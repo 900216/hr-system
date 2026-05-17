@@ -1546,10 +1546,22 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                         <input type="date" id="crDate" onchange="loadCashReport()" style="padding:5px; border:1px solid #999; border-radius:3px;">
                         <button class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="saveCashReport()">💾 儲存</button>
                         <button class="btn-primary" style="padding:6px 14px; font-size:13px;" onclick="printCashReport()">🖨️ 列印</button>
+                        <button class="btn-secondary" style="padding:6px 14px; font-size:13px;" onclick="resetCashAutoCalc()">🔄 重算</button>
                         <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#a78bfa,#7c3aed);" onclick="openCashReportHistory()">📊 歷史概況</button>
                     </div>
                 </div>
                 <div class="panel-body">
+                    <!-- 💡 操作提示 -->
+                    <div style="background:#fef3c7; padding:10px; border-radius:6px; margin-bottom:12px; font-size:12px; line-height:1.6; color:#78350f;">
+                        💡 <strong>使用提示：</strong>
+                        <ul style="margin:4px 0 0 18px; padding:0;">
+                            <li>所有欄位都可<strong>直接編輯</strong>（包含自動計算欄位 802, 803, 804, 806）</li>
+                            <li>手動修改的欄位會<strong>變黃色</strong>，自動計算不會覆寫它</li>
+                            <li>若要回到全自動計算，點頂部「<strong>🔄 重算</strong>」按鈕</li>
+                            <li>OCR 辨識不準時，可<strong>直接手動修改</strong>數字</li>
+                        </ul>
+                    </div>
+                    
                     <!-- 📸 OCR 上傳區 -->
                     <div style="background:linear-gradient(135deg, #dbeafe, #bfdbfe); padding:14px; border-radius:8px; margin-bottom:14px; border:1px solid #3b82f6;">
                         <div style="font-weight:bold; margin-bottom:10px; color:#1e3a8a; font-size:14px;">📸 上傳現金日報圖片自動辨識</div>
@@ -1637,6 +1649,42 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                             </thead>
                             <tbody id="crCashBody"></tbody>
                         </table>
+                    </div>
+                    
+                    <!-- 📋 計算明細（即時顯示） -->
+                    <div class="cr-section" style="background:linear-gradient(135deg, #ede9fe, #ddd6fe); border:2px solid #8b5cf6;">
+                        <div class="cr-section-title" style="border-bottom-color:#8b5cf6; background:linear-gradient(to right, #c4b5fd, transparent);">📋 計算明細（透明化）</div>
+                        
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+                            <!-- 802 計算明細 -->
+                            <div style="background:white; padding:12px; border-radius:6px; border:1px solid #c4b5fd;">
+                                <div style="font-weight:bold; color:#5b21b6; font-size:14px; padding-bottom:6px; border-bottom:1px solid #ddd6fe; margin-bottom:8px;">
+                                    📊 802 本日應有現金小計
+                                </div>
+                                <div id="calc802Detail" style="font-size:12px; line-height:1.9;"></div>
+                            </div>
+                            
+                            <!-- 804 計算明細 -->
+                            <div style="background:white; padding:12px; border-radius:6px; border:1px solid #c4b5fd;">
+                                <div style="font-weight:bold; color:#5b21b6; font-size:14px; padding-bottom:6px; border-bottom:1px solid #ddd6fe; margin-bottom:8px;">
+                                    📊 804 本日應有週轉金
+                                </div>
+                                <div id="calc804Detail" style="font-size:12px; line-height:1.9;"></div>
+                            </div>
+                            
+                            <!-- 806 計算明細 -->
+                            <div style="background:white; padding:12px; border-radius:6px; border:1px solid #c4b5fd;">
+                                <div style="font-weight:bold; color:#5b21b6; font-size:14px; padding-bottom:6px; border-bottom:1px solid #ddd6fe; margin-bottom:8px;">
+                                    📊 806 門市現金短/溢
+                                </div>
+                                <div id="calc806Detail" style="font-size:12px; line-height:1.9;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:12px; padding:10px; background:#fef3c7; border-radius:4px; font-size:12px; color:#92400e; line-height:1.7;">
+                            💡 <strong>說明：</strong>所有黃色背景欄位都是<strong>系統自動計算</strong>，您只需輸入白色背景欄位。<br>
+                            上方明細會即時更新，您可以一眼看出每個金額怎麼算出來的。
+                        </div>
                     </div>
                     
                     <!-- 📝 備註 + 電子簽名 -->
@@ -3937,9 +3985,9 @@ function renderCRRegisterTable() {
         html += '<tr>';
         html += '<td style="text-align:left;"><span style="color:#9ca3af;font-size:10px;">' + item.code + '</span> ' + item.name + '</td>';
         for (var r = 1; r <= 3; r++) {
-            html += '<td class="' + cls + '"><input type="number" id="cr_r' + r + '_' + item.code + '" oninput="recalcCashReport()" ' + (item.auto ? 'readonly' : '') + ' value="0"></td>';
+            html += '<td class="' + cls + '"><input type="number" id="cr_r' + r + '_' + item.code + '" oninput="' + (item.auto ? 'markManualEdit(this)' : 'recalcCashReport()') + '" value="0"></td>';
         }
-        html += '<td class="auto-calc"><input type="number" id="cr_total_' + item.code + '" readonly value="0"></td>';
+        html += '<td class="auto-calc"><input type="number" id="cr_total_' + item.code + '" oninput="markManualEdit(this)" value="0"></td>';
         html += '</tr>';
     }
     tbody.innerHTML = html;
@@ -4017,7 +4065,7 @@ function renderCRCashTable() {
         html += '<tr>';
         html += '<td><span style="color:#9ca3af;font-size:10px;">' + item.code + '</span> ' + item.name + '</td>';
         if (item.auto) {
-            html += '<td class="auto-calc"><input type="number" id="cr_amt_' + item.code + '" readonly value="0"></td>';
+            html += '<td class="auto-calc"><input type="number" id="cr_amt_' + item.code + '" oninput="markManualEdit(this)" value="0"></td>';
         } else {
             html += '<td><input type="number" id="cr_amt_' + item.code + '" oninput="recalcCashReport()" value="0"></td>';
         }
@@ -4026,15 +4074,24 @@ function renderCRCashTable() {
     tbody.innerHTML = html;
 }
 
+// 標記為手動編輯（自動計算就不會覆寫）
+function markManualEdit(el) {
+    if (!el) return;
+    el.dataset.manual = '1';
+    el.style.background = '#fef3c7';
+    el.style.fontWeight = 'bold';
+}
+
 // 即時自動計算
 function recalcCashReport() {
     function num(id) { 
         var el = document.getElementById(id);
         return el ? (parseFloat(el.value) || 0) : 0;
     }
+    // 🔑 改進：手動編輯過的欄位不會被自動計算覆寫
     function setVal(id, v) {
         var el = document.getElementById(id);
-        if (el) el.value = v;
+        if (el && !el.dataset.manual) el.value = v;
     }
     
     // 收銀機合計
@@ -4052,7 +4109,7 @@ function recalcCashReport() {
     var t104 = num('cr_r1_104') + num('cr_r2_104') + num('cr_r3_104');
     setVal('cr_total_104', t104);
     
-    // 111 = 104 - 105A - 105B - 106A - 106B - 107 - 108 - 112 - 113 - 116 - 117 - 109 - 110
+    // 111 本日實際銷貨收入 = 104 - 各項退/折/誤打
     for (var r2 = 1; r2 <= 3; r2++) {
         var v111 = num('cr_r' + r2 + '_104') 
                  - num('cr_r' + r2 + '_105A') - num('cr_r' + r2 + '_105B')
@@ -4066,26 +4123,87 @@ function recalcCashReport() {
     var t111 = num('cr_r1_111') + num('cr_r2_111') + num('cr_r3_111');
     setVal('cr_total_111', t111);
     
-    // 802 = 801 + 全部收入 - 全部支出
+    // 💰 收入合計（銷貨 + 代收）
     var income = num('cr_amt_111A') + num('cr_amt_111B') + num('cr_amt_111D') + num('cr_amt_111E')
                + num('cr_amt_202') + num('cr_amt_204') + num('cr_amt_206') + num('cr_amt_208') + num('cr_amt_209');
+    
+    // 💳 代現金合計（電子支付，需從現金中扣除）
+    var cashEquivalents = num('cr_amt_401') + num('cr_amt_402') + num('cr_amt_407') 
+                        + num('cr_amt_408') + num('cr_amt_409') + num('cr_amt_410');
+    
+    // 退貨（現金退給客戶）
+    var refund = num('cr_amt_501') + num('cr_amt_502');
+    
+    // 進貨（付現金）
+    var purchase = num('cr_amt_601') + num('cr_amt_602');
+    
+    // 費用支出
     var expense = num('cr_amt_701') + num('cr_amt_704') + num('cr_amt_706') + num('cr_amt_707')
                 + num('cr_amt_708') + num('cr_amt_709') + num('cr_amt_710') + num('cr_amt_712')
                 + num('cr_amt_713') + num('cr_amt_715') + num('cr_amt_717') + num('cr_amt_718') + num('cr_amt_719');
-    var should = num('cr_amt_801') + income - expense;
+    
+    // 802 本日應有現金小計 = 801昨日 + 收入 - 代現金 - 退貨 - 進貨 - 支出
+    var should = num('cr_amt_801') + income - cashEquivalents - refund - purchase - expense;
     setVal('cr_amt_802', should);
     
-    // 803 = 803A + 803B + 803C
+    // 803 本日匯款額 = 803A(郵局) + 803B(銀行) + 803C(ATM)
     var transfer = num('cr_amt_803A') + num('cr_amt_803B') + num('cr_amt_803C');
     setVal('cr_amt_803', transfer);
     
     // 804 = 802 - 803
-    var should2 = should - transfer;
-    setVal('cr_amt_804', should2);
+    // 注意：要用 input 真實值（如果 802 被手動改了，用真實值）
+    var actual802 = num('cr_amt_802');
+    var actual803 = num('cr_amt_803');
+    setVal('cr_amt_804', actual802 - actual803);
     
     // 806 = 805 - 804
-    var diff = num('cr_amt_805') - should2;
-    setVal('cr_amt_806', diff);
+    var actual804 = num('cr_amt_804');
+    setVal('cr_amt_806', num('cr_amt_805') - actual804);
+    
+    // 更新公式說明區
+    updateFormulaInfo({
+        s801: num('cr_amt_801'),
+        income: income,
+        cashEq: cashEquivalents,
+        refund: refund,
+        purchase: purchase,
+        expense: expense,
+        s802: num('cr_amt_802'),
+        s803: num('cr_amt_803'),
+        s804: num('cr_amt_804'),
+        s805: num('cr_amt_805'),
+        s806: num('cr_amt_806')
+    });
+}
+
+// 🔄 重新計算（清除手動覆寫旗標）
+function resetCashAutoCalc() {
+    var inputs = document.querySelectorAll('#page-cashReport input[data-manual]');
+    for (var i = 0; i < inputs.length; i++) {
+        inputs[i].removeAttribute('data-manual');
+        inputs[i].style.background = '';
+        inputs[i].style.fontWeight = '';
+    }
+    recalcCashReport();
+    showNotif('🔄 已清除所有手動覆寫，全部依公式重新計算');
+}
+
+// 顯示公式說明（讓使用者了解計算邏輯）
+function updateFormulaInfo(d) {
+    var elem = document.getElementById('crFormulaInfo');
+    if (!elem) return;
+    
+    var diffColor = d.s806 < 0 ? '#dc2626' : (d.s806 > 0 ? '#f59e0b' : '#059669');
+    var diffSign = d.s806 > 0 ? '+' : '';
+    
+    elem.innerHTML = 
+        '<div style="background:#fef3c7; padding:10px; border-radius:6px; font-size:12px; line-height:1.8;">' +
+        '<strong>📊 即時計算邏輯：</strong><br>' +
+        '<span style="color:#374151;">' +
+        '802 = 801昨日(' + d.s801.toLocaleString() + ') + 收入(' + d.income.toLocaleString() + ') - 代現金(' + d.cashEq.toLocaleString() + ') - 退進貨(' + (d.refund+d.purchase).toLocaleString() + ') - 支出(' + d.expense.toLocaleString() + ') = <strong>' + d.s802.toLocaleString() + '</strong><br>' +
+        '804 = 802(' + d.s802.toLocaleString() + ') - 匯款(' + d.s803.toLocaleString() + ') = <strong>' + d.s804.toLocaleString() + '</strong><br>' +
+        '806 = 805實際(' + d.s805.toLocaleString() + ') - 804應有(' + d.s804.toLocaleString() + ') = <strong style="color:' + diffColor + ';">' + diffSign + d.s806.toLocaleString() + '</strong>' +
+        '</span></div>';
 }
 
 // 載入資料
