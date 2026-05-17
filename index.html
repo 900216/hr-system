@@ -4124,27 +4124,17 @@ function recalcCashReport() {
     var t111 = num('cr_r1_111') + num('cr_r2_111') + num('cr_r3_111');
     setVal('cr_total_111', t111);
     
-    // 💰 收入合計（銷貨 + 代收）
-    var income = num('cr_amt_111A') + num('cr_amt_111B') + num('cr_amt_111D') + num('cr_amt_111E')
-               + num('cr_amt_202') + num('cr_amt_204') + num('cr_amt_206') + num('cr_amt_208') + num('cr_amt_209');
+    // 💰 銷貨收入（111A + 111D）
+    var sales = num('cr_amt_111A') + num('cr_amt_111D');
     
-    // 💳 代現金合計（電子支付，需從現金中扣除）
-    var cashEquivalents = num('cr_amt_401') + num('cr_amt_402') + num('cr_amt_407') 
-                        + num('cr_amt_408') + num('cr_amt_409') + num('cr_amt_410');
+    // 💼 代收
+    var receipt = num('cr_amt_206');
     
-    // 退貨（現金退給客戶）
-    var refund = num('cr_amt_501') + num('cr_amt_502');
+    // 💳 代現金扣除（409 其它卡）
+    var cashEquivalents = num('cr_amt_409');
     
-    // 進貨（付現金）
-    var purchase = num('cr_amt_601') + num('cr_amt_602');
-    
-    // 費用支出
-    var expense = num('cr_amt_701') + num('cr_amt_704') + num('cr_amt_706') + num('cr_amt_707')
-                + num('cr_amt_708') + num('cr_amt_709') + num('cr_amt_710') + num('cr_amt_712')
-                + num('cr_amt_713') + num('cr_amt_715') + num('cr_amt_717') + num('cr_amt_718') + num('cr_amt_719');
-    
-    // 802 本日應有現金小計 = 801昨日 + 收入 - 代現金 - 退貨 - 進貨 - 支出
-    var should = num('cr_amt_801') + income - cashEquivalents - refund - purchase - expense;
+    // 🔑 使用簡化公式：802 = 111A + 111D + 206 - 409 + 801
+    var should = sales + receipt - cashEquivalents + num('cr_amt_801');
     setVal('cr_amt_802', should);
     
     // 803 本日匯款額 = 803A(郵局) + 803B(銀行) + 803C(ATM)
@@ -4152,7 +4142,6 @@ function recalcCashReport() {
     setVal('cr_amt_803', transfer);
     
     // 804 = 802 - 803
-    // 注意：要用 input 真實值（如果 802 被手動改了，用真實值）
     var actual802 = num('cr_amt_802');
     var actual803 = num('cr_amt_803');
     setVal('cr_amt_804', actual802 - actual803);
@@ -4161,14 +4150,13 @@ function recalcCashReport() {
     var actual804 = num('cr_amt_804');
     setVal('cr_amt_806', num('cr_amt_805') - actual804);
     
-    // 更新公式說明區
+    // 更新公式說明區（簡化版）
     updateFormulaInfo({
         s801: num('cr_amt_801'),
-        income: income,
-        cashEq: cashEquivalents,
-        refund: refund,
-        purchase: purchase,
-        expense: expense,
+        s111A: num('cr_amt_111A'),
+        s111D: num('cr_amt_111D'),
+        s206: receipt,
+        s409: cashEquivalents,
         s802: num('cr_amt_802'),
         s803: num('cr_amt_803'),
         s804: num('cr_amt_804'),
@@ -4199,15 +4187,15 @@ function updateFormulaInfo(d) {
     if (elem) {
         elem.innerHTML = 
             '<div style="background:#fef3c7; padding:10px; border-radius:6px; font-size:12px; line-height:1.8;">' +
-            '<strong>📊 即時計算邏輯：</strong><br>' +
+            '<strong>📊 即時計算邏輯（簡化公式）：</strong><br>' +
             '<span style="color:#374151;">' +
-            '802 = 801昨日(' + d.s801.toLocaleString() + ') + 收入(' + d.income.toLocaleString() + ') - 代現金(' + d.cashEq.toLocaleString() + ') - 退進貨(' + (d.refund+d.purchase).toLocaleString() + ') - 支出(' + d.expense.toLocaleString() + ') = <strong>' + d.s802.toLocaleString() + '</strong><br>' +
+            '802 = 111A(' + d.s111A.toLocaleString() + ') + 111D(' + d.s111D.toLocaleString() + ') + 206(' + d.s206.toLocaleString() + ') - 409(' + d.s409.toLocaleString() + ') + 801(' + d.s801.toLocaleString() + ') = <strong>' + d.s802.toLocaleString() + '</strong><br>' +
             '804 = 802(' + d.s802.toLocaleString() + ') - 匯款(' + d.s803.toLocaleString() + ') = <strong>' + d.s804.toLocaleString() + '</strong><br>' +
             '806 = 805實際(' + d.s805.toLocaleString() + ') - 804應有(' + d.s804.toLocaleString() + ') = <strong style="color:' + diffColor + ';">' + diffSign + d.s806.toLocaleString() + '</strong>' +
             '</span></div>';
     }
     
-    // ⭐ 新版三個明細卡片
+    // ⭐ 三個明細卡片
     function row(label, value, sign, hint) {
         var col = sign === '+' ? '#059669' : (sign === '-' ? '#dc2626' : '#1f2937');
         return '<div style="display:flex; justify-content:space-between; padding:3px 0;">' +
@@ -4216,16 +4204,15 @@ function updateFormulaInfo(d) {
                '</div>';
     }
     
-    // 📊 802 明細
+    // 📊 802 明細（簡化版：802 = 111A + 111D + 206 - 409 + 801）
     var elem802 = document.getElementById('calc802Detail');
     if (elem802) {
         var html802 = '';
-        html802 += row('801 昨日留存週轉金', d.s801);
-        html802 += row('銷貨+代收款', d.income, '+', '(111A+B+D+E+202~209)');
-        html802 += row('代現金', d.cashEq, '-', '(401~410)');
-        if (d.refund) html802 += row('現金退貨', d.refund, '-', '(501+502)');
-        if (d.purchase) html802 += row('現金進貨', d.purchase, '-', '(601+602)');
-        if (d.expense) html802 += row('費用支出', d.expense, '-', '(701~719)');
+        html802 += row('111A 銷貨收入(免稅)', d.s111A, '+', '');
+        html802 += row('111D 代銷/隨取收入(免稅)', d.s111D, '+', '');
+        html802 += row('206 代收', d.s206, '+', '');
+        html802 += row('409 其它卡（代現金）', d.s409, '-', '');
+        html802 += row('801 昨日留存週轉金', d.s801, '+', '');
         html802 += '<hr style="margin:6px 0; border:0; border-top:1px solid #c4b5fd;">';
         html802 += '<div style="display:flex; justify-content:space-between; font-size:14px; font-weight:bold; color:#5b21b6;">' +
                    '<span>= 802 應有現金</span>' +
