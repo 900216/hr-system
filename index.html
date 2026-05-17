@@ -1581,6 +1581,12 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                     
                     <!-- 報表標題區 -->
                     <div class="cash-report-header" style="background:#fef3c7; padding:14px; border-radius:6px; margin-bottom:14px;">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                            <strong style="font-size:14px;">🏬 選擇門市：</strong>
+                            <select id="crStoreSelect" onchange="onCashReportStoreChange()" style="padding:6px 10px; border:1px solid #d97706; border-radius:4px; background:white; font-size:13px; min-width:200px;">
+                                <option value="">-- 請選擇門市 --</option>
+                            </select>
+                        </div>
                         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; font-size:13px;">
                             <div><strong>店號：</strong><input type="text" id="crStoreCode" placeholder="285861" style="border:none; background:transparent; width:100px;"></div>
                             <div><strong>店名：</strong><input type="text" id="crStoreName" placeholder="例：小金" style="border:none; background:transparent; width:120px;"></div>
@@ -1799,6 +1805,55 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
             </div>
             
             <!-- 危險區域 -->
+            <!-- 💾 本地備份 -->
+            <div class="work-list-panel" style="border-color:#059669; margin-top:20px;">
+                <div class="panel-header" style="background:linear-gradient(to bottom, #10b981, #059669);">
+                    <h3 style="color:white;">💾 本地備份（資料安全保護）</h3>
+                </div>
+                <div class="panel-body" style="background:#ecfdf5;">
+                    <div style="background:white; padding:14px; border-radius:6px; margin-bottom:14px; border:1px solid #6ee7b7;">
+                        <div style="font-size:13px; color:#064e3b; line-height:1.8;">
+                            <strong>📌 為什麼要備份？</strong><br>
+                            ✅ 防止瀏覽器清除快取時資料遺失<br>
+                            ✅ 換手機 / 電腦時轉移資料<br>
+                            ✅ 重大操作前先備份，可隨時還原<br>
+                            ✅ 多人協作時統一資料版本
+                        </div>
+                    </div>
+                    
+                    <!-- 備份統計 -->
+                    <div id="backupStats" style="background:white; padding:12px; border-radius:6px; margin-bottom:14px; border:1px solid #6ee7b7;">
+                        <div style="font-size:12px; color:#064e3b;">統計載入中...</div>
+                    </div>
+                    
+                    <!-- 匯出區 -->
+                    <div style="background:white; padding:14px; border-radius:6px; margin-bottom:12px; border:1px solid #6ee7b7;">
+                        <div style="font-weight:bold; color:#064e3b; margin-bottom:8px; font-size:14px;">📥 匯出備份</div>
+                        <div style="font-size:12px; color:#6b7280; margin-bottom:10px; line-height:1.6;">
+                            將所有資料打包成 JSON 檔下載到本機。建議每週備份一次。
+                        </div>
+                        <button class="btn-confirm" style="padding:10px 20px; font-size:14px; font-weight:bold;" onclick="exportBackup()">
+                            📥 立即下載備份檔
+                        </button>
+                    </div>
+                    
+                    <!-- 匯入區 -->
+                    <div style="background:white; padding:14px; border-radius:6px; border:1px solid #6ee7b7;">
+                        <div style="font-weight:bold; color:#064e3b; margin-bottom:8px; font-size:14px;">📤 還原備份</div>
+                        <div style="font-size:12px; color:#6b7280; margin-bottom:10px; line-height:1.6;">
+                            選擇之前下載的 JSON 備份檔，<strong style="color:#dc2626;">將覆蓋目前所有資料</strong>。
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <input type="file" id="backupFileInput" accept=".json" style="font-size:13px;">
+                            <button class="btn-primary" style="padding:8px 16px; font-size:13px;" onclick="importBackup()">
+                                📤 還原資料
+                            </button>
+                        </div>
+                        <div id="importStatus" style="margin-top:8px; font-size:12px;"></div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="work-list-panel" style="border-color:#dc2626; margin-top:20px;">
                 <div class="panel-header" style="background:linear-gradient(to bottom, #ef4444, #dc2626);">
                     <h3 style="color:white;">⚠️ 危險區域</h3>
@@ -2669,7 +2724,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'shiftSwap') loadShiftSwapTargets();
     else if (pageName === 'reviewMonth') renderReviewList();
     else if (pageName === 'accountManagement') renderAccountList();
-    else if (pageName === 'systemParams') loadSystemParams();
+    else if (pageName === 'systemParams') { loadSystemParams(); renderBackupStats(); }
     else if (pageName === 'systemLog') renderSystemLog();
     else if (pageName === 'payroll') { setCurrentMonth('payrollMonth'); renderPayroll(); }
     else if (pageName === 'mySalary') renderMySalary();
@@ -3958,6 +4013,9 @@ function initCashReport() {
         dateInput.value = yyyy + '-' + mm + '-' + dd;
     }
     
+    // 載入門市選單
+    loadStoreSelectForCashReport();
+    
     // 渲染表格結構
     renderCRRegisterTable();
     renderCRIncomeTable();
@@ -3972,8 +4030,42 @@ function initCashReport() {
     // 載入資料
     loadCashReport();
     
-    // 🚀 背景預載入 Tesseract OCR 引擎（加速首次 OCR）
+    // 🚀 背景預載入 Tesseract OCR 引擎
     setTimeout(preloadTesseract, 2000);
+}
+
+// 🏬 載入門市選單
+function loadStoreSelectForCashReport() {
+    var sel = document.getElementById('crStoreSelect');
+    if (!sel) return;
+    
+    var stores = loadData('stores', defaultStores);
+    var currentStoreId = loadData('currentStoreId', stores[0] && stores[0].id);
+    
+    var html = '<option value="">-- 請選擇門市 --</option>';
+    for (var i = 0; i < stores.length; i++) {
+        var s = stores[i];
+        var selected = (s.id === currentStoreId) ? 'selected' : '';
+        html += '<option value="' + s.id + '" ' + selected + '>' + 
+                (s.code || '') + ' - ' + s.name + 
+                (s.area ? ' (' + s.area + ')' : '') + '</option>';
+    }
+    sel.innerHTML = html;
+}
+
+// 🏬 選擇門市時自動填入店號、店名
+function onCashReportStoreChange() {
+    var sel = document.getElementById('crStoreSelect');
+    var storeId = sel.value;
+    if (!storeId) return;
+    
+    var stores = loadData('stores', defaultStores);
+    var store = stores.find(function(s) { return s.id === storeId; });
+    if (!store) return;
+    
+    document.getElementById('crStoreCode').value = store.code || '';
+    document.getElementById('crStoreName').value = store.name || '';
+    showNotif('🏬 已選擇門市：' + store.name);
 }
 
 function renderCRRegisterTable() {
@@ -4284,6 +4376,12 @@ function loadCashReport() {
     document.getElementById('crStoreName').value = report.storeName || '';
     document.getElementById('crNote').value = report.note || '';
     
+    // 還原門市選擇
+    if (report.storeId) {
+        var sel = document.getElementById('crStoreSelect');
+        if (sel) sel.value = report.storeId;
+    }
+    
     // 載入簽名
     if (report.managerSignData && report.managerSignTime) {
         document.getElementById('sig_manager_data').value = report.managerSignData;
@@ -4347,6 +4445,7 @@ function saveCashReport() {
     
     var report = {
         date: dateVal,
+        storeId: document.getElementById('crStoreSelect').value || '',
         storeCode: document.getElementById('crStoreCode').value,
         storeName: document.getElementById('crStoreName').value,
         note: document.getElementById('crNote').value,
@@ -4997,11 +5096,240 @@ function printCashReport() {
     var dateVal = document.getElementById('crDate').value;
     if (!dateVal) return alert('⚠️ 請選擇會計日');
     
-    var content = document.querySelector('#page-cashReport .main-content').innerHTML;
+    function val(id) {
+        var el = document.getElementById(id);
+        return el ? (el.value || '') : '';
+    }
+    function num(id) {
+        var v = parseFloat(val(id));
+        return isNaN(v) ? 0 : v;
+    }
+    function fmt(n) {
+        return (n || 0).toLocaleString();
+    }
     
-    var styles = '';
-    var styleEls = document.querySelectorAll('style');
-    for (var i = 0; i < styleEls.length; i++) styles += styleEls[i].innerHTML;
+    // 取得日期顯示
+    var d = new Date(dateVal);
+    var weekDays = ['日','一','二','三','四','五','六'];
+    var accDate = d.getFullYear() + '年' + String(d.getMonth()+1).padStart(2,'0') + '月' + String(d.getDate()).padStart(2,'0') + '日(' + weekDays[d.getDay()] + ')';
+    var now = new Date();
+    var printDate = now.getFullYear() + '/ ' + String(now.getMonth()+1).padStart(2,'0') + '/ ' + String(now.getDate()).padStart(2,'0') + '(' + weekDays[now.getDay()] + ')  ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    
+    // 收銀機資料
+    var regRows = '';
+    var regItems = [
+        {code:'101', name:'本日來客數'},
+        {code:'102', name:'本日結帳累計金額'},
+        {code:'103', name:'- 昨日結帳累計金額'},
+        {code:'104', name:'發票日結帳金額'},
+        {code:'104A', name:'發票日結帳金額(免稅)'},
+        {code:'104B', name:'發票日結帳金額(應稅)'},
+        {code:'105A', name:'- 退瓶/自帶杯(免稅)'},
+        {code:'105B', name:'- 退瓶/自帶杯(應稅)'},
+        {code:'106A', name:'- 折扣(免稅)'},
+        {code:'106B', name:'- 折扣(應稅)'},
+        {code:'107', name:'- 門市折價券'},
+        {code:'108', name:'- 廠商折價券'},
+        {code:'112', name:'- 組合促銷折讓(免稅)'},
+        {code:'113', name:'- 組合促銷折讓(應稅)'},
+        {code:'116', name:'- 商品兌換券/卡(免稅)'},
+        {code:'117', name:'- 商品兌換券/卡(應稅)'},
+        {code:'109', name:'- 誤打銷退重印免稅銷售'},
+        {code:'110', name:'- 誤打銷退重印應稅銷售'},
+        {code:'111', name:'本日實際銷貨收入'},
+        {code:'120', name:'實際營業額(扣除行動隨取)'}
+    ];
+    for (var i = 0; i < regItems.length; i++) {
+        var it = regItems[i];
+        regRows += '<tr>';
+        regRows += '<td style="text-align:center;">' + it.code + '</td>';
+        regRows += '<td>' + it.name + '</td>';
+        regRows += '<td style="text-align:right;">' + fmt(num('cr_r1_' + it.code)) + '</td>';
+        regRows += '<td style="text-align:right;">' + fmt(num('cr_r2_' + it.code)) + '</td>';
+        regRows += '<td style="text-align:right;">' + fmt(num('cr_r3_' + it.code)) + '</td>';
+        regRows += '<td style="text-align:right; font-weight:bold;">' + fmt(num('cr_total_' + it.code)) + '</td>';
+        regRows += '</tr>';
+    }
+    
+    // 銷貨收入 + 代收 + 代現金
+    var incomeRows = '';
+    var incomeItems = [
+        {section:'銷貨收入', code:'111A', name:'銷貨收入(免稅)'},
+        {code:'111B', name:'銷貨收入(應稅)'},
+        {code:'111D', name:'代銷/隨取收入(免稅)'},
+        {code:'111E', name:'代銷/隨取收入(應稅)'},
+        {section:'代收款&其他收入', code:'202', name:'代售商品', hasCount:true},
+        {code:'204', name:'慈善捐款', hasCount:true},
+        {code:'206', name:'代收', hasCount:true},
+        {code:'208', name:'總部撥款', hasCount:true},
+        {code:'209', name:'門市暫收款', hasCount:true},
+        {section:'代現金', code:'401', name:'- 禮券', hasCount:true},
+        {code:'402', name:'- 廠商代現金', hasCount:true},
+        {code:'407', name:'- 禮物卡', hasCount:true},
+        {code:'408', name:'- 禮券餘額卡', hasCount:true},
+        {code:'409', name:'- 其它卡', hasCount:true},
+        {code:'410', name:'- 代兌', hasCount:true}
+    ];
+    var lastSec = '';
+    for (var j = 0; j < incomeItems.length; j++) {
+        var ii = incomeItems[j];
+        if (ii.section && ii.section !== lastSec) {
+            incomeRows += '<tr style="background:#fef3c7;"><td colspan="4" style="font-weight:bold; padding:4px 8px;">' + ii.section + '</td></tr>';
+            lastSec = ii.section;
+        }
+        incomeRows += '<tr>';
+        incomeRows += '<td style="text-align:center;">' + ii.code + '</td>';
+        incomeRows += '<td>' + ii.name + '</td>';
+        incomeRows += '<td style="text-align:right;">' + (ii.hasCount ? fmt(num('cr_cnt_' + ii.code)) + ' 張' : '-') + '</td>';
+        incomeRows += '<td style="text-align:right; font-weight:bold;">' + fmt(num('cr_amt_' + ii.code)) + '</td>';
+        incomeRows += '</tr>';
+    }
+    
+    // 費用支出
+    var expenseRows = '';
+    var expenseItems = [
+        {code:'701', name:'- 現金支出進項稅額'},
+        {code:'704', name:'- 郵電費', hasCount:true},
+        {code:'706', name:'- 水、瓦斯費', hasCount:true},
+        {code:'707', name:'- 電費', hasCount:true},
+        {code:'708', name:'- 自用商品', hasCount:true},
+        {code:'709', name:'- 雜費', hasCount:true},
+        {code:'710', name:'- 清潔管理費', hasCount:true},
+        {code:'712', name:'- 交通費', hasCount:true},
+        {code:'713', name:'- 檢驗費', hasCount:true},
+        {code:'715', name:'- 偽鈔', hasCount:true},
+        {code:'717', name:'- 其他損失', hasCount:true},
+        {code:'718', name:'- 發票費用', hasCount:true},
+        {code:'719', name:'- 通路匯款', hasCount:true}
+    ];
+    for (var k = 0; k < expenseItems.length; k++) {
+        var ei = expenseItems[k];
+        expenseRows += '<tr>';
+        expenseRows += '<td style="text-align:center;">' + ei.code + '</td>';
+        expenseRows += '<td>' + ei.name + '</td>';
+        expenseRows += '<td style="text-align:right;">' + (ei.hasCount ? fmt(num('cr_cnt_' + ei.code)) + ' 張' : '-') + '</td>';
+        expenseRows += '<td style="text-align:right;">' + fmt(num('cr_amt_' + ei.code)) + '</td>';
+        expenseRows += '</tr>';
+    }
+    
+    // 簽名圖
+    var managerSig = val('sig_manager_data');
+    var managerTime = val('sig_manager_time');
+    var accountantSig = val('sig_accountant_data');
+    var accountantTime = val('sig_accountant_time');
+    var managerSigHtml = managerSig 
+        ? '<img src="' + managerSig + '" style="max-height:60px; max-width:200px;">' 
+        : '<span style="color:#9ca3af;">（未簽名）</span>';
+    var accountantSigHtml = accountantSig 
+        ? '<img src="' + accountantSig + '" style="max-height:60px; max-width:200px;">' 
+        : '<span style="color:#9ca3af;">（未簽名）</span>';
+    var managerTimeStr = managerTime ? formatDateTime(new Date(managerTime)) : '';
+    var accountantTimeStr = accountantTime ? formatDateTime(new Date(accountantTime)) : '';
+    
+    // 組成完整列印 HTML
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>現金日報表</title>';
+    html += '<style>';
+    html += '@page { size: A4 portrait; margin: 8mm; }';
+    html += '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing:border-box; }';
+    html += 'body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; color:#000; background:white; margin:0; padding:0; font-size:11px; }';
+    html += '.title { text-align:center; font-size:16px; font-weight:bold; margin-bottom:6px; }';
+    html += '.header-info { display:flex; justify-content:space-between; margin-bottom:8px; font-size:11px; }';
+    html += '.acc-date { font-size:12px; margin-bottom:6px; font-weight:bold; }';
+    html += 'table { width:100%; border-collapse:collapse; margin-bottom:8px; }';
+    html += 'th, td { border:1px solid #444; padding:3px 5px; font-size:10px; }';
+    html += 'th { background:#e5e7eb; font-weight:bold; text-align:center; }';
+    html += '.bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }';
+    html += '.sign-area { display:flex; justify-content:space-around; margin-top:12px; padding-top:10px; border-top:1px solid #444; }';
+    html += '.sign-box { text-align:center; }';
+    html += '.sign-box .label { font-size:11px; margin-bottom:4px; }';
+    html += '.sign-box .img { min-height:60px; padding:4px; border-bottom:1px solid #444; }';
+    html += '.sign-box .time { font-size:9px; color:#555; margin-top:4px; }';
+    html += '.note { margin-top:6px; font-size:11px; padding:4px; border:1px solid #d1d5db; min-height:30px; }';
+    html += '</style></head><body>';
+    
+    // 標題
+    html += '<div class="title">現金日報表（代用轉帳傳票）</div>';
+    
+    // 店號、店名、列印日
+    html += '<div class="header-info">';
+    html += '<div>店號：' + val('crStoreCode') + '<br>店名：' + val('crStoreName') + '</div>';
+    html += '<div>列印日：' + printDate + '</div>';
+    html += '</div>';
+    
+    // 會計日
+    html += '<div class="acc-date">會計日：' + accDate + '</div>';
+    
+    // 收銀機表
+    html += '<table>';
+    html += '<thead><tr>';
+    html += '<th style="width:50px;">簡號</th>';
+    html += '<th>收銀機日結帳項目名稱</th>';
+    html += '<th style="width:75px;">收銀機第一台</th>';
+    html += '<th style="width:75px;">收銀機第二台</th>';
+    html += '<th style="width:75px;">收銀機第三台</th>';
+    html += '<th style="width:75px;">收銀機合計</th>';
+    html += '</tr></thead><tbody>' + regRows + '</tbody></table>';
+    
+    // 下方雙欄：左側收入/退進貨 右側費用/週轉金
+    html += '<div class="bottom-grid">';
+    
+    // 左：銷貨收入/代收/代現金
+    html += '<div>';
+    html += '<table><thead><tr><th>簡號</th><th>會計科目</th><th>張數</th><th>收支額</th></tr></thead>';
+    html += '<tbody>' + incomeRows + '</tbody></table>';
+    
+    // 現金退貨/進貨
+    html += '<table><thead><tr><th colspan="4" style="background:#fef3c7;">現金退貨 / 現金進貨</th></tr>';
+    html += '<tr><th>簡號</th><th>會計科目</th><th>張數/零售價</th><th>收支額</th></tr></thead><tbody>';
+    html += '<tr><td style="text-align:center;">501</td><td>現金退貨（成本）</td><td style="text-align:right;">' + fmt(num('cr_cnt_501')) + ' 張 / ' + fmt(num('cr_retail_501')) + '</td><td style="text-align:right;">' + fmt(num('cr_amt_501')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">502</td><td>現金退貨進項稅額</td><td style="text-align:right;">-</td><td style="text-align:right;">' + fmt(num('cr_amt_502')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">601</td><td>- 現金進貨（成本）</td><td style="text-align:right;">' + fmt(num('cr_cnt_601')) + ' 張 / ' + fmt(num('cr_retail_601')) + '</td><td style="text-align:right;">' + fmt(num('cr_amt_601')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">602</td><td>- 現金進貨進項稅額</td><td style="text-align:right;">-</td><td style="text-align:right;">' + fmt(num('cr_amt_602')) + '</td></tr>';
+    html += '</tbody></table>';
+    html += '</div>';
+    
+    // 右：費用 + 週轉金
+    html += '<div>';
+    html += '<table><thead><tr><th colspan="4" style="background:#fef3c7;">費用支出</th></tr>';
+    html += '<tr><th>簡號</th><th>會計科目</th><th>張數</th><th>收支額</th></tr></thead>';
+    html += '<tbody>' + expenseRows + '</tbody></table>';
+    
+    // 週轉金
+    html += '<table><thead><tr><th colspan="3" style="background:#fef3c7;">週轉金</th></tr>';
+    html += '<tr><th>簡號</th><th>會計科目</th><th>金額</th></tr></thead><tbody>';
+    html += '<tr><td style="text-align:center;">801</td><td>昨日留存週轉金</td><td style="text-align:right;">' + fmt(num('cr_amt_801')) + '</td></tr>';
+    html += '<tr style="background:#fef3c7;"><td style="text-align:center;">802</td><td><strong>本日應有現金小計</strong></td><td style="text-align:right; font-weight:bold;">' + fmt(num('cr_amt_802')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">803</td><td>- 本日匯款額</td><td style="text-align:right;">' + fmt(num('cr_amt_803')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">803A</td><td>　- 本日匯款額(郵局)</td><td style="text-align:right;">' + fmt(num('cr_amt_803A')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">803B</td><td>　- 本日匯款額(銀行)</td><td style="text-align:right;">' + fmt(num('cr_amt_803B')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">803C</td><td>　- 本日匯款額(ATM)</td><td style="text-align:right;">' + fmt(num('cr_amt_803C')) + '</td></tr>';
+    html += '<tr style="background:#fef3c7;"><td style="text-align:center;">804</td><td><strong>= 本日應有週轉金</strong></td><td style="text-align:right; font-weight:bold;">' + fmt(num('cr_amt_804')) + '</td></tr>';
+    html += '<tr><td style="text-align:center;">805</td><td>本日實際清點週轉金</td><td style="text-align:right;">' + fmt(num('cr_amt_805')) + '</td></tr>';
+    var s806 = num('cr_amt_806');
+    var s806Color = s806 < 0 ? '#dc2626' : (s806 > 0 ? '#d97706' : '#059669');
+    html += '<tr style="background:#fef3c7;"><td style="text-align:center;">806</td><td><strong>門市現金短/溢</strong></td><td style="text-align:right; font-weight:bold; color:' + s806Color + ';">' + fmt(s806) + '</td></tr>';
+    html += '</tbody></table>';
+    html += '</div>';
+    
+    html += '</div>'; // bottom-grid
+    
+    // 備註
+    var note = val('crNote');
+    if (note) html += '<div class="note"><strong>備註：</strong>' + note + '</div>';
+    
+    // 簽名區
+    html += '<div class="sign-area">';
+    html += '<div class="sign-box"><div class="label"><strong>店經理</strong></div>';
+    html += '<div class="img">' + managerSigHtml + '</div>';
+    if (managerTimeStr) html += '<div class="time">簽署時間：' + managerTimeStr + '</div>';
+    html += '</div>';
+    html += '<div class="sign-box"><div class="label"><strong>會計人員</strong></div>';
+    html += '<div class="img">' + accountantSigHtml + '</div>';
+    if (accountantTimeStr) html += '<div class="time">簽署時間：' + accountantTimeStr + '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</body></html>';
     
     // 用 iframe 列印
     var iframe = document.getElementById('cashReportPrintFrame');
@@ -5010,19 +5338,6 @@ function printCashReport() {
     iframe.id = 'cashReportPrintFrame';
     iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
     document.body.appendChild(iframe);
-    
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>現金日報表</title>';
-    html += '<style>' + styles + '</style>';
-    html += '<style>';
-    html += '@page { size: A4 portrait; margin: 10mm; }';
-    html += 'body { background:white; color:black; font-family: "Microsoft JhengHei", "PingFang TC", serif; }';
-    html += '.panel-header > div, button, .breadcrumb { display:none !important; }';
-    html += 'input[type="number"], input[type="text"] { border:none !important; background:transparent !important; }';
-    html += 'input[readonly] { background:transparent !important; font-weight:bold; }';
-    html += '.cr-table td { padding:3px 5px; font-size:11px; }';
-    html += '.cr-section-title { font-size:13px; }';
-    html += '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }';
-    html += '</style></head><body>' + content + '</body></html>';
     
     var doc = iframe.contentWindow.document;
     doc.open();
@@ -6194,6 +6509,222 @@ function resetSystemParams() {
 }
 
 // 🗑️ 清空所有系統資料（回到出廠設定）
+// ============= 💾 本地備份系統 =============
+// 系統所有資料的儲存 keys
+var BACKUP_KEYS = [
+    'accounts', 'employees', 'stores',
+    'workList', 'shifts',
+    'leaveList', 'compLeaveByEmp', 'autoOvertimeByEmp',
+    'overtimeList', 'businessTripList', 'cardSupplementList', 'shiftSwapList',
+    'attendanceAbnormalList',
+    'insuranceList',
+    'salarySlips',
+    'leaveBalanceAdjustments',
+    'dailyCashReports',
+    'logs',
+    'systemSettings',
+    'currentStoreId', 'currentSchedStoreId'
+];
+
+// 渲染備份統計資訊
+function renderBackupStats() {
+    var statsEl = document.getElementById('backupStats');
+    if (!statsEl) return;
+    
+    var totalKeys = 0;
+    var totalSize = 0;
+    var keyDetails = [];
+    
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var key = BACKUP_KEYS[i];
+        var val = localStorage.getItem(key);
+        if (val !== null) {
+            totalKeys++;
+            totalSize += val.length;
+            var sizeKB = (val.length / 1024).toFixed(1);
+            keyDetails.push({ key: key, size: sizeKB });
+        }
+    }
+    
+    var totalKB = (totalSize / 1024).toFixed(1);
+    var lastBackup = localStorage.getItem('lastBackupTime');
+    
+    var html = '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">';
+    html += '<div style="background:linear-gradient(135deg,#10b981,#059669); color:white; padding:10px; border-radius:6px; text-align:center;">' +
+            '<div style="font-size:11px; opacity:0.9;">📊 已儲存項目</div>' +
+            '<strong style="font-size:22px;">' + totalKeys + '</strong> / ' + BACKUP_KEYS.length + '</div>';
+    html += '<div style="background:linear-gradient(135deg,#3b82f6,#2563eb); color:white; padding:10px; border-radius:6px; text-align:center;">' +
+            '<div style="font-size:11px; opacity:0.9;">💾 資料大小</div>' +
+            '<strong style="font-size:22px;">' + totalKB + '</strong> KB</div>';
+    html += '<div style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; padding:10px; border-radius:6px; text-align:center;">' +
+            '<div style="font-size:11px; opacity:0.9;">📅 最後備份</div>' +
+            '<strong style="font-size:13px;">' + (lastBackup ? formatDateTime(new Date(lastBackup)) : '尚未備份') + '</strong></div>';
+    html += '</div>';
+    statsEl.innerHTML = html;
+}
+
+// 📥 匯出備份
+function exportBackup() {
+    if (!confirm('📥 準備下載備份檔？\n\n將所有資料打包為 JSON 檔下載到您的裝置。')) return;
+    
+    var backup = {
+        version: '1.0',
+        appName: '考勤管理系統',
+        exportedAt: new Date().toISOString(),
+        exportedBy: (currentUser && currentUser.name) || 'unknown',
+        data: {}
+    };
+    
+    // 收集所有資料
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var key = BACKUP_KEYS[i];
+        var val = localStorage.getItem(key);
+        if (val !== null) {
+            try {
+                backup.data[key] = JSON.parse(val);
+            } catch(e) {
+                backup.data[key] = val;
+            }
+        }
+    }
+    
+    // 計算統計
+    var keyCount = Object.keys(backup.data).length;
+    var jsonStr = JSON.stringify(backup, null, 2);
+    var sizeKB = (jsonStr.length / 1024).toFixed(1);
+    
+    // 產生檔名（含日期時間）
+    var now = new Date();
+    var fname = '考勤系統備份_' + 
+                now.getFullYear() + 
+                String(now.getMonth()+1).padStart(2,'0') + 
+                String(now.getDate()).padStart(2,'0') + '_' +
+                String(now.getHours()).padStart(2,'0') + 
+                String(now.getMinutes()).padStart(2,'0') + 
+                '.json';
+    
+    // 下載
+    var blob = new Blob([jsonStr], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+    
+    // 記錄備份時間
+    localStorage.setItem('lastBackupTime', now.toISOString());
+    renderBackupStats();
+    
+    showNotif('✅ 備份完成！檔案大小 ' + sizeKB + ' KB（' + keyCount + ' 個項目）');
+    logAction('backup', '匯出備份檔：' + fname);
+}
+
+// 📤 匯入備份
+function importBackup() {
+    var fileInput = document.getElementById('backupFileInput');
+    var statusEl = document.getElementById('importStatus');
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        statusEl.innerHTML = '<span style="color:#dc2626;">❌ 請先選擇備份檔（.json）</span>';
+        return;
+    }
+    
+    var file = fileInput.files[0];
+    
+    if (!file.name.endsWith('.json')) {
+        statusEl.innerHTML = '<span style="color:#dc2626;">❌ 檔案格式錯誤，請選擇 .json 檔</span>';
+        return;
+    }
+    
+    statusEl.innerHTML = '<span style="color:#1e40af;">⏳ 正在讀取備份檔...</span>';
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var backup = JSON.parse(e.target.result);
+            
+            // 驗證格式
+            if (!backup.data || typeof backup.data !== 'object') {
+                statusEl.innerHTML = '<span style="color:#dc2626;">❌ 備份檔格式錯誤（缺少 data 欄位）</span>';
+                return;
+            }
+            
+            var keys = Object.keys(backup.data);
+            var exportDate = backup.exportedAt ? formatDateTime(new Date(backup.exportedAt)) : '未知';
+            var exportBy = backup.exportedBy || '未知';
+            
+            // 預覽 + 確認
+            var msg = '📋 備份檔資訊：\n';
+            msg += '─────────────────\n';
+            msg += '版本：' + (backup.version || '?') + '\n';
+            msg += '匯出時間：' + exportDate + '\n';
+            msg += '匯出者：' + exportBy + '\n';
+            msg += '項目數：' + keys.length + ' 個\n';
+            msg += '─────────────────\n\n';
+            msg += '⚠️ 還原將「覆蓋」目前所有資料！\n';
+            msg += '建議先點「📥 立即下載備份檔」備份目前資料。\n\n';
+            msg += '確定要還原嗎？';
+            
+            if (!confirm(msg)) {
+                statusEl.innerHTML = '<span style="color:#6b7280;">已取消還原</span>';
+                return;
+            }
+            
+            // 二次確認
+            if (!confirm('🔴 最後確認：目前所有資料將被「' + exportDate + '」的備份取代！\n\n按確定繼續還原。')) {
+                statusEl.innerHTML = '<span style="color:#6b7280;">已取消還原</span>';
+                return;
+            }
+            
+            // 開始還原
+            var restored = 0;
+            var failed = [];
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                try {
+                    var val = backup.data[key];
+                    if (typeof val === 'object') {
+                        localStorage.setItem(key, JSON.stringify(val));
+                    } else {
+                        localStorage.setItem(key, val);
+                    }
+                    restored++;
+                } catch(err) {
+                    failed.push(key);
+                }
+            }
+            
+            statusEl.innerHTML = '<span style="color:#059669;">✅ 還原完成！已還原 ' + restored + ' 個項目</span>';
+            
+            // 記錄
+            try { logAction('backup', '匯入備份檔（' + restored + ' 項）'); } catch(e) {}
+            
+            // 跳出結果
+            var resultMsg = '✅ 還原完成！\n\n';
+            resultMsg += '✓ 成功：' + restored + ' 個項目\n';
+            if (failed.length > 0) resultMsg += '✗ 失敗：' + failed.length + ' 個 (' + failed.join(', ') + ')\n';
+            resultMsg += '\n⚡ 系統將重新整理以套用新資料...';
+            alert(resultMsg);
+            
+            // 重新整理頁面
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+            
+        } catch(err) {
+            statusEl.innerHTML = '<span style="color:#dc2626;">❌ 備份檔解析失敗：' + err.message + '</span>';
+            console.error('Import error:', err);
+        }
+    };
+    reader.onerror = function() {
+        statusEl.innerHTML = '<span style="color:#dc2626;">❌ 讀取檔案失敗</span>';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
 function clearAllSystemData() {
     if (!currentUser || currentUser.role !== 'admin') {
         return alert('⚠️ 只有管理員才能清空資料');
