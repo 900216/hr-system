@@ -1181,9 +1181,14 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                 <div class="submenu-item" onclick="goToPage('changePassword','menu-employee')">🔑 變更密碼</div>
             </div>
         </div>
-        <div class="menu-item" id="menu-cash" onclick="goToPage('cashReport','menu-cash')">💵 現金日報</div>
-        <div class="menu-item" id="menu-goods" onclick="goToPage('purchaseReceipt','menu-goods')">📦 進貨驗收</div>
-        <div class="menu-item" id="menu-transfer" onclick="goToPage('transferOrder','menu-transfer')">🔄 51-調撥單</div>
+        <div class="menu-item" id="menu-daily-inv">📊 日別庫存 ▼
+            <div class="submenu">
+                <div class="submenu-item" onclick="goToPage('cashReport','menu-daily-inv')">💵 現金日報</div>
+                <div class="submenu-item" onclick="goToPage('purchaseReceipt','menu-daily-inv')">📦 進貨驗收</div>
+                <div class="submenu-item" onclick="goToPage('transferOrder','menu-daily-inv')">🔄 51-調撥單</div>
+                <div class="submenu-item" onclick="goToPage('productLibrary','menu-daily-inv')">📋 條碼商品庫</div>
+            </div>
+        </div>
         <div class="menu-item" id="menu-system">⚙️ 系統管理 ▼
             <div class="submenu">
                 <div class="submenu-item" onclick="goToPage('storeManagement','menu-system')">🏬 門市管理</div>
@@ -1572,6 +1577,142 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
     <!-- 💵 現金日報頁面 -->
     <!-- 📦 進貨驗收彙總表頁面 -->
     <!-- 📤 51-調撥單頁面 -->
+    <!-- 📋 條碼商品庫管理頁 -->
+    <div id="page-productLibrary" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>📋 條碼商品庫</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                    <h3>📋 條碼商品庫管理</h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="openAddProductCodeModal()">➕ 新增商品</button>
+                        <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#10b981,#059669);" onclick="exportProductCodes()">💾 匯出 CSV</button>
+                        <label class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#8b5cf6,#7c3aed); cursor:pointer; display:inline-block;">
+                            📥 匯入 CSV
+                            <input type="file" accept=".csv" onchange="importProductCodes(event)" style="display:none;">
+                        </label>
+                        <button class="btn-danger" style="padding:6px 14px; font-size:13px;" onclick="clearAllProductCodes()">🗑️ 清空全部</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="alert-box info">
+                        💡 <strong>條碼商品庫</strong>用於儲存「品號 ↔ 品名/價格」對應資訊。
+                        在調撥單刷取條碼時，會自動比對品號（條碼前 6 碼）並帶入此處記錄的品名、價格。<br>
+                        🧠 <strong>自動記憶：</strong>在調撥單編輯品名/價格會自動同步到此庫；可直接在這裡預先建立常用商品資料。
+                    </div>
+                    
+                    <!-- 統計卡片 -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:14px;">
+                        <div style="background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:12px; opacity:0.9;">總商品數</div>
+                            <strong id="plTotalCount" style="font-size:24px;">0</strong>
+                        </div>
+                        <div style="background:linear-gradient(135deg,#10b981,#059669); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:12px; opacity:0.9;">免稅商品</div>
+                            <strong id="plTaxFreeCount" style="font-size:24px;">0</strong>
+                        </div>
+                        <div style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:12px; opacity:0.9;">應稅商品</div>
+                            <strong id="plTaxableCount" style="font-size:24px;">0</strong>
+                        </div>
+                        <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:12px; opacity:0.9;">未填品名</div>
+                            <strong id="plEmptyCount" style="font-size:24px;">0</strong>
+                        </div>
+                    </div>
+                    
+                    <!-- 搜尋區 -->
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                        <input type="text" id="plSearchInput" placeholder="🔍 搜尋品號 / 品名" oninput="renderProductLibraryPage()" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #999; border-radius:4px; font-size:13px;">
+                        <select id="plFilterTax" onchange="renderProductLibraryPage()" style="padding:8px; border:1px solid #999; border-radius:4px; font-size:13px;">
+                            <option value="">所有稅別</option>
+                            <option value="免">免稅</option>
+                            <option value="應">應稅</option>
+                        </select>
+                        <select id="plFilterStatus" onchange="renderProductLibraryPage()" style="padding:8px; border:1px solid #999; border-radius:4px; font-size:13px;">
+                            <option value="">所有狀態</option>
+                            <option value="named">已填品名</option>
+                            <option value="empty">未填品名</option>
+                        </select>
+                        <select id="plSortBy" onchange="renderProductLibraryPage()" style="padding:8px; border:1px solid #999; border-radius:4px; font-size:13px;">
+                            <option value="lastUsed">最近使用</option>
+                            <option value="code">品號排序</option>
+                            <option value="name">品名排序</option>
+                            <option value="priceDesc">價格高到低</option>
+                            <option value="priceAsc">價格低到高</option>
+                        </select>
+                    </div>
+                    
+                    <!-- 商品列表 -->
+                    <div style="overflow-x:auto;">
+                        <table class="work-table" style="min-width:780px; font-size:12px;">
+                            <thead>
+                                <tr style="background:#7c3aed; color:white;">
+                                    <th style="width:90px;">品號</th>
+                                    <th>品名</th>
+                                    <th style="width:55px;">PMA</th>
+                                    <th style="width:50px;">稅</th>
+                                    <th style="width:85px;">成本價</th>
+                                    <th style="width:85px;">零售價</th>
+                                    <th style="width:120px;">最近條碼</th>
+                                    <th style="width:80px;">最近使用</th>
+                                    <th style="width:80px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增商品 Modal -->
+    <div id="addProductCodeModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:500px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <strong style="font-size:16px;">➕ 新增商品到庫</strong>
+                <button onclick="closeModal('addProductCodeModal')" style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">✕</button>
+            </div>
+            <div class="alert-box info">
+                💡 預先建立商品資料後，掃描條碼（前 6 碼相符）會自動帶入品名與價格。
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:12px; color:#374151;">品號（6 碼） <span style="color:#dc2626;">*</span></label>
+                    <input type="text" id="apcCode" maxlength="6" placeholder="例：576134" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace;">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:12px; color:#374151;">品名 <span style="color:#dc2626;">*</span></label>
+                    <input type="text" id="apcName" placeholder="例：6mm一般用PLA吸管(200支)" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">PMA</label>
+                    <input type="text" id="apcPma" value="88" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">稅別</label>
+                    <select id="apcTaxFree" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="免">免稅</option>
+                        <option value="應">應稅</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">成本價</label>
+                    <input type="number" step="0.01" id="apcCostPrice" value="0" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">零售價</label>
+                    <input type="number" id="apcRetailPrice" value="0" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+            </div>
+            <div style="margin-top:14px; display:flex; gap:8px; justify-content:flex-end;">
+                <button class="btn-secondary" onclick="closeModal('addProductCodeModal')" style="padding:8px 14px;">取消</button>
+                <button class="btn-confirm" onclick="saveNewProductCode()" style="padding:8px 14px;">💾 新增</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="page-transferOrder" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>📤 51-調撥單</strong></div>
         <div class="main-content">
@@ -1581,6 +1722,7 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                         <label style="font-size:13px;">日期：</label>
                         <input type="date" id="toDate" onchange="loadTransferOrder()" style="padding:5px; border:1px solid #999; border-radius:3px;">
+                        <button class="btn-confirm" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#10b981,#059669);" onclick="createNewTransferOrder()">🆕 創建新調撥單</button>
                         <button class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="saveTransferOrder()">💾 儲存</button>
                         <button class="btn-primary" style="padding:6px 14px; font-size:13px;" onclick="printTransferOrder()">🖨️ 列印</button>
                         <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#a78bfa,#7c3aed);" onclick="openTransferOrderHistory()">📊 歷史概況</button>
@@ -1699,6 +1841,200 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                     </div>
                     
                     <div style="margin-top:10px; font-size:11px; color:#6b7280; text-align:center;">第三聯：調出GDO聯</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 📋 條碼商品庫獨立頁 -->
+    <div id="page-productLibrary" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>📋 條碼商品庫</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <h3>📋 條碼商品庫管理</h3>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <input type="text" id="plSearch" placeholder="🔍 搜尋品號/品名" oninput="renderProductLibraryList()" style="padding:6px 10px; border:1px solid #999; border-radius:4px; width:200px; font-size:13px;">
+                        <button class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="openAddProductModal()">➕ 新增商品</button>
+                        <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#10b981,#059669);" onclick="openBarcodeScannerForLibrary()">📷 掃描新增</button>
+                        <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#f59e0b,#d97706);" onclick="openImageRecognitionModal()">📸 圖片識別入庫</button>
+                        <button class="btn-secondary" style="padding:6px 14px; font-size:13px;" onclick="exportProductLibraryCSV()">💾 匯出 CSV</button>
+                        <button class="btn-secondary" style="padding:6px 14px; font-size:13px;" onclick="importProductLibraryCSV()">📂 匯入 CSV</button>
+                        <input type="file" id="plImportInput" accept=".csv" style="display:none;" onchange="onImportProductCSV(event)">
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <!-- 統計卡片 -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:14px;">
+                        <div style="background:linear-gradient(135deg,#3b82f6,#1e40af); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:11px; opacity:0.9;">📦 商品總數</div>
+                            <div id="plStatTotal" style="font-size:24px; font-weight:bold; margin-top:4px;">0</div>
+                        </div>
+                        <div style="background:linear-gradient(135deg,#10b981,#059669); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:11px; opacity:0.9;">✅ 已命名</div>
+                            <div id="plStatNamed" style="font-size:24px; font-weight:bold; margin-top:4px;">0</div>
+                        </div>
+                        <div style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:11px; opacity:0.9;">⚠️ 待命名</div>
+                            <div id="plStatUnnamed" style="font-size:24px; font-weight:bold; margin-top:4px;">0</div>
+                        </div>
+                        <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:white; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:11px; opacity:0.9;">💰 總零售值</div>
+                            <div id="plStatRetail" style="font-size:18px; font-weight:bold; margin-top:4px;">$0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-box info" style="margin-bottom:12px;">
+                        💡 <strong>條碼解析規則：</strong>條碼前 6 碼 = 品號，最後 1 碼 = 數量。系統會自動記住每個品號的商品資訊，下次掃描時自動帶入。
+                    </div>
+                    
+                    <!-- 商品庫表格 -->
+                    <div style="overflow-x:auto;">
+                        <table class="work-table" style="min-width:760px; font-size:13px;">
+                            <thead>
+                                <tr style="background:#7c3aed; color:white;">
+                                    <th style="width:90px;">品號</th>
+                                    <th>品名</th>
+                                    <th style="width:65px;">PMA</th>
+                                    <th style="width:60px;">稅</th>
+                                    <th style="width:80px;">成本價</th>
+                                    <th style="width:80px;">零售價</th>
+                                    <th style="width:130px;">最近條碼</th>
+                                    <th style="width:90px;">最近使用</th>
+                                    <th style="width:90px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productLibraryListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 📋 新增/編輯商品 Modal -->
+    <div id="productAddModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:520px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <strong style="font-size:16px;" id="paProductModalTitle">➕ 新增商品</strong>
+                <button onclick="closeModal('productAddModal')" style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">✕</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:12px; color:#374151; font-weight:bold;">品號 *（前 6 碼）：</label>
+                    <input type="text" id="paProductCode" maxlength="6" placeholder="例：471003" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:15px;">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:12px; color:#374151; font-weight:bold;">品名 *：</label>
+                    <input type="text" id="paProductName" placeholder="例：6mm一般用PLA吸管(200支)" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">PMA：</label>
+                    <input type="text" id="paPma" value="88" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">稅別：</label>
+                    <select id="paTaxFree" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="免">免</option>
+                        <option value="應">應</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">成本價：</label>
+                    <input type="number" step="0.01" id="paCostPrice" placeholder="0.00" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#374151;">零售價：</label>
+                    <input type="number" id="paRetailPrice" placeholder="0" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:12px; color:#374151;">最近條碼（選填）：</label>
+                    <input type="text" id="paLastBarcode" placeholder="完整條碼" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace;">
+                </div>
+            </div>
+            <div style="margin-top:14px; display:flex; gap:8px; justify-content:flex-end;">
+                <button class="btn-secondary" onclick="closeModal('productAddModal')" style="padding:8px 14px;">取消</button>
+                <button class="btn-confirm" onclick="saveAddProduct()" style="padding:8px 14px;">💾 儲存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 📸 圖片識別入庫 Modal -->
+    <div id="imageRecognitionModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:680px; max-height:95vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <strong style="font-size:16px;">📸 圖片識別入庫</strong>
+                <button onclick="closeImageRecognitionModal()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">✕</button>
+            </div>
+            
+            <div class="alert-box info" style="font-size:12px;">
+                💡 上傳商品照片或標籤，系統會自動辨識：<br>
+                ① <strong>條碼</strong> → 自動填入品號（前 6 碼）<br>
+                ② <strong>OCR 文字</strong> → 嘗試擷取品名、價格<br>
+                辨識後可手動修改，確認後加入商品庫。
+            </div>
+            
+            <!-- 上傳區 -->
+            <div style="background:#fef3c7; padding:14px; border-radius:8px; margin:12px 0; border:1px dashed #d97706;">
+                <div style="font-weight:bold; margin-bottom:8px; color:#78350f;">📁 選擇圖片</div>
+                <input type="file" id="irImageInput" accept="image/*" onchange="onImageRecognitionFileSelected(event)" style="font-size:13px; width:100%;">
+                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn-confirm" id="irProcessBtn" style="padding:8px 16px; display:none;" onclick="processImageForLibrary()">🔍 開始辨識</button>
+                    <span id="irStatus" style="font-size:12px; color:#1e40af; font-weight:bold; padding:6px 0;"></span>
+                </div>
+                <div id="irPreviewWrap" style="margin-top:10px; display:none; text-align:center;">
+                    <img id="irPreview" style="max-width:100%; max-height:240px; border:2px solid #d97706; border-radius:4px;">
+                </div>
+            </div>
+            
+            <!-- OCR 結果 -->
+            <div id="irOcrSection" style="display:none; margin-bottom:12px;">
+                <div style="font-weight:bold; margin-bottom:6px; font-size:13px;">📝 OCR 文字辨識結果（可手動修改）：</div>
+                <textarea id="irOcrText" rows="3" style="width:100%; padding:8px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:11px;"></textarea>
+                <button onclick="reExtractFromOcrText()" style="margin-top:6px; padding:6px 12px; font-size:12px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer;">🔄 重新解析</button>
+            </div>
+            
+            <!-- 識別結果欄位 -->
+            <div id="irFieldsSection" style="display:none;">
+                <div style="font-weight:bold; margin:14px 0 8px 0; font-size:14px; color:#059669;">✏️ 確認資料（請補齊或修正）：</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="grid-column:1/-1;">
+                        <label style="font-size:12px; color:#374151; font-weight:bold;">品號（前 6 碼）：</label>
+                        <input type="text" id="irProductCode" maxlength="6" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:15px;">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <label style="font-size:12px; color:#374151; font-weight:bold;">品名：</label>
+                        <input type="text" id="irProductName" placeholder="若 OCR 未抓到請手動輸入" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#374151;">PMA：</label>
+                        <input type="text" id="irPma" value="88" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#374151;">稅別：</label>
+                        <select id="irTaxFree" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                            <option value="免">免</option>
+                            <option value="應">應</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#374151;">成本價：</label>
+                        <input type="number" step="0.01" id="irCostPrice" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#374151;">零售價：</label>
+                        <input type="number" id="irRetailPrice" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <label style="font-size:12px; color:#374151;">完整條碼（選填）：</label>
+                        <input type="text" id="irFullBarcode" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace;">
+                    </div>
+                </div>
+                
+                <div style="margin-top:14px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="closeImageRecognitionModal()" style="padding:8px 14px;">取消</button>
+                    <button class="btn-primary" onclick="continueImageRecognition()" style="padding:8px 14px;">📸 繼續識別下一張</button>
+                    <button class="btn-confirm" onclick="saveImageRecognitionToLibrary()" style="padding:8px 14px;">💾 加入商品庫</button>
                 </div>
             </div>
         </div>
@@ -3198,13 +3534,13 @@ var ROLE_PERMISSIONS = {
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
                   'scheduleQuery', 'shiftSwap', 'reviewMonth', 'employeeBasic',
                   'leaveAllocation', 'insuranceAdd', 'insuranceRemove', 'insuranceQuery',
-                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder']
+                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary']
     },
     'deputy': {
         // 副店長：協助店長，可使用現金日報、排班、請假、薪資查詢
         allowed: ['workList', 'attendanceAbnormal', 'overtimeApply', 'businessTrip',
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
-                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder']
+                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary']
     },
     'staff': {
         // 一般職員：可看排班作業（唯讀）+ 請假 + 變更密碼 + 我的薪資
@@ -3288,7 +3624,8 @@ var PERMISSION_FEATURES = [
         { id: 'payroll',          name: '💰 薪資管理' },
         { id: 'cashReport',       name: '💵 現金日報' },
         { id: 'purchaseReceipt',  name: '📦 進貨驗收' },
-        { id: 'transferOrder',    name: '🔄 51-調撥單' }
+        { id: 'transferOrder',    name: '🔄 51-調撥單' },
+        { id: 'productLibrary',   name: '📋 條碼商品庫' }
     ]},
     { group: '⚙️ 系統管理', items: [
         { id: 'storeManagement',    name: '🏬 門市管理' },
@@ -3727,6 +4064,8 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'cashReport') initCashReport();
     else if (pageName === 'purchaseReceipt') initPurchaseReceipt();
     else if (pageName === 'transferOrder') initTransferOrder();
+    else if (pageName === 'productLibrary') initProductLibraryPage();
+    else if (pageName === 'productLibrary') initProductLibrary();
     else if (pageName === 'insuranceAdd') { /* 加保表單 */ }
     else if (pageName === 'insuranceRemove') loadInsuranceRemoveOptions();
     else if (pageName === 'insuranceQuery') renderInsuranceQuery();
@@ -5301,11 +5640,126 @@ function saveTransferOrder() {
     };
     
     var all = loadData('transferOrders', {});
+    var isNewRecord = !all[orderNo];
     all[orderNo] = report;
     saveData('transferOrders', all);
     
-    showNotif('💾 已儲存調撥單：' + orderNo);
     logAction('transferOrder', '儲存調撥單：' + orderNo);
+    
+    // 🎉 儲存成功提示 + 詢問是否清空開新單
+    var totalCost = 0;
+    for (var i = 0; i < _toCurrentItems.length; i++) {
+        totalCost += (_toCurrentItems[i].quantity || 0) * (_toCurrentItems[i].costPrice || 0);
+    }
+    
+    var msg = (isNewRecord ? '✅ 已新增調撥單記錄' : '✅ 已更新調撥單') + '\n\n';
+    msg += '📋 單號：' + orderNo + '\n';
+    msg += '📤 調出：' + (outStore.code || '') + ' ' + (outStore.name || '') + '\n';
+    msg += '📥 調入：' + (inStore.code || '') + ' ' + (inStore.name || '') + '\n';
+    msg += '📦 品項數：' + _toCurrentItems.length + '\n';
+    msg += '💰 成本合計：' + totalCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '\n\n';
+    msg += '🆕 要立即建立下一筆新的調撥單嗎？\n（按確定會清空目前資料，準備新單）';
+    
+    if (confirm(msg)) {
+        // 直接清空（不需再次確認，因為已儲存）
+        document.getElementById('toOrderNo').value = '';
+        var today = new Date();
+        document.getElementById('toDate').value = today.getFullYear() + '-' + 
+            String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+            String(today.getDate()).padStart(2, '0');
+        
+        _toCurrentItems = [];
+        renderTransferItems(_toCurrentItems);
+        recalcTransferOrder();
+        updateScanFeedback();
+        
+        document.getElementById('toSig_out_data').value = '';
+        document.getElementById('toSig_out_time').value = '';
+        document.getElementById('toSig_in_data').value = '';
+        document.getElementById('toSig_in_time').value = '';
+        renderTransferSignaturePanel('out');
+        renderTransferSignaturePanel('in');
+        
+        document.getElementById('toInStoreSelect').value = '';
+        document.getElementById('toInStoreInfo').textContent = '-';
+        
+        var manualInp = document.getElementById('manualBarcodeInput');
+        if (manualInp) manualInp.value = '';
+        
+        var orderNoInp = document.getElementById('toOrderNo');
+        if (orderNoInp) orderNoInp.focus();
+        
+        showNotif('🆕 已開新單，可開始輸入');
+    } else {
+        showNotif('💾 已儲存：' + orderNo + '（仍保留在畫面）');
+    }
+}
+
+// 🆕 創建新的調撥單（清空目前畫面，準備輸入下一筆）
+function createNewTransferOrder() {
+    // 判斷目前畫面有沒有未儲存的資料
+    var hasData = (_toCurrentItems && _toCurrentItems.length > 0) ||
+                  (document.getElementById('toOrderNo').value.trim()) ||
+                  (document.getElementById('toSig_out_data').value) ||
+                  (document.getElementById('toSig_in_data').value);
+    
+    if (hasData) {
+        // 檢查是否已儲存
+        var currentOrderNo = document.getElementById('toOrderNo').value.trim();
+        var saved = false;
+        if (currentOrderNo) {
+            var all = loadData('transferOrders', {});
+            saved = !!all[currentOrderNo];
+        }
+        
+        var warningMsg = saved 
+            ? '🆕 確定要清空目前資料，開始新的調撥單？\n\n（目前單號 ' + currentOrderNo + ' 已儲存，可從「📊 歷史概況」找回）'
+            : '⚠️ 目前資料尚未儲存！\n\n清空後將無法復原。確定要清空嗎？\n\n💡 建議：先點「💾 儲存」再開新單。';
+        
+        if (!confirm(warningMsg)) return;
+    }
+    
+    // 清空所有欄位
+    document.getElementById('toOrderNo').value = '';
+    
+    // 日期重設為今天
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('toDate').value = yyyy + '-' + mm + '-' + dd;
+    
+    // 清空調撥明細
+    _toCurrentItems = [];
+    renderTransferItems(_toCurrentItems);
+    recalcTransferOrder();
+    updateScanFeedback();
+    
+    // 清空簽章
+    document.getElementById('toSig_out_data').value = '';
+    document.getElementById('toSig_out_time').value = '';
+    document.getElementById('toSig_in_data').value = '';
+    document.getElementById('toSig_in_time').value = '';
+    renderTransferSignaturePanel('out');
+    renderTransferSignaturePanel('in');
+    
+    // 重置調入店（調出店保留目前門市方便連續開單）
+    document.getElementById('toInStoreSelect').value = '';
+    document.getElementById('toInStoreInfo').textContent = '-';
+    
+    // 清除手動輸入條碼欄
+    var manualInp = document.getElementById('manualBarcodeInput');
+    if (manualInp) manualInp.value = '';
+    
+    // 更新列印日
+    var pd = document.getElementById('toPrintDate');
+    if (pd) pd.textContent = formatDateTime(new Date());
+    
+    // 焦點移到單號欄方便立即輸入
+    var orderNoInp = document.getElementById('toOrderNo');
+    if (orderNoInp) orderNoInp.focus();
+    
+    showNotif('🆕 已清空，可開始輸入新的調撥單');
 }
 
 // 載入
@@ -5533,16 +5987,64 @@ function onBarcodeScanned(barcode) {
         if (navigator.vibrate) navigator.vibrate(100); 
     } catch(e){}
     
-    // 加入清單
+    // 🔑 根據掃描模式分流
+    if (window._scanMode === 'library') {
+        // 商品庫新增模式
+        handleLibraryScan(barcode);
+        return;
+    }
+    
+    // 預設：調撥單模式
     addTransferItemFromBarcode(barcode);
     
     // 更新 UI
-    var product = (loadData('barcodeProducts', {})[barcode]) || {};
-    var info = product.productName ? ('（' + product.productName + '）') : '（新條碼）';
+    var productCode = barcode.length >= 6 ? barcode.substring(0, 6) : barcode;
+    var product = (loadData('productCodes', {})[productCode]) || {};
+    var info = product.productName ? ('（' + product.productName + '）') : '（新品號）';
     document.getElementById('scanResult').innerHTML = 
         '<span style="color:#059669; font-weight:bold;">✅ 掃描成功：' + barcode + ' ' + info + '</span><br>' +
         '<span style="font-size:11px; color:#6b7280;">繼續對準下個條碼...</span>';
     updateScanFeedback();
+}
+
+// 商品庫掃描處理
+function handleLibraryScan(barcode) {
+    if (barcode.length < 6) {
+        document.getElementById('scanResult').innerHTML = 
+            '<span style="color:#dc2626;">⚠️ 條碼太短（需至少 6 碼）</span>';
+        return;
+    }
+    
+    var productCode = barcode.substring(0, 6);
+    var products = loadData('productCodes', {});
+    var existing = products[productCode];
+    
+    // 關閉掃描，開啟編輯/新增 Modal
+    closeBarcodeScanner();
+    window._scanMode = null;
+    
+    setTimeout(function() {
+        if (existing) {
+            // 已存在 → 編輯
+            editProductInLibrary(productCode);
+            showNotif('📋 品號 ' + productCode + ' 已存在，可編輯資料');
+        } else {
+            // 新增
+            _editingPLCode = null;
+            document.getElementById('paProductModalTitle').textContent = '➕ 新增商品（來自掃描）';
+            document.getElementById('paProductCode').value = productCode;
+            document.getElementById('paProductCode').disabled = false;
+            document.getElementById('paProductName').value = '';
+            document.getElementById('paPma').value = '88';
+            document.getElementById('paTaxFree').value = '免';
+            document.getElementById('paCostPrice').value = '';
+            document.getElementById('paRetailPrice').value = '';
+            document.getElementById('paLastBarcode').value = barcode;
+            document.getElementById('productAddModal').classList.remove('hidden');
+            setTimeout(function() { document.getElementById('paProductName').focus(); }, 100);
+            showNotif('📷 已掃描品號 ' + productCode + '，請填入商品資訊');
+        }
+    }, 300);
 }
 
 // 嗶聲（Web Audio API）
@@ -5669,6 +6171,234 @@ var _editingProductCode = null;
 function openProductCodesLibrary() {
     document.getElementById('productCodesLibraryModal').classList.remove('hidden');
     renderProductCodesLibrary();
+}
+
+// ============= 📋 條碼商品庫獨立頁 =============
+function initProductLibrary() {
+    renderProductLibraryPage();
+}
+
+function renderProductLibraryPage() {
+    var tbody = document.getElementById('plListBody');
+    if (!tbody) return;
+    
+    var products = loadData('productCodes', {});
+    var allCodes = Object.keys(products);
+    
+    // 統計
+    var taxFreeCount = 0, taxableCount = 0, emptyCount = 0;
+    for (var i = 0; i < allCodes.length; i++) {
+        var p = products[allCodes[i]];
+        if (p.taxFree === '免') taxFreeCount++;
+        else if (p.taxFree === '應') taxableCount++;
+        if (!p.productName || p.productName === '') emptyCount++;
+    }
+    var stats = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+    stats('plTotalCount', allCodes.length);
+    stats('plTaxFreeCount', taxFreeCount);
+    stats('plTaxableCount', taxableCount);
+    stats('plEmptyCount', emptyCount);
+    
+    // 篩選
+    var keyword = (document.getElementById('plSearchInput') || {value:''}).value.toLowerCase();
+    var filterTax = (document.getElementById('plFilterTax') || {value:''}).value;
+    var filterStatus = (document.getElementById('plFilterStatus') || {value:''}).value;
+    var sortBy = (document.getElementById('plSortBy') || {value:'lastUsed'}).value;
+    
+    var codes = allCodes.filter(function(c) {
+        var p = products[c];
+        if (keyword) {
+            var match = c.toLowerCase().includes(keyword) || 
+                       (p.productName || '').toLowerCase().includes(keyword);
+            if (!match) return false;
+        }
+        if (filterTax && p.taxFree !== filterTax) return false;
+        if (filterStatus === 'named' && (!p.productName || p.productName === '')) return false;
+        if (filterStatus === 'empty' && p.productName && p.productName !== '') return false;
+        return true;
+    });
+    
+    // 排序
+    codes.sort(function(a, b) {
+        var pa = products[a], pb = products[b];
+        switch(sortBy) {
+            case 'code': return a.localeCompare(b);
+            case 'name': return (pa.productName || '').localeCompare(pb.productName || '');
+            case 'priceDesc': return (parseFloat(pb.costPrice) || 0) - (parseFloat(pa.costPrice) || 0);
+            case 'priceAsc': return (parseFloat(pa.costPrice) || 0) - (parseFloat(pb.costPrice) || 0);
+            case 'lastUsed':
+            default:
+                return (pb.lastUsed || '').localeCompare(pa.lastUsed || '');
+        }
+    });
+    
+    if (codes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px; color:#9ca3af;">📭 條碼商品庫為空。<br><br>點上方「➕ 新增商品」手動加入，或進「🔄 51-調撥單」掃描條碼自動建立。</td></tr>';
+        return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < codes.length; i++) {
+        var code = codes[i];
+        var p = products[code];
+        var lastUsed = p.lastUsed ? new Date(p.lastUsed) : null;
+        var lastUsedStr = lastUsed ? (lastUsed.getMonth()+1) + '/' + lastUsed.getDate() + ' ' + 
+                          String(lastUsed.getHours()).padStart(2,'0') + ':' + 
+                          String(lastUsed.getMinutes()).padStart(2,'0') : '-';
+        
+        var taxBadge = p.taxFree === '應' 
+            ? '<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:3px;font-size:11px;">應</span>'
+            : '<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:3px;font-size:11px;">免</span>';
+        
+        var nameDisplay = p.productName 
+            ? '<strong>' + p.productName + '</strong>'
+            : '<span style="color:#dc2626;">⚠️ 未填品名</span>';
+        
+        html += '<tr>';
+        html += '<td style="font-family:monospace; font-weight:bold; background:#f3f4f6;">' + code + '</td>';
+        html += '<td>' + nameDisplay + '</td>';
+        html += '<td style="text-align:center;">' + (p.pma || '88') + '</td>';
+        html += '<td style="text-align:center;">' + taxBadge + '</td>';
+        html += '<td style="text-align:right;">' + (parseFloat(p.costPrice) || 0).toFixed(2) + '</td>';
+        html += '<td style="text-align:right;">' + (parseFloat(p.retailPrice) || 0).toLocaleString() + '</td>';
+        html += '<td style="font-family:monospace; font-size:10px; color:#6b7280;">' + (p.lastBarcode || '-') + '</td>';
+        html += '<td style="text-align:center; font-size:11px; color:#6b7280;">' + lastUsedStr + '</td>';
+        html += '<td>';
+        html += '<button class="btn-edit" style="padding:4px 8px; font-size:11px;" onclick="editProductCode(\'' + code + '\')">✏️</button> ';
+        html += '<button class="btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteProductCode(\'' + code + '\')">🗑️</button>';
+        html += '</td>';
+        html += '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+// 重新指向獨立頁的渲染（保持相容）
+var _origRenderProductCodesLibrary = renderProductCodesLibrary;
+renderProductCodesLibrary = function() {
+    _origRenderProductCodesLibrary();
+    renderProductLibraryPage();
+};
+
+// 新增商品 Modal
+function openAddProductCodeModal() {
+    document.getElementById('apcCode').value = '';
+    document.getElementById('apcName').value = '';
+    document.getElementById('apcPma').value = '88';
+    document.getElementById('apcTaxFree').value = '免';
+    document.getElementById('apcCostPrice').value = 0;
+    document.getElementById('apcRetailPrice').value = 0;
+    document.getElementById('addProductCodeModal').classList.remove('hidden');
+    setTimeout(function() {
+        var el = document.getElementById('apcCode');
+        if (el) el.focus();
+    }, 100);
+}
+
+function saveNewProductCode() {
+    var code = document.getElementById('apcCode').value.trim();
+    var name = document.getElementById('apcName').value.trim();
+    
+    if (!code) return alert('⚠️ 請輸入品號');
+    if (code.length !== 6) return alert('⚠️ 品號需為 6 碼');
+    if (!name) return alert('⚠️ 請輸入品名');
+    
+    var products = loadData('productCodes', {});
+    
+    if (products[code]) {
+        if (!confirm('品號 ' + code + ' 已存在於商品庫，現有品名「' + (products[code].productName || '未填') + '」。\n\n要覆蓋嗎？')) {
+            return;
+        }
+    }
+    
+    products[code] = {
+        productCode: code,
+        productName: name,
+        pma: document.getElementById('apcPma').value.trim() || '88',
+        taxFree: document.getElementById('apcTaxFree').value,
+        costPrice: parseFloat(document.getElementById('apcCostPrice').value) || 0,
+        retailPrice: parseFloat(document.getElementById('apcRetailPrice').value) || 0,
+        lastBarcode: '',
+        lastUsed: new Date().toISOString()
+    };
+    
+    saveData('productCodes', products);
+    closeModal('addProductCodeModal');
+    renderProductLibraryPage();
+    showNotif('✅ 已新增 ' + code + ' ' + name);
+    logAction('productLibrary', '新增商品 ' + code);
+}
+
+// 匯入 CSV
+function importProductCodes(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var text = e.target.result;
+        // 去除 BOM
+        if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+        
+        var lines = text.split(/\r?\n/);
+        if (lines.length < 2) return alert('⚠️ CSV 檔案內容不足');
+        
+        var products = loadData('productCodes', {});
+        var imported = 0, updated = 0, skipped = 0;
+        
+        // 第一行是標頭，從第二行開始
+        for (var i = 1; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+            
+            var cols = line.split(',');
+            if (cols.length < 2) { skipped++; continue; }
+            
+            var code = cols[0].trim();
+            if (code.length !== 6) { skipped++; continue; }
+            
+            var exists = !!products[code];
+            products[code] = {
+                productCode: code,
+                productName: (cols[1] || '').trim().replace(/，/g, ','),
+                pma: (cols[2] || '88').trim(),
+                taxFree: (cols[3] || '免').trim(),
+                costPrice: parseFloat(cols[4]) || 0,
+                retailPrice: parseFloat(cols[5]) || 0,
+                lastBarcode: (cols[6] || '').trim(),
+                lastUsed: (cols[7] || new Date().toISOString()).trim()
+            };
+            
+            if (exists) updated++; else imported++;
+        }
+        
+        saveData('productCodes', products);
+        renderProductLibraryPage();
+        
+        alert('✅ 匯入完成！\n\n新增：' + imported + ' 筆\n更新：' + updated + ' 筆\n跳過：' + skipped + ' 筆');
+        logAction('productLibrary', '匯入 CSV：' + (imported + updated) + ' 筆');
+        
+        // 清空 file input
+        event.target.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+// 清空全部
+function clearAllProductCodes() {
+    var products = loadData('productCodes', {});
+    var count = Object.keys(products).length;
+    if (count === 0) return alert('商品庫已經是空的');
+    
+    if (!confirm('🚨 確定要清空全部 ' + count + ' 筆商品資料？\n\n此操作無法復原！\n\n建議先點「💾 匯出 CSV」備份。')) return;
+    
+    // 第二次確認
+    var input = prompt('請輸入「CLEAR」確認清空：');
+    if (input !== 'CLEAR') return alert('已取消');
+    
+    saveData('productCodes', {});
+    renderProductLibraryPage();
+    showNotif('🗑️ 已清空條碼商品庫');
+    logAction('productLibrary', '清空全部 ' + count + ' 筆');
 }
 
 function renderProductCodesLibrary() {
@@ -5809,6 +6539,650 @@ function exportProductCodes() {
     setTimeout(function() { URL.revokeObjectURL(url); }, 100);
     
     showNotif('💾 已匯出 ' + codes.length + ' 個品號');
+}
+
+// ============= 📋 條碼商品庫獨立頁 =============
+function initProductLibraryPage() {
+    renderProductLibraryList();
+}
+
+function renderProductLibraryList() {
+    var tbody = document.getElementById('productLibraryListBody');
+    if (!tbody) return;
+    
+    var products = loadData('productCodes', {});
+    var codes = Object.keys(products);
+    var keyword = (document.getElementById('plSearch') || {value:''}).value.toLowerCase();
+    
+    // 統計
+    var total = codes.length;
+    var named = 0, unnamed = 0;
+    var totalRetail = 0;
+    for (var k = 0; k < codes.length; k++) {
+        var pp = products[codes[k]];
+        if (pp.productName) named++; else unnamed++;
+        totalRetail += parseFloat(pp.retailPrice) || 0;
+    }
+    if (document.getElementById('plStatTotal')) document.getElementById('plStatTotal').textContent = total;
+    if (document.getElementById('plStatNamed')) document.getElementById('plStatNamed').textContent = named;
+    if (document.getElementById('plStatUnnamed')) document.getElementById('plStatUnnamed').textContent = unnamed;
+    if (document.getElementById('plStatRetail')) document.getElementById('plStatRetail').textContent = '$' + totalRetail.toLocaleString();
+    
+    // 排序：最近使用優先
+    codes.sort(function(a, b) {
+        var ta = products[a].lastUsed || '';
+        var tb = products[b].lastUsed || '';
+        return tb.localeCompare(ta);
+    });
+    
+    // 篩選
+    if (keyword) {
+        codes = codes.filter(function(c) {
+            var p = products[c];
+            return c.toLowerCase().includes(keyword) || 
+                   (p.productName || '').toLowerCase().includes(keyword) ||
+                   (p.lastBarcode || '').toLowerCase().includes(keyword);
+        });
+    }
+    
+    if (codes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px; color:#9ca3af;">' +
+                          '📭 條碼商品庫為空<br><br>' +
+                          '<button class="btn-confirm" onclick="openAddProductModal()" style="padding:8px 16px;">➕ 新增第一個商品</button> ' +
+                          '<button class="btn-primary" onclick="openBarcodeScannerForLibrary()" style="padding:8px 16px; background:#10b981;">📷 掃描新增</button>' +
+                          '</td></tr>';
+        return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < codes.length; i++) {
+        var code = codes[i];
+        var p = products[code];
+        var lastUsed = p.lastUsed ? new Date(p.lastUsed) : null;
+        var lastUsedStr = lastUsed ? (lastUsed.getFullYear()+'/'+(lastUsed.getMonth()+1)+'/'+lastUsed.getDate()) : '-';
+        
+        var nameDisplay = p.productName 
+            ? '<strong>' + p.productName + '</strong>' 
+            : '<span style="color:#dc2626; font-weight:bold;">⚠️ 未命名（請編輯）</span>';
+        
+        html += '<tr>';
+        html += '<td style="font-family:monospace; font-weight:bold; background:#f3f4f6;">' + code + '</td>';
+        html += '<td>' + nameDisplay + '</td>';
+        html += '<td style="text-align:center;">' + (p.pma || '88') + '</td>';
+        html += '<td style="text-align:center;">' + (p.taxFree || '免') + '</td>';
+        html += '<td style="text-align:right;">' + (parseFloat(p.costPrice) || 0).toFixed(2) + '</td>';
+        html += '<td style="text-align:right;">' + (parseFloat(p.retailPrice) || 0).toLocaleString() + '</td>';
+        html += '<td style="font-family:monospace; font-size:11px; color:#6b7280;">' + (p.lastBarcode || '-') + '</td>';
+        html += '<td style="text-align:center; font-size:11px; color:#6b7280;">' + lastUsedStr + '</td>';
+        html += '<td>';
+        html += '<button class="btn-edit" style="padding:4px 8px; font-size:11px;" onclick="editProductInLibrary(\'' + code + '\')">✏️</button> ';
+        html += '<button class="btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteProductInLibrary(\'' + code + '\')">🗑️</button>';
+        html += '</td>';
+        html += '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+// 新增商品
+var _editingPLCode = null; // null=新增, 否則=編輯
+
+function openAddProductModal() {
+    _editingPLCode = null;
+    document.getElementById('paProductModalTitle').textContent = '➕ 新增商品';
+    document.getElementById('paProductCode').value = '';
+    document.getElementById('paProductCode').disabled = false;
+    document.getElementById('paProductName').value = '';
+    document.getElementById('paPma').value = '88';
+    document.getElementById('paTaxFree').value = '免';
+    document.getElementById('paCostPrice').value = '';
+    document.getElementById('paRetailPrice').value = '';
+    document.getElementById('paLastBarcode').value = '';
+    document.getElementById('productAddModal').classList.remove('hidden');
+    setTimeout(function() { document.getElementById('paProductCode').focus(); }, 100);
+}
+
+function editProductInLibrary(code) {
+    var products = loadData('productCodes', {});
+    var p = products[code];
+    if (!p) return alert('找不到品號 ' + code);
+    
+    _editingPLCode = code;
+    document.getElementById('paProductModalTitle').textContent = '✏️ 編輯商品 - ' + code;
+    document.getElementById('paProductCode').value = code;
+    document.getElementById('paProductCode').disabled = true; // 編輯時不可改品號
+    document.getElementById('paProductName').value = p.productName || '';
+    document.getElementById('paPma').value = p.pma || '88';
+    document.getElementById('paTaxFree').value = p.taxFree || '免';
+    document.getElementById('paCostPrice').value = p.costPrice || '';
+    document.getElementById('paRetailPrice').value = p.retailPrice || '';
+    document.getElementById('paLastBarcode').value = p.lastBarcode || '';
+    document.getElementById('productAddModal').classList.remove('hidden');
+}
+
+function saveAddProduct() {
+    var code = document.getElementById('paProductCode').value.trim();
+    var name = document.getElementById('paProductName').value.trim();
+    
+    if (!code) return alert('⚠️ 請輸入品號');
+    if (code.length !== 6) return alert('⚠️ 品號必須為 6 碼');
+    if (!name) return alert('⚠️ 請輸入品名');
+    
+    var products = loadData('productCodes', {});
+    
+    // 新增時檢查重複
+    if (_editingPLCode === null && products[code]) {
+        if (!confirm('⚠️ 品號 ' + code + ' 已存在！\n\n是否覆蓋現有資料？')) return;
+    }
+    
+    products[code] = {
+        productCode: code,
+        productName: name,
+        pma: document.getElementById('paPma').value.trim() || '88',
+        taxFree: document.getElementById('paTaxFree').value,
+        costPrice: parseFloat(document.getElementById('paCostPrice').value) || 0,
+        retailPrice: parseFloat(document.getElementById('paRetailPrice').value) || 0,
+        lastBarcode: document.getElementById('paLastBarcode').value.trim(),
+        lastUsed: new Date().toISOString()
+    };
+    
+    saveData('productCodes', products);
+    
+    closeModal('productAddModal');
+    renderProductLibraryList();
+    showNotif(_editingPLCode ? '✏️ 已更新品號 ' + code : '➕ 已新增品號 ' + code);
+    logAction('productLibrary', (_editingPLCode ? '更新' : '新增') + '商品：' + code + ' ' + name);
+    _editingPLCode = null;
+}
+
+function deleteProductInLibrary(code) {
+    var products = loadData('productCodes', {});
+    var p = products[code];
+    if (!p) return;
+    var name = p.productName || '（未命名）';
+    
+    showConfirmDelete('刪除此商品？', 
+        '<strong>品號：' + code + '</strong><br>品名：' + name + '<br><br>此操作無法復原！', 
+        function() {
+            var pp = loadData('productCodes', {});
+            delete pp[code];
+            saveData('productCodes', pp);
+            renderProductLibraryList();
+            showNotif('🗑️ 已刪除品號 ' + code);
+            logAction('productLibrary', '刪除商品：' + code);
+        });
+}
+
+// 📷 掃描新增商品
+function openBarcodeScannerForLibrary() {
+    if (typeof Html5Qrcode === 'undefined') {
+        return alert('⚠️ 條碼掃描函式庫尚未載入');
+    }
+    
+    // 開啟相同的掃描 Modal，但設定模式
+    window._scanMode = 'library'; // 標記掃描模式
+    openBarcodeScanner();
+}
+
+// 匯出 CSV
+function exportProductLibraryCSV() {
+    var products = loadData('productCodes', {});
+    var codes = Object.keys(products);
+    if (codes.length === 0) return alert('條碼商品庫為空');
+    
+    var csv = '品號,品名,PMA,稅,成本價,零售價,最近條碼,最近使用\n';
+    for (var i = 0; i < codes.length; i++) {
+        var c = codes[i];
+        var p = products[c];
+        var row = [
+            c,
+            (p.productName || '').replace(/,/g, '，').replace(/\n/g,' '),
+            p.pma || '',
+            p.taxFree || '',
+            p.costPrice || 0,
+            p.retailPrice || 0,
+            p.lastBarcode || '',
+            p.lastUsed || ''
+        ].join(',');
+        csv += row + '\n';
+    }
+    
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '條碼商品庫_' + new Date().toISOString().substring(0,10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+    
+    showNotif('💾 已匯出 ' + codes.length + ' 個品號到 CSV');
+}
+
+// 匯入 CSV
+function importProductLibraryCSV() {
+    document.getElementById('plImportInput').click();
+}
+
+function onImportProductCSV(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        var text = ev.target.result;
+        // 移除 BOM
+        if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+        
+        var lines = text.split(/\r?\n/);
+        if (lines.length < 2) return alert('⚠️ CSV 檔案內容不足');
+        
+        // 跳過標題列
+        var products = loadData('productCodes', {});
+        var added = 0, updated = 0, skipped = 0;
+        
+        for (var i = 1; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+            
+            var cols = line.split(',');
+            if (cols.length < 2) { skipped++; continue; }
+            
+            var code = cols[0].trim();
+            if (!code || code.length !== 6) { skipped++; continue; }
+            
+            var isNew = !products[code];
+            products[code] = {
+                productCode: code,
+                productName: (cols[1] || '').replace(/，/g, ',').trim(),
+                pma: (cols[2] || '88').trim(),
+                taxFree: (cols[3] || '免').trim(),
+                costPrice: parseFloat(cols[4]) || 0,
+                retailPrice: parseFloat(cols[5]) || 0,
+                lastBarcode: (cols[6] || '').trim(),
+                lastUsed: (cols[7] || new Date().toISOString()).trim()
+            };
+            
+            if (isNew) added++; else updated++;
+        }
+        
+        saveData('productCodes', products);
+        renderProductLibraryList();
+        
+        alert('✅ CSV 匯入完成！\n\n➕ 新增：' + added + ' 筆\n✏️ 更新：' + updated + ' 筆\n⏭️ 略過：' + skipped + ' 筆');
+        logAction('productLibrary', 'CSV 匯入：新增 ' + added + '、更新 ' + updated);
+        
+        // 重置 input 以便再次匯入相同檔案
+        e.target.value = '';
+    };
+    reader.readAsText(file, 'utf-8');
+}
+
+// ============= 📸 圖片識別入庫 =============
+var _irCurrentImageData = null;
+
+function openImageRecognitionModal() {
+    document.getElementById('imageRecognitionModal').classList.remove('hidden');
+    resetImageRecognitionForm();
+}
+
+function resetImageRecognitionForm() {
+    document.getElementById('irImageInput').value = '';
+    document.getElementById('irProcessBtn').style.display = 'none';
+    document.getElementById('irPreviewWrap').style.display = 'none';
+    document.getElementById('irOcrSection').style.display = 'none';
+    document.getElementById('irFieldsSection').style.display = 'none';
+    document.getElementById('irStatus').textContent = '';
+    document.getElementById('irOcrText').value = '';
+    document.getElementById('irProductCode').value = '';
+    document.getElementById('irProductName').value = '';
+    document.getElementById('irPma').value = '88';
+    document.getElementById('irTaxFree').value = '免';
+    document.getElementById('irCostPrice').value = '';
+    document.getElementById('irRetailPrice').value = '';
+    document.getElementById('irFullBarcode').value = '';
+    _irCurrentImageData = null;
+}
+
+function closeImageRecognitionModal() {
+    document.getElementById('imageRecognitionModal').classList.add('hidden');
+    _irCurrentImageData = null;
+}
+
+function continueImageRecognition() {
+    // 保留欄位但重置選圖（讓使用者能連續處理多張圖）
+    resetImageRecognitionForm();
+    showNotif('📸 請選擇下一張圖片');
+}
+
+function onImageRecognitionFileSelected(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    
+    _irCurrentImageData = file;
+    
+    // 預覽
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        document.getElementById('irPreview').src = ev.target.result;
+        document.getElementById('irPreviewWrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    
+    document.getElementById('irProcessBtn').style.display = 'inline-block';
+    document.getElementById('irStatus').textContent = '✅ 圖片已選擇，點「🔍 開始辨識」';
+}
+
+// 主要辨識流程
+function processImageForLibrary() {
+    if (!_irCurrentImageData) return alert('⚠️ 請先選擇圖片');
+    
+    var statusEl = document.getElementById('irStatus');
+    statusEl.textContent = '⏳ 處理中...';
+    
+    // 雙管齊下：條碼掃描 + OCR
+    var scanResult = { barcode: '', ocrText: '' };
+    
+    // STEP 1: 嘗試從圖片掃條碼
+    tryScanBarcodeFromImage(_irCurrentImageData).then(function(barcode) {
+        scanResult.barcode = barcode || '';
+        if (barcode) {
+            statusEl.textContent = '✅ 條碼辨識成功：' + barcode + '，繼續 OCR...';
+        } else {
+            statusEl.textContent = '⚠️ 未偵測到條碼，改用 OCR 辨識...';
+        }
+        // STEP 2: OCR 辨識文字
+        return tryOcrFromImage(_irCurrentImageData, function(prog) {
+            statusEl.textContent = '🔍 OCR 辨識中 ' + Math.round(prog * 100) + '%' + 
+                (barcode ? '（條碼：' + barcode + '）' : '');
+        });
+    }).then(function(ocrText) {
+        scanResult.ocrText = ocrText || '';
+        statusEl.textContent = '✅ 辨識完成！請確認下方資料';
+        
+        // 顯示 OCR 結果
+        document.getElementById('irOcrText').value = scanResult.ocrText;
+        document.getElementById('irOcrSection').style.display = 'block';
+        document.getElementById('irFieldsSection').style.display = 'block';
+        
+        // 套用結果到欄位
+        applyRecognitionResults(scanResult.barcode, scanResult.ocrText);
+    }).catch(function(err) {
+        statusEl.textContent = '❌ 辨識失敗：' + err;
+        console.error(err);
+    });
+}
+
+// 從圖片掃條碼（使用 html5-qrcode 的 scanFile）
+// 🔑 強化版：先嘗試原圖，失敗再嘗試預處理後的圖
+function tryScanBarcodeFromImage(file) {
+    return new Promise(function(resolve) {
+        if (typeof Html5Qrcode === 'undefined') {
+            resolve('');
+            return;
+        }
+        try {
+            // 使用獨立的 reader 容器（畫面外）
+            var tempDiv = document.getElementById('irHiddenScanner');
+            if (!tempDiv) {
+                tempDiv = document.createElement('div');
+                tempDiv.id = 'irHiddenScanner';
+                tempDiv.style.cssText = 'position:fixed; left:-9999px; top:0; width:1px; height:1px;';
+                document.body.appendChild(tempDiv);
+            }
+            
+            // 第一次嘗試：原圖
+            var scanner1 = new Html5Qrcode('irHiddenScanner');
+            scanner1.scanFile(file, false).then(function(decodedText) {
+                resolve(decodedText);
+            }).catch(function() {
+                // 失敗：嘗試預處理後的圖（barcode 模式 = 強對比）
+                preprocessImageForOCR(file, 'barcode').then(function(processedBlob) {
+                    var scanner2 = new Html5Qrcode('irHiddenScanner');
+                    var processedFile = new File([processedBlob], 'processed.png', { type: 'image/png' });
+                    scanner2.scanFile(processedFile, false).then(function(decoded2) {
+                        resolve(decoded2);
+                    }).catch(function() {
+                        resolve(''); // 兩次都失敗
+                    });
+                }).catch(function() {
+                    resolve('');
+                });
+            });
+        } catch(e) {
+            resolve('');
+        }
+    });
+}
+
+// 從圖片 OCR（商品標籤模式 - 用 label 預處理）
+function tryOcrFromImage(file, onProgress) {
+    return new Promise(function(resolve, reject) {
+        if (typeof Tesseract === 'undefined') {
+            reject('OCR 引擎未載入');
+            return;
+        }
+        
+        // 🔑 先用 label 模式預處理（保留灰階層次，適合商品標籤）
+        preprocessImageForOCR(file, 'label').then(function(processedBlob) {
+            return Tesseract.recognize(processedBlob, 'chi_tra+eng', {
+                // 🔑 PSM 4 = 假設文字為單欄變動大小（適合產品標籤）
+                tessedit_pageseg_mode: '4',
+                tessedit_ocr_engine_mode: '1',
+                preserve_interword_spaces: '1',
+                logger: function(m) {
+                    if (m.status === 'recognizing text' && onProgress) {
+                        onProgress(m.progress);
+                    }
+                }
+            });
+        }).then(function(result) {
+            resolve(result.data.text);
+        }).catch(function(err) {
+            reject(err.message || err);
+        });
+    });
+}
+
+// 套用辨識結果
+function applyRecognitionResults(barcode, ocrText) {
+    // 1. 處理條碼 → 品號（前 6 碼）
+    if (barcode && barcode.length >= 6) {
+        document.getElementById('irProductCode').value = barcode.substring(0, 6);
+        document.getElementById('irFullBarcode').value = barcode;
+    }
+    
+    // 2. 解析 OCR 文字
+    extractFieldsFromOcrText(ocrText);
+    
+    // 3. 若品號為空但 OCR 有抓到 6 位數字 → 用 OCR 的
+    if (!document.getElementById('irProductCode').value && ocrText) {
+        var codeMatch = ocrText.match(/\b(\d{6})\b/);
+        if (codeMatch) {
+            document.getElementById('irProductCode').value = codeMatch[1];
+        }
+    }
+    
+    // 4. 若品號已存在於商品庫 → 預載已知資料
+    var pc = document.getElementById('irProductCode').value;
+    if (pc) {
+        var existing = (loadData('productCodes', {}))[pc];
+        if (existing) {
+            if (!document.getElementById('irProductName').value) {
+                document.getElementById('irProductName').value = existing.productName || '';
+            }
+            if (!document.getElementById('irCostPrice').value) {
+                document.getElementById('irCostPrice').value = existing.costPrice || '';
+            }
+            if (!document.getElementById('irRetailPrice').value) {
+                document.getElementById('irRetailPrice').value = existing.retailPrice || '';
+            }
+            document.getElementById('irStatus').innerHTML = 
+                '<span style="color:#7c3aed; font-weight:bold;">📋 商品庫已有此品號，可直接更新或修改</span>';
+        }
+    }
+}
+
+// 從 OCR 文字解析欄位（強化版）
+function extractFieldsFromOcrText(text) {
+    if (!text) return;
+    
+    // 清理文字：移除多餘空白
+    var cleaned = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n');
+    var lines = cleaned.split(/\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+    
+    // ===== 擷取所有可能的價格 =====
+    // 標記為「明確價格」（有 $ 符號或 NT$）
+    var explicitPrices = [];
+    // 標記為「可能價格」（單獨數字）
+    var candidatePrices = [];
+    
+    var explicitRegex = /(?:NT\$|NT|\$|＄)\s*(\d{1,4}(?:\.\d{1,2})?)/gi;
+    var m;
+    while ((m = explicitRegex.exec(cleaned)) !== null) {
+        var n = parseFloat(m[1]);
+        if (!isNaN(n) && n >= 1 && n <= 9999) {
+            explicitPrices.push(n);
+        }
+    }
+    
+    // 從每行擷取數字
+    for (var li = 0; li < lines.length; li++) {
+        var line = lines[li];
+        // 找該行的數字
+        var nums = line.match(/\d{1,4}(?:\.\d{1,2})?/g);
+        if (!nums) continue;
+        
+        for (var ni = 0; ni < nums.length; ni++) {
+            var nn = parseFloat(nums[ni]);
+            // 過濾：價格通常 5-9999
+            if (!isNaN(nn) && nn >= 5 && nn <= 9999 && nums[ni].length <= 6) {
+                // 避免抓到品號（6 位整數，無小數點）
+                if (nn >= 100000 && nums[ni].indexOf('.') === -1) continue;
+                candidatePrices.push(nn);
+            }
+        }
+    }
+    
+    // 優先使用明確標示的價格，否則用候選價格
+    var prices = explicitPrices.length > 0 ? explicitPrices : candidatePrices;
+    prices.sort(function(a, b) { return b - a; });
+    
+    // 自動分配：最大→零售，次大→成本
+    if (!document.getElementById('irRetailPrice').value && prices.length > 0) {
+        document.getElementById('irRetailPrice').value = prices[0];
+    }
+    if (!document.getElementById('irCostPrice').value && prices.length > 1) {
+        document.getElementById('irCostPrice').value = prices[1];
+    }
+    
+    // ===== 擷取品名 =====
+    if (!document.getElementById('irProductName').value) {
+        var bestName = '';
+        var bestScore = 0;
+        
+        for (var lj = 0; lj < lines.length; lj++) {
+            var l = lines[lj];
+            // 評分制：選最像品名的那行
+            var score = 0;
+            
+            // 含中文字：加分
+            var chineseChars = (l.match(/[\u4e00-\u9fa5]/g) || []).length;
+            score += chineseChars * 2;
+            
+            // 含括號（規格說明）：加分
+            if (/[（(].*[)）]/.test(l)) score += 5;
+            
+            // 含尺寸單位（ml, g, kg, mm, 支, 個）：加分
+            if (/\d+\s*(?:ml|g|kg|mm|cm|公分|公克|毫升|支|個|包|盒|瓶|罐|入)/.test(l)) score += 10;
+            
+            // 長度合理：加分
+            if (l.length >= 3 && l.length <= 30) score += 3;
+            
+            // 全數字：扣分
+            if (/^[\d\.,\s]+$/.test(l)) score -= 100;
+            
+            // 含 "$" "NT" 等價格符號：扣分
+            if (/\$|NT|＄/.test(l)) score -= 5;
+            
+            // 含「品名」「商品名」標籤詞：大幅加分
+            if (/品名|商品|名稱/.test(l)) score += 20;
+            
+            // 含「店號」「日期」等表頭詞：扣分
+            if (/店號|店名|日期|列印|時間|單號|頁/.test(l)) score -= 20;
+            
+            if (score > bestScore && chineseChars >= 2) {
+                bestScore = score;
+                bestName = l;
+            }
+        }
+        
+        if (bestName) {
+            // 清理品名（移除價格、店號等雜訊）
+            bestName = bestName.replace(/(?:NT\$|\$)?\s*\d{2,4}(?:\.\d{1,2})?/g, '')
+                               .replace(/品名[:：]?/, '')
+                               .replace(/商品[:：]?/, '')
+                               .trim();
+            document.getElementById('irProductName').value = bestName;
+        }
+    }
+    
+    // ===== 偵測稅別 =====
+    if (/免稅|不含稅|外加稅/.test(text)) {
+        document.getElementById('irTaxFree').value = '免';
+    } else if (/應稅|內含稅|含稅/.test(text)) {
+        document.getElementById('irTaxFree').value = '應';
+    }
+}
+
+// 重新從 OCR 文字解析（使用者修改後）
+function reExtractFromOcrText() {
+    var text = document.getElementById('irOcrText').value;
+    if (!text) return alert('⚠️ 沒有 OCR 文字');
+    
+    // 清空後重抓
+    document.getElementById('irProductName').value = '';
+    document.getElementById('irCostPrice').value = '';
+    document.getElementById('irRetailPrice').value = '';
+    extractFieldsFromOcrText(text);
+    showNotif('🔄 已重新解析 OCR 結果');
+}
+
+// 儲存到商品庫
+function saveImageRecognitionToLibrary() {
+    var code = document.getElementById('irProductCode').value.trim();
+    var name = document.getElementById('irProductName').value.trim();
+    
+    if (!code) return alert('⚠️ 請填入品號');
+    if (code.length !== 6) return alert('⚠️ 品號必須為 6 碼');
+    if (!name) return alert('⚠️ 請填入品名');
+    
+    var products = loadData('productCodes', {});
+    var isNew = !products[code];
+    
+    products[code] = {
+        productCode: code,
+        productName: name,
+        pma: document.getElementById('irPma').value.trim() || '88',
+        taxFree: document.getElementById('irTaxFree').value,
+        costPrice: parseFloat(document.getElementById('irCostPrice').value) || 0,
+        retailPrice: parseFloat(document.getElementById('irRetailPrice').value) || 0,
+        lastBarcode: document.getElementById('irFullBarcode').value.trim(),
+        lastUsed: new Date().toISOString()
+    };
+    
+    saveData('productCodes', products);
+    renderProductLibraryList();
+    
+    showNotif((isNew ? '➕ 已新增' : '✏️ 已更新') + '：' + code + ' - ' + name);
+    logAction('productLibrary', '圖片識別入庫：' + code + ' ' + name);
+    
+    // 詢問是否繼續
+    if (confirm('✅ 已儲存：' + name + '\n\n要繼續識別下一張圖片嗎？')) {
+        continueImageRecognition();
+    } else {
+        closeImageRecognitionModal();
+    }
 }
 
 // 🖨️ 列印
@@ -6322,12 +7696,16 @@ function processPurchaseReceiptOCR() {
     
     statusEl.textContent = '⏳ 圖片前處理中...';
     
-    preprocessImageForOCR(file).then(function(processedBlob) {
+    preprocessImageForOCR(file, 'document').then(function(processedBlob) {
         statusEl.textContent = '⏳ 開始辨識...';
         return Tesseract.recognize(
             processedBlob,
             'chi_tra+eng',
             {
+                // 🔑 PSM 6 = 統一區塊（適合表格）
+                tessedit_pageseg_mode: '6',
+                tessedit_ocr_engine_mode: '1',
+                preserve_interword_spaces: '1',
                 logger: function(m) {
                     if (m.status === 'recognizing text') {
                         statusEl.textContent = '🔍 辨識中... ' + Math.round(m.progress * 100) + '%';
@@ -7382,37 +8760,133 @@ function deleteCashReport(date) {
 
 // ============= 📸 OCR 圖片辨識（影像前處理 + 數字白名單版） =============
 // 🔧 影像前處理：放大、灰階、二值化 → 大幅提升辨識準確度
-function preprocessImageForOCR(file) {
+// 🚀 強化版圖片預處理
+// 支援多種模式：'document'（單據/文件，重二值化）、'label'（標籤/價牌）、'barcode'（條碼）
+function preprocessImageForOCR(file, mode) {
+    mode = mode || 'document'; // 預設為單據模式
     return new Promise(function(resolve, reject) {
         var img = new Image();
         img.onload = function() {
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-            
-            // 放大圖片到至少 2000px 寬（OCR 辨識更準）
-            var scale = img.width < 2000 ? 2000 / img.width : 1;
-            canvas.width = Math.round(img.width * scale);
-            canvas.height = Math.round(img.height * scale);
-            
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            var data = imageData.data;
-            
-            // 灰階 + 對比強化 + 二值化
-            for (var i = 0; i < data.length; i += 4) {
-                var gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-                var v;
-                if (gray > 160) v = 255;
-                else if (gray < 90) v = 0;
-                else v = Math.round((gray - 90) * 255 / 70);
-                data[i] = v; data[i+1] = v; data[i+2] = v;
+            try {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                
+                // 🔍 智能縮放：目標寬度視模式而定
+                var targetWidth = (mode === 'document') ? 2400 : (mode === 'label' ? 2000 : 1600);
+                var scale = img.width < targetWidth ? targetWidth / img.width : 1;
+                // 但不超過 3 倍，避免過度放大造成模糊
+                if (scale > 3) scale = 3;
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var data = imageData.data;
+                var w = canvas.width, h = canvas.height;
+                var pixels = w * h;
+                
+                // ===== STEP 1: 灰階轉換 =====
+                var grayArr = new Uint8ClampedArray(pixels);
+                for (var i = 0, j = 0; i < data.length; i += 4, j++) {
+                    grayArr[j] = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+                }
+                
+                // ===== STEP 2: 自動對比強化（CLAHE 簡化版：百分位拉伸）=====
+                // 計算灰階直方圖
+                var hist = new Array(256).fill(0);
+                for (var p = 0; p < pixels; p++) hist[grayArr[p]]++;
+                
+                // 找 1% 和 99% 百分位
+                var cumsum = 0;
+                var p1 = 0, p99 = 255;
+                var target1 = pixels * 0.01, target99 = pixels * 0.99;
+                for (var v = 0; v < 256; v++) {
+                    cumsum += hist[v];
+                    if (p1 === 0 && cumsum >= target1) p1 = v;
+                    if (cumsum >= target99) { p99 = v; break; }
+                }
+                var contrastRange = p99 - p1;
+                if (contrastRange < 30) contrastRange = 30; // 避免除以零
+                
+                // 拉伸對比
+                for (var pp = 0; pp < pixels; pp++) {
+                    var stretched = ((grayArr[pp] - p1) * 255) / contrastRange;
+                    if (stretched < 0) stretched = 0;
+                    if (stretched > 255) stretched = 255;
+                    grayArr[pp] = stretched;
+                }
+                
+                // ===== STEP 3: Otsu 自適應閾值（找最佳二值化分界）=====
+                var hist2 = new Array(256).fill(0);
+                for (var p2 = 0; p2 < pixels; p2++) hist2[grayArr[p2]]++;
+                
+                var totalSum = 0;
+                for (var k = 0; k < 256; k++) totalSum += k * hist2[k];
+                
+                var sumB = 0, wB = 0, wF = 0;
+                var maxVariance = 0;
+                var otsuThreshold = 128;
+                
+                for (var t = 0; t < 256; t++) {
+                    wB += hist2[t];
+                    if (wB === 0) continue;
+                    wF = pixels - wB;
+                    if (wF === 0) break;
+                    
+                    sumB += t * hist2[t];
+                    var mB = sumB / wB;
+                    var mF = (totalSum - sumB) / wF;
+                    
+                    var variance = wB * wF * (mB - mF) * (mB - mF);
+                    if (variance > maxVariance) {
+                        maxVariance = variance;
+                        otsuThreshold = t;
+                    }
+                }
+                
+                // ===== STEP 4: 二值化（依模式調整）=====
+                if (mode === 'document') {
+                    // 文件模式：純黑白
+                    for (var q = 0, qi = 0; q < pixels; q++, qi += 4) {
+                        var v2 = grayArr[q] > otsuThreshold ? 255 : 0;
+                        data[qi] = v2; data[qi+1] = v2; data[qi+2] = v2;
+                    }
+                } else if (mode === 'label') {
+                    // 標籤模式：保留灰階層次（過渡帶不二值化）
+                    var lowT = otsuThreshold - 30;
+                    var highT = otsuThreshold + 30;
+                    for (var q2 = 0, qi2 = 0; q2 < pixels; q2++, qi2 += 4) {
+                        var g2 = grayArr[q2];
+                        var v3;
+                        if (g2 > highT) v3 = 255;
+                        else if (g2 < lowT) v3 = 0;
+                        else v3 = Math.round((g2 - lowT) * 255 / (highT - lowT));
+                        data[qi2] = v3; data[qi2+1] = v3; data[qi2+2] = v3;
+                    }
+                } else {
+                    // 條碼模式：強對比
+                    for (var q3 = 0, qi3 = 0; q3 < pixels; q3++, qi3 += 4) {
+                        var v4 = grayArr[q3] > otsuThreshold ? 255 : 0;
+                        data[qi3] = v4; data[qi3+1] = v4; data[qi3+2] = v4;
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                
+                // ===== STEP 5: 銳化濾鏡（文件模式才用，會增加邊緣）=====
+                if (mode === 'document') {
+                    applySharpenFilter(ctx, w, h);
+                }
+                
+                canvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
+            } catch(err) {
+                console.error('Preprocess error:', err);
+                // 失敗時返回原圖
+                resolve(file);
             }
-            
-            ctx.putImageData(imageData, 0, 0);
-            canvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
         };
         img.onerror = reject;
         var reader = new FileReader();
@@ -7420,6 +8894,57 @@ function preprocessImageForOCR(file) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
     });
+}
+
+// 銳化濾鏡（unsharp mask 簡化版）
+function applySharpenFilter(ctx, w, h) {
+    try {
+        var imageData = ctx.getImageData(0, 0, w, h);
+        var data = imageData.data;
+        var copy = new Uint8ClampedArray(data);
+        
+        // 銳化 kernel
+        // [ 0, -1, 0,
+        //  -1,  5, -1,
+        //   0, -1, 0 ]
+        for (var y = 1; y < h - 1; y++) {
+            for (var x = 1; x < w - 1; x++) {
+                var idx = (y * w + x) * 4;
+                
+                var c = copy[idx];        // center
+                var u = copy[idx - w * 4]; // up
+                var d = copy[idx + w * 4]; // down
+                var l = copy[idx - 4];     // left
+                var r = copy[idx + 4];     // right
+                
+                var sharpened = 5 * c - u - d - l - r;
+                if (sharpened < 0) sharpened = 0;
+                if (sharpened > 255) sharpened = 255;
+                
+                data[idx] = sharpened;
+                data[idx + 1] = sharpened;
+                data[idx + 2] = sharpened;
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+    } catch(e) {
+        // 銳化失敗就略過
+    }
+}
+
+// 🎯 數字專用前處理（給金額/條碼用，使用較強的二值化）
+function preprocessImageForNumbers(file) {
+    return preprocessImageForOCR(file, 'document');
+}
+
+// 📄 文件單據前處理
+function preprocessImageForDocument(file) {
+    return preprocessImageForOCR(file, 'document');
+}
+
+// 🏷️ 商品標籤前處理
+function preprocessImageForLabel(file) {
+    return preprocessImageForOCR(file, 'label');
 }
 
 function processCashReportOCR() {
@@ -7446,14 +8971,18 @@ function processCashReportOCR() {
     
     statusEl.textContent = '⏳ 步驟 1/3：圖片前處理中（放大 + 增加對比）...';
     
-    preprocessImageForOCR(file).then(function(processedBlob) {
+    preprocessImageForOCR(file, 'document').then(function(processedBlob) {
         statusEl.textContent = '⏳ 步驟 2/3：開始辨識...';
         
         return Tesseract.recognize(
             processedBlob,
             'chi_tra+eng',
             {
-                // 🔑 關鍵：限制只辨識數字、英文字母、逗號、減號（大幅提升準確度）
+                // 🔑 PSM 6 = 假設文字為單一統一區塊（適合表格列）
+                tessedit_pageseg_mode: '6',
+                // OCR 引擎模式：3 = LSTM only（最準確）
+                tessedit_ocr_engine_mode: '1',
+                // 字元白名單：數字+英文+標點（大幅提升準確度）
                 tessedit_char_whitelist: '0123456789,.-ABCDEFG',
                 preserve_interword_spaces: '1',
                 logger: function(m) {
