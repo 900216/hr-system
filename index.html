@@ -2062,6 +2062,13 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
             <div style="background:#fef3c7; padding:8px; border-radius:6px; margin-bottom:10px; font-size:12px; color:#78350f;">
                 💡 把商品條碼對準畫面中央橫線，掃描成功會「嗶」一聲並自動加入清單。可<strong>連續掃描</strong>多個商品！
             </div>
+            <div style="background:#dbeafe; padding:8px 10px; border-radius:6px; margin-bottom:10px; font-size:12px; color:#1e3a8a; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span>🤖 <strong>自動識別品名</strong>：掃條碼同時 OCR 識別中文品名</span>
+                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                    <input type="checkbox" id="ocrEnabledToggle" checked onchange="toggleOcrEnabled(this.checked)" style="width:18px; height:18px;">
+                    <strong id="ocrToggleLabel">已啟用</strong>
+                </label>
+            </div>
             <div id="barcodeReader" style="width:100%; border:3px solid #3b82f6; border-radius:8px; overflow:hidden; background:#000;"></div>
             <div id="scanResult" style="margin-top:10px; padding:10px; background:#f0fdf4; border:1px solid #10b981; border-radius:6px; font-size:13px; min-height:40px;">
                 ⏳ 請對準條碼...
@@ -2460,7 +2467,13 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                     
                     <!-- 🏦 第五區：週轉金 -->
                     <div class="cr-section">
-                        <div class="cr-section-title">🏦 週轉金</div>
+                        <div class="cr-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                            <span>🏦 週轉金</span>
+                            <button onclick="resetAutoCalcFields()" style="padding:4px 12px; font-size:11px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer;" title="清除手動覆寫，恢復自動計算">🔄 重置自動計算</button>
+                        </div>
+                        <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">
+                            💡 黃色欄位（802/803/804/806）為自動計算，可<strong>手動輸入覆寫</strong>。覆寫後系統不會再自動更新該欄。
+                        </div>
                         <table class="cr-table">
                             <thead>
                                 <tr><th>會計科目</th><th>金額</th></tr>
@@ -6074,16 +6087,37 @@ function onBarcodeScanned(barcode) {
         return;
     }
     
+    // 🆕 在加入清單前先擷取畫面（用於 OCR 識別品名）
+    var capturedImage = null;
+    if (_ocrEnabled && barcode.length >= 6) {
+        // 檢查品號是否已有名稱（已知商品不需 OCR）
+        var pc = barcode.substring(0, 6);
+        var existing = (loadData('productCodes', {}))[pc];
+        if (!existing || !existing.productName) {
+            capturedImage = captureVideoFrame();
+        }
+    }
+    
     // 預設：調撥單模式
     addTransferItemFromBarcode(barcode);
+    
+    // 🆕 若是新品號且有擷取到畫面 → 排入 OCR 佇列
+    if (capturedImage && _toCurrentItems.length > 0) {
+        var lastItem = _toCurrentItems[_toCurrentItems.length - 1];
+        if (lastItem && !lastItem.productName) {
+            lastItem.__ocrTag = 'ocr_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            queueOcrForItem(lastItem.__ocrTag, capturedImage);
+        }
+    }
     
     // 更新 UI
     var productCode = barcode.length >= 6 ? barcode.substring(0, 6) : barcode;
     var product = (loadData('productCodes', {})[productCode]) || {};
-    var info = product.productName ? ('（' + product.productName + '）') : '（新品號）';
+    var info = product.productName ? ('（' + product.productName + '）') : '（新品號，自動識別中...）';
     document.getElementById('scanResult').innerHTML = 
         '<span style="color:#059669; font-weight:bold;">✅ 掃描成功：' + barcode + ' ' + info + '</span><br>' +
         '<span style="font-size:11px; color:#6b7280;">繼續對準下個條碼...</span>';
+    updateOcrIndicator();
     updateScanFeedback();
 }
 
@@ -6161,6 +6195,179 @@ function playBeep() {
         osc1.stop(now + 0.18);
         osc2.stop(now + 0.18);
     } catch(e) {}
+}
+
+// ============= 📸 掃描時自動識別品名 =============
+var _ocrEnabled = true;       // OCR 識別品名開關
+var _ocrQueue = [];           // OCR 工作佇列
+var _ocrProcessing = false;   // 是否處理中
+
+// 從相機 video 元素擷取目前畫面
+function captureVideoFrame() {
+    try {
+        var video = document.querySelector('#barcodeReader video');
+        if (!video || video.videoWidth === 0) return null;
+        
+        var canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        
+        return canvas.toDataURL('image/png');
+    } catch(e) {
+        console.warn('Capture frame error:', e);
+        return null;
+    }
+}
+
+// 將 dataURL 轉成 Blob
+function dataUrlToBlob(dataUrl) {
+    var parts = dataUrl.split(',');
+    var meta = parts[0].split(':')[1].split(';')[0];
+    var binStr = atob(parts[1]);
+    var arr = new Uint8Array(binStr.length);
+    for (var i = 0; i < binStr.length; i++) arr[i] = binStr.charCodeAt(i);
+    return new Blob([arr], { type: meta });
+}
+
+// 將 OCR 任務加入佇列
+function queueOcrForItem(itemTag, imageDataUrl) {
+    _ocrQueue.push({ itemTag: itemTag, image: imageDataUrl, queuedAt: Date.now() });
+    updateOcrIndicator();
+    if (!_ocrProcessing) processOcrQueue();
+}
+
+// 處理 OCR 佇列
+function processOcrQueue() {
+    if (_ocrQueue.length === 0) {
+        _ocrProcessing = false;
+        updateOcrIndicator();
+        return;
+    }
+    _ocrProcessing = true;
+    var job = _ocrQueue.shift();
+    updateOcrIndicator();
+    
+    var blob;
+    try {
+        blob = dataUrlToBlob(job.image);
+    } catch(e) {
+        processOcrQueue();
+        return;
+    }
+    
+    preprocessImageForOCR(blob, 'label').then(function(processed) {
+        return Tesseract.recognize(processed, 'chi_tra+eng', {
+            tessedit_pageseg_mode: '6',
+            tessedit_ocr_engine_mode: '1',
+            preserve_interword_spaces: '1',
+            logger: function(){}
+        });
+    }).then(function(result) {
+        var productName = extractProductNameFromOcrText(result.data.text);
+        if (productName) {
+            updateItemProductNameByTag(job.itemTag, productName);
+        }
+    }).catch(function(err) {
+        console.warn('OCR error:', err);
+    }).then(function() {
+        // 不論成功失敗都繼續下一個
+        setTimeout(processOcrQueue, 100);
+    });
+}
+
+// 從 OCR 文字找出最像品名的那行
+function extractProductNameFromOcrText(text) {
+    if (!text) return '';
+    var lines = text.split(/\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+    
+    var best = '', bestScore = 0;
+    for (var i = 0; i < lines.length; i++) {
+        var l = lines[i];
+        var score = 0;
+        
+        var chineseChars = (l.match(/[\u4e00-\u9fa5]/g) || []).length;
+        if (chineseChars < 2) continue; // 至少 2 個中文字
+        
+        score += chineseChars * 3;
+        if (/[（(].*[)）]/.test(l)) score += 5;
+        if (/\d+\s*(?:ml|g|kg|mm|cm|公分|公克|毫升|支|個|包|盒|瓶|罐|入|串)/.test(l)) score += 10;
+        if (l.length >= 3 && l.length <= 30) score += 3;
+        if (/^[\d\.,\s]+$/.test(l)) score -= 100;
+        if (/\$|NT|＄/.test(l)) score -= 5;
+        if (/店號|店名|日期|列印|時間|單號|頁|統一|7-11/.test(l)) score -= 20;
+        
+        if (score > bestScore) {
+            bestScore = score;
+            best = l;
+        }
+    }
+    
+    if (best) {
+        // 清理：移除價格、標籤詞
+        return best.replace(/(?:NT\$|\$|＄)\s*\d+(?:\.\d+)?/g, '')
+                   .replace(/品名[:：]?/, '')
+                   .replace(/商品[:：]?/, '')
+                   .trim();
+    }
+    return '';
+}
+
+// 依 tag 更新調撥項目的品名
+function updateItemProductNameByTag(tag, name) {
+    for (var i = 0; i < _toCurrentItems.length; i++) {
+        if (_toCurrentItems[i].__ocrTag === tag) {
+            if (!_toCurrentItems[i].productName) {
+                _toCurrentItems[i].productName = name;
+                
+                // 同步存到條碼商品庫
+                if (_toCurrentItems[i].productCode) {
+                    var products = loadData('productCodes', {});
+                    var pc = _toCurrentItems[i].productCode;
+                    products[pc] = products[pc] || {};
+                    products[pc].productCode = pc;
+                    products[pc].productName = name;
+                    products[pc].pma = products[pc].pma || _toCurrentItems[i].pma || '88';
+                    products[pc].taxFree = products[pc].taxFree || _toCurrentItems[i].taxFree || '免';
+                    products[pc].lastBarcode = _toCurrentItems[i].barcode || '';
+                    products[pc].lastUsed = new Date().toISOString();
+                    saveData('productCodes', products);
+                }
+                
+                renderTransferItems(_toCurrentItems);
+                recalcTransferOrder();
+                showNotif('📝 品名識別：' + name);
+            }
+            break;
+        }
+    }
+}
+
+// 更新 OCR 進度指示
+function updateOcrIndicator() {
+    var el = document.getElementById('scanResult');
+    if (!el) return;
+    
+    var current = el.innerHTML;
+    var queueLen = _ocrQueue.length + (_ocrProcessing ? 1 : 0);
+    
+    // 移除舊的 OCR 進度行
+    current = current.replace(/<div class="ocr-prog"[^<]*<\/div>/g, '');
+    
+    if (queueLen > 0) {
+        current += '<div class="ocr-prog" style="margin-top:6px; padding:4px 8px; background:#fef3c7; border-radius:4px; font-size:11px; color:#92400e;">🔍 品名識別中... 佇列 ' + queueLen + ' 個</div>';
+    }
+    
+    el.innerHTML = current;
+}
+
+// 切換 OCR 啟用狀態
+function toggleOcrEnabled(checked) {
+    _ocrEnabled = !!checked;
+    var lbl = document.getElementById('ocrToggleLabel');
+    if (lbl) lbl.textContent = _ocrEnabled ? '已啟用' : '已停用';
+    showNotif(_ocrEnabled ? '🤖 已啟用自動識別品名' : '🚫 已停用自動識別品名');
 }
 
 // 手動輸入條碼
@@ -8310,8 +8517,12 @@ function renderCRCashTable() {
         var item = CR_CASH_ITEMS[i];
         html += '<tr>';
         html += '<td><span style="color:#9ca3af;font-size:10px;">' + item.code + '</span> ' + item.name + '</td>';
-        // 🔑 全部可編輯（auto 項目仍會由公式自動計算）
-        html += '<td' + (item.auto ? ' class="auto-calc"' : '') + '><input type="number" id="cr_amt_' + item.code + '" oninput="recalcCashReport()" value="0"></td>';
+        if (item.auto) {
+            // 🔑 自動計算欄位：允許手動覆寫（一旦手動編輯，公式不會再覆蓋）
+            html += '<td class="auto-calc"><input type="number" id="cr_amt_' + item.code + '" oninput="markManualEdit(this); recalcCashReport()" value="0" title="此欄會自動計算，可手動覆寫"></td>';
+        } else {
+            html += '<td><input type="number" id="cr_amt_' + item.code + '" oninput="recalcCashReport()" value="0"></td>';
+        }
         html += '</tr>';
     }
     tbody.innerHTML = html;
@@ -8323,6 +8534,24 @@ function markManualEdit(el) {
     el.dataset.manual = '1';
     el.style.background = '#fef3c7';
     el.style.fontWeight = 'bold';
+}
+
+// 🔄 重置自動計算欄位（清除手動標記，恢復公式計算）
+function resetAutoCalcFields() {
+    if (!confirm('🔄 確定要重置自動計算？\n\n所有手動輸入的 802/803/804/806 將會被公式重新計算覆蓋。')) return;
+    
+    var autoFields = ['cr_amt_802', 'cr_amt_803', 'cr_amt_804', 'cr_amt_806',
+                      'cr_amt_111A', 'cr_amt_111B'];
+    for (var i = 0; i < autoFields.length; i++) {
+        var el = document.getElementById(autoFields[i]);
+        if (el) {
+            delete el.dataset.manual;
+            el.style.background = '';
+            el.style.fontWeight = '';
+        }
+    }
+    recalcCashReport();
+    showNotif('🔄 已重置，所有欄位由公式自動計算');
 }
 
 // 即時自動計算
@@ -8397,20 +8626,20 @@ function recalcCashReport() {
     
     // 🔑 使用簡化公式：802 = 111A + 111B + 111D + 111E + 206 - 409 + 801
     var should = sales + receipt - cashEquivalents + num('cr_amt_801');
-    setVal('cr_amt_802', should);
+    softSetVal('cr_amt_802', should);
     
     // 803 本日匯款額 = 803A(郵局) + 803B(銀行) + 803C(ATM)
     var transfer = num('cr_amt_803A') + num('cr_amt_803B') + num('cr_amt_803C');
-    setVal('cr_amt_803', transfer);
+    softSetVal('cr_amt_803', transfer);
     
     // 804 = 802 - 803
     var actual802 = num('cr_amt_802');
     var actual803 = num('cr_amt_803');
-    setVal('cr_amt_804', actual802 - actual803);
+    softSetVal('cr_amt_804', actual802 - actual803);
     
     // 806 = 805 - 804
     var actual804 = num('cr_amt_804');
-    setVal('cr_amt_806', num('cr_amt_805') - actual804);
+    softSetVal('cr_amt_806', num('cr_amt_805') - actual804);
     
     // 更新公式說明區
     updateFormulaInfo({
