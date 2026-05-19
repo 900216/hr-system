@@ -1897,7 +1897,8 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                 ✅ 品號（6 碼數字）<br>
                 ✅ 品名（中文）<br>
                 ✅ 單品零售價（單一數字）<br>
-                ⏭️ <strong>不抓取</strong>：庫存數、銷售量、迴轉天數等資料
+                ⏭️ <strong>不抓取</strong>：庫存數、銷售量、迴轉天數等資料<br><br>
+                📸 <strong>拍照訣竅：</strong>① 正面拍、避免傾斜 ② 充足光線 ③ 整張紙清晰可見 ④ 解析度越高越好。
             </div>
             
             <!-- 上傳區 -->
@@ -7175,103 +7176,324 @@ function processShelfImage() {
     }).then(function(result) {
         var text = result.data.text;
         document.getElementById('sbRawText').value = text;
-        _sbResults = parseShelfOcrText(text);
+        
+        // 🆕 收集所有詞與位置資訊（bbox）
+        var allWords = (result.data.words || []).slice();
+        if (allWords.length === 0 && result.data.lines) {
+            for (var l = 0; l < result.data.lines.length; l++) {
+                if (result.data.lines[l].words) {
+                    allWords = allWords.concat(result.data.lines[l].words);
+                }
+            }
+        }
+        
+        // 🔑 優先使用空間位置解析（更準確）
+        var spatialResults = [];
+        if (allWords.length > 5) {
+            spatialResults = parseShelfWithSpatial(allWords);
+        }
+        
+        // 文字備援解析
+        var textResults = parseShelfOcrText(text);
+        
+        // 選擇較完整的結果（有品名的數量多者勝出）
+        var spatialNamedCount = spatialResults.filter(function(r){ return r.productName; }).length;
+        var textNamedCount = textResults.filter(function(r){ return r.productName; }).length;
+        
+        if (spatialNamedCount >= textNamedCount && spatialResults.length > 0) {
+            _sbResults = spatialResults;
+            console.log('採用空間解析:', spatialResults.length, '筆,', spatialNamedCount, '有品名');
+        } else {
+            _sbResults = textResults;
+            console.log('採用文字解析:', textResults.length, '筆,', textNamedCount, '有品名');
+        }
+        
         renderShelfResults();
         document.getElementById('sbResultSection').style.display = 'block';
-        statusEl.textContent = '✅ 完成！共辨識 ' + _sbResults.length + ' 筆，請檢查/修正';
+        var namedCount = _sbResults.filter(function(r){ return r.productName; }).length;
+        statusEl.textContent = '✅ 完成！共辨識 ' + _sbResults.length + ' 筆（其中 ' + namedCount + ' 筆有品名），請檢查/修正';
     }).catch(function(err) {
         statusEl.textContent = '❌ 辨識失敗：' + (err.message || err);
+        console.error(err);
     });
 }
 
-// 從 OCR 文字解析排面表
+// 🆕 基於空間位置（bbox）的解析：找到每個品號的位置，然後找下方同欄的中文文字當品名
+function parseShelfWithSpatial(words) {
+    // 1. 找所有 6 碼品號的位置
+    var codes = [];
+    for (var i = 0; i < words.length; i++) {
+        var w = words[i];
+        if (!w || !w.text || !w.bbox) continue;
+        var match = String(w.text).match(/^(\d{6})$/);
+        if (match) {
+            codes.push({
+                code: match[1],
+                x: (w.bbox.x0 + w.bbox.x1) / 2,
+                y: (w.bbox.y0 + w.bbox.y1) / 2,
+                bbox: w.bbox,
+                height: w.bbox.y1 - w.bbox.y0
+            });
+        }
+    }
+    
+    if (codes.length === 0) return [];
+    
+    // 2. 估算欄寬與列高
+    // 找最上方一排的 codes（y 差 < 30）來估欄寬
+    codes.sort(function(a, b) { return a.y - b.y || a.x - b.x; });
+    var firstY = codes[0].y;
+    var topRow = codes.filter(function(c) { return Math.abs(c.y - firstY) < 30; });
+    topRow.sort(function(a, b) { return a.x - b.x; });
+    
+    var columnWidth = 200;  // 預設欄寬
+    if (topRow.length >= 2) {
+        // 取相鄰兩 code 的 x 差
+        var gaps = [];
+        for (var t = 1; t < topRow.length; t++) {
+            gaps.push(topRow[t].x - topRow[t-1].x);
+        }
+        gaps.sort(function(a, b) { return a - b; });
+        columnWidth = gaps[Math.floor(gaps.length / 2)];  // 中位數
+    }
+    var columnTolerance = columnWidth * 0.45;  // 同欄 x 容差
+    
+    // 列高：估算「下一個 row」的距離
+    var rowHeight = 250;  // 預設
+    var ySet = {};
+    for (var cy = 0; cy < codes.length; cy++) {
+        var ry = Math.round(codes[cy].y / 30) * 30;  // 量化到 30 像素
+        ySet[ry] = (ySet[ry] || 0) + 1;
+    }
+    var sortedY = Object.keys(ySet).map(Number).sort(function(a, b) { return a - b; });
+    if (sortedY.length >= 2) {
+        var ydiffs = [];
+        for (var sy = 1; sy < sortedY.length; sy++) {
+            var d = sortedY[sy] - sortedY[sy-1];
+            if (d > 50) ydiffs.push(d);  // 過濾同一橫排
+        }
+        if (ydiffs.length > 0) {
+            ydiffs.sort(function(a, b) { return a - b; });
+            rowHeight = ydiffs[Math.floor(ydiffs.length / 2)];
+        }
+    }
+    
+    // 3. 對每個 code 找下方同欄的中文與價格
+    var results = [];
+    
+    for (var c = 0; c < codes.length; c++) {
+        var code = codes[c];
+        var nameWords = [];
+        var priceCandidates = [];
+        
+        for (var w2 = 0; w2 < words.length; w2++) {
+            var word = words[w2];
+            if (!word || !word.text || !word.bbox) continue;
+            
+            var wx = (word.bbox.x0 + word.bbox.x1) / 2;
+            var wy = (word.bbox.y0 + word.bbox.y1) / 2;
+            
+            // 必須在 code 下方（不包含 code 本身的 y）
+            if (wy <= code.y + 5) continue;
+            // 必須在同欄
+            if (Math.abs(wx - code.x) > columnTolerance) continue;
+            // 不超過下方一個列高（避免抓到下一橫排的商品）
+            if (wy - code.y > rowHeight * 0.85) continue;
+            
+            var txt = String(word.text).trim();
+            if (!txt) continue;
+            
+            // 中文字
+            if (/[\u4e00-\u9fa5]/.test(txt)) {
+                nameWords.push({ text: txt, y: wy, x: wx });
+            }
+            // 小數字當價格候選（單獨的 1-3 位數）
+            else if (/^\d{1,3}$/.test(txt)) {
+                var num = parseInt(txt);
+                if (num >= 5 && num <= 999) {
+                    priceCandidates.push({ price: num, y: wy });
+                }
+            }
+        }
+        
+        // 中文字按位置排序組合
+        nameWords.sort(function(a, b) {
+            if (Math.abs(a.y - b.y) < 20) return a.x - b.x;
+            return a.y - b.y;
+        });
+        var rawName = nameWords.map(function(n) { return n.text; }).join('');
+        // 清理：移除開頭的 (吊) (蔬) (吊 等標籤
+        var cleanName = rawName.replace(/^[\(（][^\)）]{0,3}[\)）]/, '').trim();
+        if (!cleanName) cleanName = rawName.trim();
+        
+        // 第一個（最靠近 code 下方）小數字 = 零售價
+        priceCandidates.sort(function(a, b) { return a.y - b.y; });
+        var price = 0;
+        // 取在「品名下方」的第一個價格
+        if (nameWords.length > 0 && priceCandidates.length > 0) {
+            var lastNameY = nameWords[nameWords.length - 1].y;
+            for (var pc = 0; pc < priceCandidates.length; pc++) {
+                if (priceCandidates[pc].y > lastNameY - 10) {
+                    price = priceCandidates[pc].price;
+                    break;
+                }
+            }
+            if (!price && priceCandidates.length > 0) {
+                price = priceCandidates[0].price;
+            }
+        } else if (priceCandidates.length > 0) {
+            price = priceCandidates[0].price;
+        }
+        
+        results.push({
+            productCode: code.code,
+            productName: cleanName,
+            retailPrice: price,
+            pma: '88',
+            taxFree: '免',
+            selected: true
+        });
+    }
+    
+    // 去重（同品號只保留第一筆，或保留品名較完整的）
+    var seen = {};
+    var unique = [];
+    for (var r = 0; r < results.length; r++) {
+        var existing = seen[results[r].productCode];
+        if (!existing) {
+            seen[results[r].productCode] = results[r];
+            unique.push(results[r]);
+        } else if (!existing.productName && results[r].productName) {
+            // 用較完整的替代
+            existing.productName = results[r].productName;
+            if (!existing.retailPrice) existing.retailPrice = results[r].retailPrice;
+        }
+    }
+    
+    return unique;
+}
+
+// 從 OCR 文字解析排面表（文字備援版）
 function parseShelfOcrText(text) {
     if (!text) return [];
     
     var lines = text.split(/\n/).map(function(l){ return l.trim(); });
     var results = [];
     
-    // 找關鍵標籤行的索引
-    var codeLineIdx = -1, nameStartIdx = -1, priceLineIdx = -1;
-    
-    for (var i = 0; i < lines.length; i++) {
-        var l = lines[i];
-        if (codeLineIdx === -1 && /品號.{0,3}排面/.test(l)) codeLineIdx = i;
-        if (codeLineIdx === -1 && /^品號/.test(l)) codeLineIdx = i;
-        if (nameStartIdx === -1 && /^品名/.test(l)) nameStartIdx = i;
-        if (priceLineIdx === -1 && /單品零售價|零售價/.test(l)) priceLineIdx = i;
+    // 將分隔線（---）或空行視為「區塊分界」
+    var blocks = [[]];
+    for (var ln = 0; ln < lines.length; ln++) {
+        var l = lines[ln];
+        if (/^[-=_*\s]{5,}$/.test(l) || l === '') {
+            if (blocks[blocks.length - 1].length > 0) blocks.push([]);
+        } else {
+            blocks[blocks.length - 1].push(l);
+        }
     }
     
-    // 收集所有「組」：以「品號」行為開始
-    var blocks = [];
-    var currBlock = null;
-    
-    for (var bi = 0; bi < lines.length; bi++) {
-        var ll = lines[bi];
-        // 識別到新的「品號」標籤 → 開始新區塊
-        if (/品號.{0,3}排面|^品號/.test(ll)) {
-            if (currBlock) blocks.push(currBlock);
-            currBlock = { codeLine: ll, nameLines: [], priceLine: '', state: 'code' };
-        } else if (currBlock) {
-            if (/^品名/.test(ll)) {
-                currBlock.state = 'name';
-                currBlock.nameLines.push(ll.replace(/^品名[:：\s]*/, ''));
-            } else if (/單品零售價|零售價/.test(ll)) {
-                currBlock.state = 'price';
-                currBlock.priceLine = ll.replace(/.*零售價[:：\s]*/, '');
-            } else if (/近四週|門市|庫存|平均|PSD|迴轉/.test(ll)) {
-                currBlock.state = 'done';
-            } else if (currBlock.state === 'name') {
-                // 繼續累積品名行（換行續寫）
-                currBlock.nameLines.push(ll);
+    for (var b = 0; b < blocks.length; b++) {
+        var block = blocks[b];
+        if (block.length === 0) continue;
+        
+        // 找品號行（含多個 "6碼(數字)" 模式）
+        var codesLine = '';
+        var nameLines = [];
+        var priceLine = '';
+        var foundCodes = false;
+        var foundPrice = false;
+        
+        for (var k = 0; k < block.length; k++) {
+            var line = block[k];
+            
+            // 品號行特徵：含「品號」標籤 或 含多個 "6碼("
+            if (!foundCodes && (/品號|品號.*排面/.test(line) || (line.match(/\d{6}\s*\(/g) || []).length >= 1)) {
+                codesLine = line;
+                foundCodes = true;
+                continue;
+            }
+            
+            // 品名行：含中文
+            if (foundCodes && !foundPrice && /[\u4e00-\u9fa5]/.test(line) && !/單品零售|零售價/.test(line)) {
+                // 排除「品名」標籤前綴
+                var nameContent = line.replace(/^品名[:：\s]*/, '');
+                if (nameContent && /[\u4e00-\u9fa5]/.test(nameContent)) {
+                    nameLines.push(nameContent);
+                }
+                continue;
+            }
+            
+            // 價格行
+            if (foundCodes && /單品零售|零售價/.test(line)) {
+                priceLine = line.replace(/.*零售價[:：\s]*/, '');
+                foundPrice = true;
+                continue;
+            }
+            
+            // 遇到「近四週/門市/庫存/PSD」就停止收集
+            if (/近四週|門市|庫存|平均.{0,2}PSD|迴轉/.test(line)) {
+                if (foundPrice) break;
             }
         }
-    }
-    if (currBlock) blocks.push(currBlock);
-    
-    // 從每個區塊抽取資料
-    for (var bk = 0; bk < blocks.length; bk++) {
-        var blk = blocks[bk];
         
-        // 抽出所有 6 碼品號
-        var codeMatches = blk.codeLine.match(/(\d{6})\s*\(/g) || [];
+        // 抽取品號
+        var codeMatches = codesLine.match(/(\d{6})\s*\(/g) || [];
         var codes = [];
         for (var cm = 0; cm < codeMatches.length; cm++) {
-            var m = codeMatches[cm].match(/(\d{6})/);
-            if (m) codes.push(m[1]);
+            var mc = codeMatches[cm].match(/(\d{6})/);
+            if (mc) codes.push(mc[1]);
         }
-        // 備援：若沒抓到，就直接找 6 位數字
         if (codes.length === 0) {
-            codes = blk.codeLine.match(/\b\d{6}\b/g) || [];
+            codes = codesLine.match(/\b\d{6}\b/g) || [];
         }
         
-        // 抽出價格（過濾過大/過小的數字）
+        if (codes.length === 0) continue;
+        
+        // 抽取價格
         var prices = [];
-        var pn = blk.priceLine.match(/\b\d{1,4}\b/g) || [];
-        for (var p = 0; p < pn.length; p++) {
-            var pv = parseInt(pn[p]);
+        var pns = priceLine.match(/\b\d{1,4}\b/g) || [];
+        for (var pp = 0; pp < pns.length; pp++) {
+            var pv = parseInt(pns[pp]);
             if (pv >= 5 && pv <= 9999) prices.push(pv);
         }
         
-        // 抽出品名段（依空白分割）
-        var names = [];
-        var combinedNameText = blk.nameLines.join(' ');
-        // 嘗試按 2+ 空白分割
-        var nameSegs = combinedNameText.split(/\s{2,}/);
-        for (var ns = 0; ns < nameSegs.length; ns++) {
-            var seg = nameSegs[ns].trim();
-            if (seg && /[\u4e00-\u9fa5]/.test(seg) && seg.length >= 2) {
-                // 清理括號標籤
-                seg = seg.replace(/^\([^)]+\)/, '').trim();
-                names.push(seg);
+        // 抽取品名段：把所有 name lines 串起來，按「2+ 空白」或「中英文段邊界」切割
+        var nameSegs = [];
+        for (var nlIdx = 0; nlIdx < nameLines.length; nlIdx++) {
+            var nameLineText = nameLines[nlIdx];
+            // 嘗試以 2+ 空格切割
+            var segs = nameLineText.split(/\s{2,}/);
+            for (var sg = 0; sg < segs.length; sg++) {
+                var seg = segs[sg].trim();
+                if (seg) {
+                    // 移除開頭括號標籤如 (吊) (蔬)
+                    seg = seg.replace(/^[\(（][^\)）]{1,3}[\)）]/, '').trim();
+                    if (seg && /[\u4e00-\u9fa5]/.test(seg)) {
+                        nameSegs.push(seg);
+                    }
+                }
             }
         }
         
-        // 配對：每個 code 對 name 和 price（按位置）
+        // 嘗試對齊品號數量（若 nameSegs > codes，可能有跨行品名要合併）
+        // 若 nameSegs == codes 數，直接配對
+        // 若 nameSegs < codes，後面留空
+        // 若 nameSegs > codes，把多出來的試圖合併到前面
+        var finalNames = [];
+        if (nameSegs.length === codes.length) {
+            finalNames = nameSegs;
+        } else if (nameSegs.length > codes.length) {
+            // 多出來的當作上一筆的延續
+            // 簡單策略：取前 codes.length 個
+            finalNames = nameSegs.slice(0, codes.length);
+        } else {
+            finalNames = nameSegs.concat(new Array(codes.length - nameSegs.length).fill(''));
+        }
+        
+        // 組合結果
         for (var ci = 0; ci < codes.length; ci++) {
             results.push({
                 productCode: codes[ci],
-                productName: names[ci] || '',
+                productName: finalNames[ci] || '',
                 retailPrice: prices[ci] || 0,
                 pma: '88',
                 taxFree: '免',
@@ -7280,7 +7502,7 @@ function parseShelfOcrText(text) {
         }
     }
     
-    // 若上面沒抓到任何資料 → 備援：全文擷取
+    // 備援：若 results 為空但全文有 6 碼品號 → 至少抓品號
     if (results.length === 0) {
         var allCodes = text.match(/\b\d{6}\b/g) || [];
         for (var ac = 0; ac < allCodes.length; ac++) {
@@ -7295,11 +7517,11 @@ function parseShelfOcrText(text) {
         }
     }
     
-    // 去重（同品號只保留第一筆）
+    // 去重
     var seen = {};
     var unique = [];
     for (var r = 0; r < results.length; r++) {
-        if (!seen[results[r].productCode]) {
+        if (!seen[results[r].productCode] && results[r].productCode) {
             seen[results[r].productCode] = true;
             unique.push(results[r]);
         }
