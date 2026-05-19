@@ -1870,6 +1870,7 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                         <button class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="openAddProductModal()">➕ 新增商品</button>
                         <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#10b981,#059669);" onclick="openBarcodeScannerForLibrary()">📷 掃描新增</button>
                         <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#f59e0b,#d97706);" onclick="openImageRecognitionModal()">📸 圖片識別入庫</button>
+                        <button class="btn-primary" style="padding:6px 14px; font-size:13px; background:linear-gradient(to bottom,#ec4899,#be185d);" onclick="openShelfBatchModal()">📑 排面表批次</button>
                         <button class="btn-secondary" style="padding:6px 14px; font-size:13px;" onclick="exportProductLibraryCSV()">💾 匯出 CSV</button>
                         <button class="btn-secondary" style="padding:6px 14px; font-size:13px;" onclick="importProductLibraryCSV()">📂 匯入 CSV</button>
                         <input type="file" id="plImportInput" accept=".csv" style="display:none;" onchange="onImportProductCSV(event)">
@@ -1967,6 +1968,82 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
             <div style="margin-top:14px; display:flex; gap:8px; justify-content:flex-end;">
                 <button class="btn-secondary" onclick="closeModal('productAddModal')" style="padding:8px 14px;">取消</button>
                 <button class="btn-confirm" onclick="saveAddProduct()" style="padding:8px 14px;">💾 儲存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 📑 排面表批次識別 Modal -->
+    <div id="shelfBatchModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:96vw; width:96vw; max-height:95vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <strong style="font-size:16px;">📑 排面表批次識別入庫</strong>
+                <button onclick="closeModal('shelfBatchModal')" style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">✕</button>
+            </div>
+            
+            <div class="alert-box info" style="font-size:12px;">
+                💡 上傳「排面表 / 7-11 內部報表」照片，系統會自動辨識多筆商品：<br>
+                ✅ 品號（6 碼數字）<br>
+                ✅ 品名（中文）<br>
+                ✅ 單品零售價（單一數字）<br>
+                ⏭️ <strong>不抓取</strong>：庫存數、銷售量、迴轉天數等資料
+            </div>
+            
+            <!-- 上傳區 -->
+            <div style="background:#fef3c7; padding:14px; border-radius:8px; margin:12px 0; border:1px dashed #d97706;">
+                <div style="font-weight:bold; margin-bottom:8px; color:#78350f;">📁 選擇排面表照片</div>
+                <input type="file" id="sbImageInput" accept="image/*" onchange="onShelfImageSelected(event)" style="font-size:13px; width:100%;">
+                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <button class="btn-confirm" id="sbProcessBtn" style="padding:8px 16px; display:none;" onclick="processShelfImage()">🔍 開始辨識</button>
+                    <span id="sbStatus" style="font-size:12px; color:#1e40af; font-weight:bold;"></span>
+                </div>
+                <div id="sbPreviewWrap" style="margin-top:10px; display:none; text-align:center;">
+                    <img id="sbPreview" style="max-width:100%; max-height:200px; border:2px solid #d97706; border-radius:4px;">
+                </div>
+            </div>
+            
+            <!-- 辨識結果區 -->
+            <div id="sbResultSection" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin:14px 0 8px 0; flex-wrap:wrap; gap:6px;">
+                    <div style="font-weight:bold; font-size:14px; color:#059669;">✏️ 辨識結果（請檢查/修正後勾選要匯入的項目）</div>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="sbSelectAll(true)" style="padding:4px 10px; font-size:11px; background:#059669; color:white; border:0; border-radius:3px; cursor:pointer;">✅ 全選</button>
+                        <button onclick="sbSelectAll(false)" style="padding:4px 10px; font-size:11px; background:#6b7280; color:white; border:0; border-radius:3px; cursor:pointer;">⬜ 全取消</button>
+                        <button onclick="sbAddManualRow()" style="padding:4px 10px; font-size:11px; background:#3b82f6; color:white; border:0; border-radius:3px; cursor:pointer;">➕ 手動新增</button>
+                    </div>
+                </div>
+                
+                <div style="background:#f9fafb; padding:8px; border-radius:6px; margin-bottom:10px; font-size:11px; color:#4b5563;">
+                    💡 紅圈 = 品號（6 碼）｜藍圈 = 品名（中文）｜下方數字 = 零售價。可即時編輯每一格。
+                </div>
+                
+                <div style="overflow-x:auto;">
+                    <table class="work-table" style="min-width:600px; font-size:13px;">
+                        <thead>
+                            <tr style="background:#ec4899; color:white;">
+                                <th style="width:40px;">勾選</th>
+                                <th style="width:90px;">品號</th>
+                                <th>品名</th>
+                                <th style="width:75px;">PMA</th>
+                                <th style="width:75px;">稅</th>
+                                <th style="width:90px;">零售價</th>
+                                <th style="width:60px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sbResultBody"></tbody>
+                    </table>
+                </div>
+                
+                <!-- OCR 原始文字（除錯用） -->
+                <details style="margin-top:10px;">
+                    <summary style="cursor:pointer; font-size:12px; color:#6b7280;">📝 顯示原始 OCR 文字（除錯用）</summary>
+                    <textarea id="sbRawText" rows="6" readonly style="width:100%; margin-top:6px; padding:6px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:10px; background:#f9fafb;"></textarea>
+                    <button onclick="reExtractFromRawText()" style="margin-top:6px; padding:5px 10px; font-size:11px; background:#3b82f6; color:white; border:0; border-radius:3px; cursor:pointer;">🔄 重新解析</button>
+                </details>
+                
+                <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="closeModal('shelfBatchModal')" style="padding:8px 14px;">取消</button>
+                    <button class="btn-confirm" onclick="batchImportShelf()" style="padding:8px 18px; background:linear-gradient(to bottom,#ec4899,#be185d); color:white;">💾 批次匯入勾選項目</button>
+                </div>
             </div>
         </div>
     </div>
@@ -7126,6 +7203,309 @@ function onImportProductCSV(e) {
         e.target.value = '';
     };
     reader.readAsText(file, 'utf-8');
+}
+
+// ============= 📑 排面表批次識別 =============
+var _sbCurrentImage = null;
+var _sbResults = [];
+
+function openShelfBatchModal() {
+    document.getElementById('shelfBatchModal').classList.remove('hidden');
+    resetShelfBatchForm();
+}
+
+function resetShelfBatchForm() {
+    document.getElementById('sbImageInput').value = '';
+    document.getElementById('sbProcessBtn').style.display = 'none';
+    document.getElementById('sbPreviewWrap').style.display = 'none';
+    document.getElementById('sbResultSection').style.display = 'none';
+    document.getElementById('sbStatus').textContent = '';
+    document.getElementById('sbRawText').value = '';
+    document.getElementById('sbResultBody').innerHTML = '';
+    _sbCurrentImage = null;
+    _sbResults = [];
+}
+
+function onShelfImageSelected(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    _sbCurrentImage = file;
+    
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        document.getElementById('sbPreview').src = ev.target.result;
+        document.getElementById('sbPreviewWrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    
+    document.getElementById('sbProcessBtn').style.display = 'inline-block';
+    document.getElementById('sbStatus').textContent = '✅ 已選擇，點「🔍 開始辨識」';
+}
+
+function processShelfImage() {
+    if (!_sbCurrentImage) return alert('⚠️ 請先選擇圖片');
+    
+    var statusEl = document.getElementById('sbStatus');
+    statusEl.textContent = '⏳ 圖片前處理中...';
+    
+    preprocessImageForOCR(_sbCurrentImage, 'document').then(function(processed) {
+        statusEl.textContent = '⏳ OCR 辨識中（大圖約 30-60 秒）...';
+        return Tesseract.recognize(processed, 'chi_tra+eng', {
+            tessedit_pageseg_mode: '6',  // 統一區塊
+            tessedit_ocr_engine_mode: '1',
+            preserve_interword_spaces: '1',
+            logger: function(m) {
+                if (m.status === 'recognizing text') {
+                    statusEl.textContent = '🔍 辨識中... ' + Math.round(m.progress * 100) + '%';
+                }
+            }
+        });
+    }).then(function(result) {
+        var text = result.data.text;
+        document.getElementById('sbRawText').value = text;
+        _sbResults = parseShelfOcrText(text);
+        renderShelfResults();
+        document.getElementById('sbResultSection').style.display = 'block';
+        statusEl.textContent = '✅ 完成！共辨識 ' + _sbResults.length + ' 筆，請檢查/修正';
+    }).catch(function(err) {
+        statusEl.textContent = '❌ 辨識失敗：' + (err.message || err);
+    });
+}
+
+// 從 OCR 文字解析排面表
+function parseShelfOcrText(text) {
+    if (!text) return [];
+    
+    var lines = text.split(/\n/).map(function(l){ return l.trim(); });
+    var results = [];
+    
+    // 找關鍵標籤行的索引
+    var codeLineIdx = -1, nameStartIdx = -1, priceLineIdx = -1;
+    
+    for (var i = 0; i < lines.length; i++) {
+        var l = lines[i];
+        if (codeLineIdx === -1 && /品號.{0,3}排面/.test(l)) codeLineIdx = i;
+        if (codeLineIdx === -1 && /^品號/.test(l)) codeLineIdx = i;
+        if (nameStartIdx === -1 && /^品名/.test(l)) nameStartIdx = i;
+        if (priceLineIdx === -1 && /單品零售價|零售價/.test(l)) priceLineIdx = i;
+    }
+    
+    // 收集所有「組」：以「品號」行為開始
+    var blocks = [];
+    var currBlock = null;
+    
+    for (var bi = 0; bi < lines.length; bi++) {
+        var ll = lines[bi];
+        // 識別到新的「品號」標籤 → 開始新區塊
+        if (/品號.{0,3}排面|^品號/.test(ll)) {
+            if (currBlock) blocks.push(currBlock);
+            currBlock = { codeLine: ll, nameLines: [], priceLine: '', state: 'code' };
+        } else if (currBlock) {
+            if (/^品名/.test(ll)) {
+                currBlock.state = 'name';
+                currBlock.nameLines.push(ll.replace(/^品名[:：\s]*/, ''));
+            } else if (/單品零售價|零售價/.test(ll)) {
+                currBlock.state = 'price';
+                currBlock.priceLine = ll.replace(/.*零售價[:：\s]*/, '');
+            } else if (/近四週|門市|庫存|平均|PSD|迴轉/.test(ll)) {
+                currBlock.state = 'done';
+            } else if (currBlock.state === 'name') {
+                // 繼續累積品名行（換行續寫）
+                currBlock.nameLines.push(ll);
+            }
+        }
+    }
+    if (currBlock) blocks.push(currBlock);
+    
+    // 從每個區塊抽取資料
+    for (var bk = 0; bk < blocks.length; bk++) {
+        var blk = blocks[bk];
+        
+        // 抽出所有 6 碼品號
+        var codeMatches = blk.codeLine.match(/(\d{6})\s*\(/g) || [];
+        var codes = [];
+        for (var cm = 0; cm < codeMatches.length; cm++) {
+            var m = codeMatches[cm].match(/(\d{6})/);
+            if (m) codes.push(m[1]);
+        }
+        // 備援：若沒抓到，就直接找 6 位數字
+        if (codes.length === 0) {
+            codes = blk.codeLine.match(/\b\d{6}\b/g) || [];
+        }
+        
+        // 抽出價格（過濾過大/過小的數字）
+        var prices = [];
+        var pn = blk.priceLine.match(/\b\d{1,4}\b/g) || [];
+        for (var p = 0; p < pn.length; p++) {
+            var pv = parseInt(pn[p]);
+            if (pv >= 5 && pv <= 9999) prices.push(pv);
+        }
+        
+        // 抽出品名段（依空白分割）
+        var names = [];
+        var combinedNameText = blk.nameLines.join(' ');
+        // 嘗試按 2+ 空白分割
+        var nameSegs = combinedNameText.split(/\s{2,}/);
+        for (var ns = 0; ns < nameSegs.length; ns++) {
+            var seg = nameSegs[ns].trim();
+            if (seg && /[\u4e00-\u9fa5]/.test(seg) && seg.length >= 2) {
+                // 清理括號標籤
+                seg = seg.replace(/^\([^)]+\)/, '').trim();
+                names.push(seg);
+            }
+        }
+        
+        // 配對：每個 code 對 name 和 price（按位置）
+        for (var ci = 0; ci < codes.length; ci++) {
+            results.push({
+                productCode: codes[ci],
+                productName: names[ci] || '',
+                retailPrice: prices[ci] || 0,
+                pma: '88',
+                taxFree: '免',
+                selected: true
+            });
+        }
+    }
+    
+    // 若上面沒抓到任何資料 → 備援：全文擷取
+    if (results.length === 0) {
+        var allCodes = text.match(/\b\d{6}\b/g) || [];
+        for (var ac = 0; ac < allCodes.length; ac++) {
+            results.push({
+                productCode: allCodes[ac],
+                productName: '',
+                retailPrice: 0,
+                pma: '88',
+                taxFree: '免',
+                selected: true
+            });
+        }
+    }
+    
+    // 去重（同品號只保留第一筆）
+    var seen = {};
+    var unique = [];
+    for (var r = 0; r < results.length; r++) {
+        if (!seen[results[r].productCode]) {
+            seen[results[r].productCode] = true;
+            unique.push(results[r]);
+        }
+    }
+    
+    return unique;
+}
+
+// 渲染辨識結果表
+function renderShelfResults() {
+    var tbody = document.getElementById('sbResultBody');
+    if (!tbody) return;
+    
+    if (!_sbResults || _sbResults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#9ca3af;">📭 沒有辨識到資料，請點「➕ 手動新增」</td></tr>';
+        return;
+    }
+    
+    var html = '';
+    var products = loadData('productCodes', {});
+    
+    for (var i = 0; i < _sbResults.length; i++) {
+        var r = _sbResults[i];
+        var exists = products[r.productCode];
+        var existsBadge = exists ? '<span style="background:#fef3c7;color:#78350f;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:4px;">已存在</span>' : '';
+        
+        html += '<tr>';
+        html += '<td style="text-align:center;"><input type="checkbox" ' + (r.selected ? 'checked' : '') + ' onchange="_sbResults[' + i + '].selected=this.checked" style="width:18px;height:18px;"></td>';
+        html += '<td><input type="text" maxlength="6" value="' + r.productCode + '" oninput="_sbResults[' + i + '].productCode=this.value" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:3px;font-family:monospace;font-weight:bold;">' + existsBadge + '</td>';
+        html += '<td><input type="text" value="' + (r.productName || '') + '" placeholder="請輸入或補齊" oninput="_sbResults[' + i + '].productName=this.value" style="width:100%;padding:4px;border:1px solid ' + (r.productName ? '#ccc' : '#dc2626') + ';border-radius:3px;"></td>';
+        html += '<td><input type="text" value="' + (r.pma || '88') + '" oninput="_sbResults[' + i + '].pma=this.value" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:3px;text-align:center;"></td>';
+        html += '<td><select onchange="_sbResults[' + i + '].taxFree=this.value" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:3px;">' +
+                '<option value="免"' + (r.taxFree === '免' ? ' selected' : '') + '>免</option>' +
+                '<option value="應"' + (r.taxFree === '應' ? ' selected' : '') + '>應</option>' +
+                '</select></td>';
+        html += '<td><input type="number" value="' + (r.retailPrice || 0) + '" oninput="_sbResults[' + i + '].retailPrice=parseFloat(this.value)||0" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:3px;text-align:right;"></td>';
+        html += '<td style="text-align:center;"><button onclick="sbDeleteRow(' + i + ')" style="padding:3px 8px;background:#dc2626;color:white;border:0;border-radius:3px;cursor:pointer;font-size:11px;">🗑️</button></td>';
+        html += '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function sbSelectAll(checked) {
+    for (var i = 0; i < _sbResults.length; i++) {
+        _sbResults[i].selected = checked;
+    }
+    renderShelfResults();
+}
+
+function sbAddManualRow() {
+    _sbResults.push({
+        productCode: '',
+        productName: '',
+        retailPrice: 0,
+        pma: '88',
+        taxFree: '免',
+        selected: true
+    });
+    renderShelfResults();
+}
+
+function sbDeleteRow(idx) {
+    _sbResults.splice(idx, 1);
+    renderShelfResults();
+}
+
+function reExtractFromRawText() {
+    var text = document.getElementById('sbRawText').value;
+    if (!text) return alert('⚠️ 沒有 OCR 文字');
+    _sbResults = parseShelfOcrText(text);
+    renderShelfResults();
+    showNotif('🔄 已重新解析，共 ' + _sbResults.length + ' 筆');
+}
+
+// 批次匯入
+function batchImportShelf() {
+    var selected = _sbResults.filter(function(r) { return r.selected; });
+    if (selected.length === 0) return alert('⚠️ 請至少勾選一筆');
+    
+    // 驗證
+    var invalid = selected.filter(function(r) {
+        return !r.productCode || r.productCode.length !== 6 || !r.productName;
+    });
+    if (invalid.length > 0) {
+        if (!confirm('⚠️ 有 ' + invalid.length + ' 筆品號或品名不完整，要跳過這些直接匯入嗎？')) return;
+    }
+    
+    var products = loadData('productCodes', {});
+    var added = 0, updated = 0, skipped = 0;
+    
+    for (var i = 0; i < selected.length; i++) {
+        var r = selected[i];
+        if (!r.productCode || r.productCode.length !== 6 || !r.productName) {
+            skipped++;
+            continue;
+        }
+        
+        var isNew = !products[r.productCode];
+        products[r.productCode] = {
+            productCode: r.productCode,
+            productName: r.productName,
+            pma: r.pma || '88',
+            taxFree: r.taxFree || '免',
+            costPrice: (products[r.productCode] && products[r.productCode].costPrice) || 0,
+            retailPrice: parseFloat(r.retailPrice) || 0,
+            lastBarcode: (products[r.productCode] && products[r.productCode].lastBarcode) || '',
+            lastUsed: new Date().toISOString()
+        };
+        if (isNew) added++; else updated++;
+    }
+    
+    saveData('productCodes', products);
+    renderProductLibraryList();
+    
+    alert('✅ 批次匯入完成！\n\n➕ 新增：' + added + ' 筆\n✏️ 更新：' + updated + ' 筆\n⏭️ 略過：' + skipped + ' 筆');
+    logAction('productLibrary', '排面表批次匯入：新增 ' + added + '、更新 ' + updated);
+    
+    closeModal('shelfBatchModal');
 }
 
 // ============= 📸 圖片識別入庫 =============
