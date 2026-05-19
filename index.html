@@ -1208,6 +1208,7 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                 <div class="submenu-item" onclick="goToPage('permissionSettings','menu-system')">🔐 權限設定</div>
                 <div class="submenu-item" onclick="goToPage('systemParams','menu-system')">⚙️ 系統參數</div>
                 <div class="submenu-item" onclick="goToPage('systemLog','menu-system')">📜 系統紀錄</div>
+                <div class="submenu-item" onclick="goToPage('cloudSync','menu-system')">🌐 線上同步</div>
             </div>
         </div>
     </div>
@@ -2830,6 +2831,98 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
             <tbody id="systemLogList"></tbody></table>
         </div></div></div>
     </div>
+    
+    <!-- 🌐 線上同步頁面 -->
+    <div id="page-cloudSync" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⚙️ 系統管理 &gt; <strong>🌐 線上同步</strong></div>
+        <div class="main-content"><div class="work-list-panel">
+            <div class="panel-header">
+                <h3>🌐 線上同步</h3>
+                <div id="syncStatusBadge" style="padding:6px 14px; border-radius:20px; font-size:13px; font-weight:bold; background:#9ca3af; color:white;">⚫ 未啟用</div>
+            </div>
+            <div class="panel-body">
+                <div class="alert-box info" style="margin-bottom:16px;">
+                    💡 <strong>線上同步</strong>讓多台設備（手機、平板、電腦）共享同一份資料：店長手機改班表，店員平板立即看到；門市間調撥單即時同步。<br>
+                    🔒 採用免費的 <strong>Pantry 雲端服務</strong>（getpantry.cloud），無需信用卡。
+                </div>
+                
+                <!-- 狀態卡片 -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:16px;">
+                    <div style="background:linear-gradient(135deg,#3b82f6,#1e40af); color:white; padding:14px; border-radius:8px;">
+                        <div style="font-size:12px; opacity:0.9;">同步狀態</div>
+                        <div id="cs_statusText" style="font-size:18px; font-weight:bold; margin-top:4px;">未啟用</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg,#10b981,#059669); color:white; padding:14px; border-radius:8px;">
+                        <div style="font-size:12px; opacity:0.9;">最近推送</div>
+                        <div id="cs_lastPush" style="font-size:14px; margin-top:4px;">尚未</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; padding:14px; border-radius:8px;">
+                        <div style="font-size:12px; opacity:0.9;">最近接收</div>
+                        <div id="cs_lastPull" style="font-size:14px; margin-top:4px;">尚未</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:white; padding:14px; border-radius:8px;">
+                        <div style="font-size:12px; opacity:0.9;">同步金鑰</div>
+                        <div id="cs_syncKey" style="font-size:11px; margin-top:4px; font-family:monospace; word-break:break-all;">未設定</div>
+                    </div>
+                </div>
+                
+                <!-- 設定區 -->
+                <div style="background:#fef3c7; padding:16px; border-radius:8px; margin-bottom:16px; border:2px dashed #d97706;">
+                    <h4 style="margin:0 0 10px 0; color:#78350f;">⚙️ 設定 Pantry 同步金鑰</h4>
+                    
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:10px; font-size:13px; line-height:1.7;">
+                        <strong>📚 首次設定步驟（一次性，約 1 分鐘）：</strong><br>
+                        ① 開新分頁，前往 <a href="https://getpantry.cloud" target="_blank" style="color:#2563eb;">getpantry.cloud</a><br>
+                        ② 填入電子郵件 + 名稱（任意），點「<strong>Get Started</strong>」<br>
+                        ③ 收信點驗證連結，網頁會顯示一串 <strong>Pantry ID</strong>（類似：<code style="background:#f3f4f6; padding:2px 6px; border-radius:3px;">abc12345-1234-1234-1234-abcdef123456</code>）<br>
+                        ④ 複製貼到下方輸入框 → 點「✅ 啟用同步」<br>
+                        ⑤ <strong>其他裝置</strong>：用同一個 Pantry ID 即可同步！
+                    </div>
+                    
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+                        <label style="font-weight:bold; color:#78350f; min-width:90px;">Pantry ID：</label>
+                        <input type="text" id="cs_pantryId" placeholder="貼上 Pantry ID（UUID 格式）" style="flex:1; min-width:280px; padding:10px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:13px;">
+                    </div>
+                    
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-confirm" style="padding:8px 18px; font-size:13px;" onclick="enableCloudSync()">✅ 啟用同步</button>
+                        <button class="btn-secondary" style="padding:8px 18px; font-size:13px;" onclick="testCloudSync()">🧪 測試連線</button>
+                        <button class="btn-danger" style="padding:8px 18px; font-size:13px;" onclick="disableCloudSync()">❌ 停用同步</button>
+                    </div>
+                </div>
+                
+                <!-- 操作區 -->
+                <div style="background:#dbeafe; padding:16px; border-radius:8px; margin-bottom:16px;">
+                    <h4 style="margin:0 0 10px 0; color:#1e3a8a;">☁️ 雲端操作</h4>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-primary" style="padding:10px 18px; font-size:13px; background:linear-gradient(to bottom,#3b82f6,#1d4ed8);" onclick="manualPushToCloud()">📤 立即推送到雲端</button>
+                        <button class="btn-primary" style="padding:10px 18px; font-size:13px; background:linear-gradient(to bottom,#10b981,#059669);" onclick="manualPullFromCloud()">📥 立即從雲端拉取</button>
+                        <button class="btn-primary" style="padding:10px 18px; font-size:13px; background:linear-gradient(to bottom,#8b5cf6,#7c3aed);" onclick="generatePantryGuide()">🆕 我沒帳號（產生 ID）</button>
+                        <button class="btn-danger" style="padding:10px 18px; font-size:13px;" onclick="clearCloudData()">🗑️ 清除雲端資料</button>
+                    </div>
+                </div>
+                
+                <!-- 自動同步設定 -->
+                <div style="background:#f3f4f6; padding:14px; border-radius:8px;">
+                    <h4 style="margin:0 0 10px 0;">🔄 自動同步</h4>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
+                        <input type="checkbox" id="cs_autoPush" checked onchange="updateAutoSyncSetting()" style="width:18px;height:18px;">
+                        <strong>自動推送：</strong>儲存資料時，2 秒後自動推送到雲端
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="cs_autoPull" checked onchange="updateAutoSyncSetting()" style="width:18px;height:18px;">
+                        <strong>自動拉取：</strong>每 30 秒自動檢查雲端是否有新資料
+                    </label>
+                </div>
+                
+                <!-- 同步歷史 -->
+                <div style="margin-top:16px;">
+                    <h4 style="margin:0 0 10px 0;">📋 同步紀錄（最近 10 筆）</h4>
+                    <div id="cs_logList" style="background:#f9fafb; padding:10px; border-radius:6px; max-height:200px; overflow-y:auto; font-family:monospace; font-size:11px; color:#374151; line-height:1.6;">尚無紀錄</div>
+                </div>
+            </div>
+        </div></div>
+    </div>
 </div>
 
 <!-- 工作 Modal -->
@@ -3647,7 +3740,8 @@ var PERMISSION_FEATURES = [
         { id: 'accountManagement',  name: '👤 帳號管理' },
         { id: 'permissionSettings', name: '🔐 權限設定' },
         { id: 'systemParams',       name: '⚙️ 系統參數' },
-        { id: 'systemLog',          name: '📜 系統紀錄' }
+        { id: 'systemLog',          name: '📜 系統紀錄' },
+        { id: 'cloudSync',          name: '🌐 線上同步' }
     ]}
 ];
 
@@ -4090,6 +4184,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'systemParams') { loadSystemParams(); renderBackupStats(); }
     else if (pageName === 'permissionSettings') { renderPermissionMatrix(); renderAccountPermissionList(); }
     else if (pageName === 'systemLog') renderSystemLog();
+    else if (pageName === 'cloudSync') initCloudSyncPage();
     else if (pageName === 'payroll') { setCurrentMonth('payrollMonth'); renderPayroll(); }
     else if (pageName === 'mySalary') renderMySalary();
     else if (pageName === 'storeManagement') renderStoreList();
@@ -11648,6 +11743,425 @@ var BACKUP_KEYS = [
     'customAccountPermissions',
     'currentStoreId', 'currentSchedStoreId'
 ];
+
+// ============= 🌐 線上同步（Pantry Cloud） =============
+var PANTRY_BASE_URL = 'https://getpantry.cloud/apiv1/pantry';
+var PANTRY_BASKET_NAME = 'hr_system_data';
+var _syncPushTimer = null;
+var _syncPullInterval = null;
+var _syncEnabled = false;
+var _syncLogs = [];
+
+// 取得裝置 ID（用於避免接收自己的推送）
+function getDeviceId() {
+    var id = localStorage.getItem('_cs_deviceId');
+    if (!id) {
+        id = 'dev_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+        localStorage.setItem('_cs_deviceId', id);
+    }
+    return id;
+}
+
+// 取得目前 Pantry ID
+function getSyncPantryId() {
+    return localStorage.getItem('_cs_pantryId') || '';
+}
+
+// 加入同步紀錄
+function addSyncLog(msg, type) {
+    type = type || 'info';
+    var icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+    var time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+    _syncLogs.unshift('[' + time + '] ' + icon + ' ' + msg);
+    if (_syncLogs.length > 30) _syncLogs.length = 30;
+    var listEl = document.getElementById('cs_logList');
+    if (listEl) listEl.innerHTML = _syncLogs.slice(0, 10).join('<br>');
+}
+
+// 更新狀態顯示
+function updateSyncUI() {
+    var pantryId = getSyncPantryId();
+    var enabled = localStorage.getItem('_cs_enabled') === '1';
+    
+    // 狀態徽章
+    var badge = document.getElementById('syncStatusBadge');
+    var statusText = document.getElementById('cs_statusText');
+    
+    if (badge && statusText) {
+        if (!pantryId) {
+            badge.textContent = '⚫ 未設定';
+            badge.style.background = '#9ca3af';
+            statusText.textContent = '未設定 Pantry ID';
+        } else if (!enabled) {
+            badge.textContent = '🟡 已設定但未啟用';
+            badge.style.background = '#f59e0b';
+            statusText.textContent = '已停用';
+        } else {
+            badge.textContent = '🟢 同步中';
+            badge.style.background = '#10b981';
+            statusText.textContent = '同步中';
+        }
+    }
+    
+    // 同步金鑰顯示
+    var keyEl = document.getElementById('cs_syncKey');
+    if (keyEl) {
+        keyEl.textContent = pantryId ? pantryId.substring(0, 8) + '...' + pantryId.substring(pantryId.length - 4) : '未設定';
+    }
+    
+    // 輸入框
+    var inputEl = document.getElementById('cs_pantryId');
+    if (inputEl && pantryId) inputEl.value = pantryId;
+    
+    // 自動同步勾選
+    var autoPush = document.getElementById('cs_autoPush');
+    var autoPull = document.getElementById('cs_autoPull');
+    if (autoPush) autoPush.checked = localStorage.getItem('_cs_autoPush') !== '0';
+    if (autoPull) autoPull.checked = localStorage.getItem('_cs_autoPull') !== '0';
+    
+    // 最近推送/拉取時間
+    var lastPush = localStorage.getItem('_cs_lastPush');
+    var lastPull = localStorage.getItem('_cs_lastPull');
+    var pushEl = document.getElementById('cs_lastPush');
+    var pullEl = document.getElementById('cs_lastPull');
+    if (pushEl) pushEl.textContent = lastPush ? formatRelativeTime(parseInt(lastPush)) : '尚未';
+    if (pullEl) pullEl.textContent = lastPull ? formatRelativeTime(parseInt(lastPull)) : '尚未';
+}
+
+function formatRelativeTime(ts) {
+    if (!ts) return '尚未';
+    var diff = Date.now() - ts;
+    if (diff < 60000) return '剛剛';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' 分鐘前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小時前';
+    return new Date(ts).toLocaleString('zh-TW', { hour12: false });
+}
+
+// 初始化頁面
+function initCloudSyncPage() {
+    updateSyncUI();
+    if (_syncLogs.length > 0) {
+        var listEl = document.getElementById('cs_logList');
+        if (listEl) listEl.innerHTML = _syncLogs.slice(0, 10).join('<br>');
+    }
+}
+
+// 啟用同步
+function enableCloudSync() {
+    var pantryId = (document.getElementById('cs_pantryId').value || '').trim();
+    if (!pantryId) return alert('⚠️ 請先輸入 Pantry ID');
+    
+    // 驗證格式（UUID 格式：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx）
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(pantryId)) {
+        if (!confirm('⚠️ Pantry ID 格式似乎不正確（應為 UUID 格式）。\n\n仍要繼續嗎？')) return;
+    }
+    
+    localStorage.setItem('_cs_pantryId', pantryId);
+    localStorage.setItem('_cs_enabled', '1');
+    _syncEnabled = true;
+    
+    addSyncLog('啟用線上同步，Pantry ID：' + pantryId.substring(0, 8) + '...', 'success');
+    showNotif('🌐 已啟用線上同步');
+    
+    // 啟動定時拉取
+    startAutoPull();
+    
+    // 先嘗試一次連線（雙向）
+    setTimeout(function() {
+        manualPullFromCloud(true);
+    }, 500);
+    
+    updateSyncUI();
+}
+
+// 停用同步
+function disableCloudSync() {
+    if (!confirm('❌ 停用線上同步？\n\n本地資料會保留，但不再與雲端同步。')) return;
+    
+    localStorage.setItem('_cs_enabled', '0');
+    _syncEnabled = false;
+    
+    if (_syncPullInterval) {
+        clearInterval(_syncPullInterval);
+        _syncPullInterval = null;
+    }
+    if (_syncPushTimer) {
+        clearTimeout(_syncPushTimer);
+        _syncPushTimer = null;
+    }
+    
+    addSyncLog('已停用線上同步', 'info');
+    showNotif('⚫ 已停用線上同步');
+    updateSyncUI();
+}
+
+// 測試連線
+function testCloudSync() {
+    var pantryId = (document.getElementById('cs_pantryId').value || '').trim() || getSyncPantryId();
+    if (!pantryId) return alert('⚠️ 請先輸入 Pantry ID');
+    
+    showNotif('🧪 測試連線中...');
+    addSyncLog('測試連線：' + pantryId.substring(0, 8) + '...', 'info');
+    
+    fetch(PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME)
+        .then(function(r) {
+            if (r.status === 404) {
+                // Basket 不存在但 Pantry 可能存在 → 嘗試建立
+                return fetch(PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ _test: true, _timestamp: Date.now() })
+                });
+            }
+            return r;
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text().then(function(t) { return { status: r.status, body: t }; });
+        })
+        .then(function(result) {
+            addSyncLog('✅ 連線成功！HTTP ' + result.status, 'success');
+            alert('✅ 連線測試成功！\n\nPantry ID 有效，可以正常使用。\n現在可以點「✅ 啟用同步」開始。');
+        })
+        .catch(function(err) {
+            addSyncLog('❌ 連線失敗：' + err.message, 'error');
+            alert('❌ 連線測試失敗！\n\n' + err.message + '\n\n可能原因：\n1. Pantry ID 錯誤\n2. 網路問題\n3. Pantry 服務暫時無法存取');
+        });
+}
+
+// 推送到雲端
+function manualPushToCloud(silent) {
+    var pantryId = getSyncPantryId();
+    if (!pantryId) {
+        if (!silent) alert('⚠️ 請先設定 Pantry ID 並啟用同步');
+        return;
+    }
+    
+    if (!silent) showNotif('📤 推送到雲端中...');
+    
+    var snapshot = { _timestamp: Date.now(), _device: getDeviceId(), _data: {} };
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var key = BACKUP_KEYS[i];
+        var v = localStorage.getItem(key);
+        if (v !== null) snapshot._data[key] = v;
+    }
+    
+    fetch(PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(snapshot)
+    }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+    }).then(function() {
+        localStorage.setItem('_cs_lastPush', String(snapshot._timestamp));
+        localStorage.setItem('_cs_lastKnownTs', String(snapshot._timestamp));
+        addSyncLog('推送成功（' + Object.keys(snapshot._data).length + ' 項資料）', 'success');
+        if (!silent) showNotif('✅ 推送成功！');
+        updateSyncUI();
+    }).catch(function(err) {
+        addSyncLog('❌ 推送失敗：' + err.message, 'error');
+        if (!silent) alert('❌ 推送失敗：' + err.message);
+    });
+}
+
+// 從雲端拉取
+function manualPullFromCloud(silent) {
+    var pantryId = getSyncPantryId();
+    if (!pantryId) {
+        if (!silent) alert('⚠️ 請先設定 Pantry ID 並啟用同步');
+        return;
+    }
+    
+    if (!silent) showNotif('📥 從雲端拉取中...');
+    
+    fetch(PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME)
+        .then(function(r) {
+            if (r.status === 404) {
+                addSyncLog('⚠️ 雲端尚無資料，請先推送', 'info');
+                if (!silent) {
+                    if (confirm('☁️ 雲端尚無資料\n\n要立即將本機資料推送到雲端嗎？')) {
+                        manualPushToCloud();
+                    }
+                }
+                return null;
+            }
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            if (!data) return;
+            if (!data._data) {
+                addSyncLog('⚠️ 雲端資料格式不符', 'error');
+                return;
+            }
+            
+            // 檢查時間戳（避免重複套用）
+            var lastKnown = parseInt(localStorage.getItem('_cs_lastKnownTs') || '0');
+            if (data._timestamp <= lastKnown && data._device === getDeviceId()) {
+                addSyncLog('雲端資料未變動，略過', 'info');
+                if (!silent) showNotif('✅ 已是最新');
+                return;
+            }
+            
+            // 套用資料
+            var applied = 0;
+            for (var k in data._data) {
+                if (data._data.hasOwnProperty(k)) {
+                    localStorage.setItem(k, data._data[k]);
+                    applied++;
+                }
+            }
+            
+            localStorage.setItem('_cs_lastPull', String(Date.now()));
+            localStorage.setItem('_cs_lastKnownTs', String(data._timestamp));
+            
+            addSyncLog('拉取成功（套用 ' + applied + ' 項）', 'success');
+            if (!silent || applied > 0) showNotif('☁️ 已套用雲端資料（' + applied + ' 項）');
+            
+            updateSyncUI();
+            
+            // 刷新當前頁面
+            refreshCurrentPage();
+        })
+        .catch(function(err) {
+            addSyncLog('❌ 拉取失敗：' + err.message, 'error');
+            if (!silent) alert('❌ 拉取失敗：' + err.message);
+        });
+}
+
+// 自動推送（debounced）
+function autoPushDebounced() {
+    if (!_syncEnabled || localStorage.getItem('_cs_autoPush') === '0') return;
+    if (_syncPushTimer) clearTimeout(_syncPushTimer);
+    _syncPushTimer = setTimeout(function() {
+        manualPushToCloud(true);
+    }, 2000);
+}
+
+// 自動拉取（定時）
+function startAutoPull() {
+    if (_syncPullInterval) clearInterval(_syncPullInterval);
+    if (localStorage.getItem('_cs_autoPull') === '0') return;
+    
+    _syncPullInterval = setInterval(function() {
+        if (_syncEnabled) manualPullFromCloud(true);
+    }, 30000);  // 每 30 秒
+}
+
+function updateAutoSyncSetting() {
+    var autoPush = document.getElementById('cs_autoPush').checked;
+    var autoPull = document.getElementById('cs_autoPull').checked;
+    localStorage.setItem('_cs_autoPush', autoPush ? '1' : '0');
+    localStorage.setItem('_cs_autoPull', autoPull ? '1' : '0');
+    
+    if (autoPull && _syncEnabled) {
+        startAutoPull();
+    } else if (!autoPull && _syncPullInterval) {
+        clearInterval(_syncPullInterval);
+        _syncPullInterval = null;
+    }
+    
+    showNotif('✅ 已更新自動同步設定');
+}
+
+// 清除雲端資料
+function clearCloudData() {
+    var pantryId = getSyncPantryId();
+    if (!pantryId) return alert('⚠️ 未設定 Pantry ID');
+    
+    if (!confirm('🗑️ 確定清除雲端資料？\n\n此操作會刪除 Pantry 上的所有同步資料，無法復原！\n\n本地資料不會被刪除。')) return;
+    
+    fetch(PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME, {
+        method: 'DELETE'
+    }).then(function(r) {
+        if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status);
+        addSyncLog('已清除雲端資料', 'success');
+        showNotif('🗑️ 雲端資料已清除');
+        localStorage.removeItem('_cs_lastKnownTs');
+        localStorage.removeItem('_cs_lastPush');
+        localStorage.removeItem('_cs_lastPull');
+        updateSyncUI();
+    }).catch(function(err) {
+        addSyncLog('❌ 清除失敗：' + err.message, 'error');
+        alert('❌ 清除失敗：' + err.message);
+    });
+}
+
+// 教學：產生 Pantry ID 引導
+function generatePantryGuide() {
+    var msg = '🆕 取得 Pantry ID 的方法（1 分鐘設定）：\n\n' +
+              '① 開新分頁，前往 https://getpantry.cloud\n' +
+              '② 填入：\n' +
+              '   - Pantry Name：「我的店」（任意）\n' +
+              '   - Email：你的電子郵件\n' +
+              '   - 點「Get Started」\n\n' +
+              '③ 收信點驗證連結\n\n' +
+              '④ 網頁會顯示一串 Pantry ID（UUID 格式）\n' +
+              '   例：abc12345-1234-5678-90ab-cdefghi12345\n\n' +
+              '⑤ 複製，貼到本頁的「Pantry ID」輸入框\n\n' +
+              '⑥ 點「✅ 啟用同步」即可！\n\n' +
+              '⚠️ 將同一 Pantry ID 設定到其他裝置 = 多裝置共享資料';
+    alert(msg);
+    window.open('https://getpantry.cloud', '_blank');
+}
+
+// 重新整理當前頁面
+function refreshCurrentPage() {
+    var current = document.querySelector('.page-content:not(.hidden)');
+    if (!current) return;
+    var pageId = (current.id || '').replace('page-', '');
+    if (!pageId) return;
+    
+    // 重新觸發 init
+    var initMap = {
+        'workList': function() { renderWorkList && renderWorkList(); },
+        'cashReport': function() { initCashReport && initCashReport(); },
+        'purchaseReceipt': function() { initPurchaseReceipt && initPurchaseReceipt(); },
+        'transferOrder': function() { loadTransferOrder && loadTransferOrder(); },
+        'productLibrary': function() { renderProductLibraryList && renderProductLibraryList(); },
+        'employees': function() { renderEmployees && renderEmployees(); },
+        'storeManagement': function() { renderStores && renderStores(); },
+        'accountManagement': function() { renderAccounts && renderAccounts(); }
+    };
+    if (initMap[pageId]) {
+        try { initMap[pageId](); } catch(e) {}
+    }
+}
+
+// hook into saveData：每次儲存都觸發 debounced push
+var _originalSaveData = window.saveData;
+window.saveData = function(key, value) {
+    if (typeof _originalSaveData === 'function') {
+        _originalSaveData(key, value);
+    } else {
+        // 預設行為
+        try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); } catch(e){}
+    }
+    // 觸發自動推送（限定備份範圍內的 key）
+    if (_syncEnabled && BACKUP_KEYS.indexOf(key) >= 0) {
+        autoPushDebounced();
+    }
+};
+
+// 啟動時自動恢復同步狀態
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        var enabled = localStorage.getItem('_cs_enabled') === '1';
+        var pantryId = getSyncPantryId();
+        if (enabled && pantryId) {
+            _syncEnabled = true;
+            addSyncLog('恢復線上同步狀態', 'info');
+            // 啟動定時拉取
+            startAutoPull();
+            // 啟動時拉一次
+            setTimeout(function() {
+                manualPullFromCloud(true);
+            }, 2000);
+        }
+    }, 1500);
+});
+
 
 // 渲染備份統計資訊
 function renderBackupStats() {
