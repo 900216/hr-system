@@ -6,6 +6,7 @@
 <title>考勤管理系統 Rostering System</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans-serif; background: #f0f0f0; }
@@ -476,6 +477,18 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
     gap: 3px;
     align-items: center;
 }
+/* 🔑 現金日報：移除數字輸入框的上下箭頭（spinner）*/
+#page-cashReport input[type="number"]::-webkit-inner-spin-button,
+#page-cashReport input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+#page-cashReport input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .slot-times input[type="time"] {
     width: 90px;
     padding: 3px;
@@ -1161,6 +1174,7 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                 <button class="btn-action btn-signout" onclick="handleSignOut()">📤 簽退</button>
                 <button class="btn-action btn-login" onclick="handleLogin()">🔓 登入</button>
             </div>
+            <button class="btn-action" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; font-weight:bold; padding:14px; border:0; border-radius:8px; cursor:pointer; font-size:16px;" onclick="openFaceLogin()">🤳 人臉辨識快速登入</button>
             <div style="margin-top:15px; padding:10px; background:#fef3c7; border-radius:4px; font-size:12px;">
                 💡 <strong>演示帳號（密碼皆為 123456）：</strong><br>
                 🔴 <code>admin</code> 系統管理員（全功能）<br>
@@ -1168,6 +1182,30 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                 🟢 <code>staff01</code> 一般職員（僅看班表、請假）<br>
                 🟢 <code>user12345</code> 時薪人員（同一般職員）
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🤳 人臉辨識登入 Modal -->
+<div id="faceLoginModal" class="hidden" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:100000; display:flex; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:20px; max-width:420px; width:92%; text-align:center;">
+        <h2 style="margin:0 0 6px 0; color:#6d28d9;">🤳 人臉辨識登入</h2>
+        <div id="faceLoginStatus" style="font-size:13px; color:#6b7280; margin-bottom:12px;">準備中...</div>
+        
+        <div style="position:relative; width:100%; max-width:320px; margin:0 auto; border-radius:12px; overflow:hidden; background:#000; aspect-ratio:1/1;">
+            <video id="faceVideo" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+            <canvas id="faceCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; transform:scaleX(-1);"></canvas>
+            <!-- 對準圈 -->
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:65%; height:65%; border:3px dashed rgba(139,92,246,0.8); border-radius:50%; pointer-events:none;"></div>
+        </div>
+        
+        <div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
+            <button id="faceLoginScanBtn" onclick="doFaceLoginScan()" style="padding:14px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; border:0; border-radius:8px; cursor:pointer; font-size:16px; font-weight:bold;">📸 開始辨識</button>
+            <button onclick="closeFaceLogin()" style="padding:10px; background:#6b7280; color:white; border:0; border-radius:8px; cursor:pointer; font-size:14px;">✕ 取消，改用帳密</button>
+        </div>
+        
+        <div style="margin-top:12px; font-size:11px; color:#9ca3af;">
+            💡 尚未註冊人臉？請先用帳密登入，到「🤳 人臉登入設定」註冊。
         </div>
     </div>
 </div>
@@ -1186,6 +1224,7 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
         </div>
         <div class="header-buttons">
             <button class="header-btn" onclick="showWorkList()">📋 工作清單</button>
+            <button class="header-btn" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);" onclick="openFaceEnroll()">🤳 人臉登入設定</button>
             <button class="header-btn logout" onclick="logout()">🚪 登出</button>
         </div>
     </div>
@@ -2323,7 +2362,7 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                             <img id="prPreviewImg" style="max-width:100%; max-height:200px; border:1px solid #d97706; border-radius:4px;">
                         </div>
                         <textarea id="prOcrResult" rows="6" placeholder="OCR 辨識結果會顯示在這裡，您可以檢查後再點「套用到表格」" style="width:100%; margin-top:8px; padding:8px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:11px; display:none;"></textarea>
-                        <button id="prApplyOcrBtn" class="btn-primary" onclick="applyPurchaseReceiptOCR()" style="margin-top:8px; padding:8px 16px; font-size:13px; display:none;">✅ 套用到表格</button>
+                        <button id="prApplyOcrBtn" class="btn-primary" onclick="applyPurchaseReceiptOcr()" style="margin-top:8px; padding:8px 16px; font-size:13px; display:none;">✅ 套用到表格</button>
                         <div style="margin-top:6px; font-size:11px; color:#6b7280;">💡 提示：圖片清晰、平整、無遮擋。辨識會自動填入明細項目。</div>
                     </div>
                     
@@ -3841,19 +3880,24 @@ function handleLogin() {
         if (account.status === 'locked') return alert('❌ 此帳號已鎖定，請聯絡管理員');
         var correctPwd = account.password || '123456';
         if (p !== correctPwd) return alert('❌ 密碼錯誤' + demoMsg);
-        currentUser = {
+        doLoginAs({
             id: account.username,
             name: account.name,
             role: account.role
-        };
+        });
     } else {
         // 無此帳號（fallback：時薪人員以 user12345 之外形式登入）
         if (u.length >= 5 && p === '123456') {
-            currentUser = { id: u, name: '員工', role: 'user' };
+            doLoginAs({ id: u, name: '員工', role: 'user' });
         } else {
             return alert('❌ 帳號或密碼錯誤' + demoMsg);
         }
     }
+}
+
+// 🔑 共用登入邏輯（帳密 / 人臉 共用）
+function doLoginAs(user) {
+    currentUser = user;
     
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('mainPage').classList.remove('hidden');
@@ -3873,6 +3917,226 @@ function handleLogin() {
     showWorkList();
     
     logAction('login', '使用者登入：' + currentUser.name + '（' + currentUser.role + '）');
+}
+
+// ============= 🤳 人臉辨識登入 =============
+var FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+var _faceModelsLoaded = false;
+var _faceStream = null;
+var _faceLoginMode = 'login';  // 'login' or 'enroll'
+var _faceEnrollTarget = null;  // 註冊時的目標帳號
+
+// 載入人臉模型
+function loadFaceModels(statusCb) {
+    if (_faceModelsLoaded) return Promise.resolve();
+    if (typeof faceapi === 'undefined') {
+        return Promise.reject(new Error('人臉辨識引擎未載入，請檢查網路'));
+    }
+    if (statusCb) statusCb('⏳ 載入人臉辨識模型中...');
+    return faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL)
+        .then(function() { return faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL); })
+        .then(function() { return faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL); })
+        .then(function() { _faceModelsLoaded = true; });
+}
+
+// 開啟相機
+function startFaceCamera(statusCb) {
+    var video = document.getElementById('faceVideo');
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        .then(function(stream) {
+            _faceStream = stream;
+            video.srcObject = stream;
+            return new Promise(function(resolve) {
+                video.onloadedmetadata = function() { video.play(); resolve(); };
+            });
+        });
+}
+
+function stopFaceCamera() {
+    if (_faceStream) {
+        _faceStream.getTracks().forEach(function(t) { t.stop(); });
+        _faceStream = null;
+    }
+    var video = document.getElementById('faceVideo');
+    if (video) video.srcObject = null;
+}
+
+// 開啟人臉登入
+function openFaceLogin() {
+    var profiles = loadData('faceProfiles', []);
+    if (profiles.length === 0) {
+        return alert('⚠️ 尚未註冊任何人臉\n\n請先用「帳號密碼」登入，\n再到「🤳 人臉登入設定」註冊您的臉。');
+    }
+    
+    _faceLoginMode = 'login';
+    document.getElementById('faceLoginModal').classList.remove('hidden');
+    var statusEl = document.getElementById('faceLoginStatus');
+    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
+    
+    setStatus('⏳ 啟動相機中...');
+    document.getElementById('faceLoginScanBtn').disabled = true;
+    
+    loadFaceModels(setStatus).then(function() {
+        return startFaceCamera(setStatus);
+    }).then(function() {
+        setStatus('✅ 請將臉對準圓圈，點「開始辨識」');
+        document.getElementById('faceLoginScanBtn').disabled = false;
+    }).catch(function(err) {
+        setStatus('❌ ' + err.message);
+        alert('❌ 無法啟動人臉辨識：' + err.message + '\n\n請確認：\n1. 已允許相機權限\n2. 使用 HTTPS（https://）\n3. 網路正常（需下載模型）');
+    });
+}
+
+function closeFaceLogin() {
+    stopFaceCamera();
+    document.getElementById('faceLoginModal').classList.add('hidden');
+}
+
+// 擷取目前畫面的人臉描述子
+function captureFaceDescriptor() {
+    var video = document.getElementById('faceVideo');
+    var opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+    return faceapi.detectSingleFace(video, opts)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+}
+
+// 執行人臉登入辨識
+function doFaceLoginScan() {
+    var statusEl = document.getElementById('faceLoginStatus');
+    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
+    var btn = document.getElementById('faceLoginScanBtn');
+    btn.disabled = true;
+    setStatus('🔍 辨識中，請保持不動...');
+    
+    captureFaceDescriptor().then(function(detection) {
+        if (!detection) {
+            setStatus('⚠️ 未偵測到人臉，請靠近並對準圓圈');
+            btn.disabled = false;
+            return;
+        }
+        
+        var profiles = loadData('faceProfiles', []);
+        var queryDesc = detection.descriptor;
+        
+        // 比對所有已註冊人臉，找最近的
+        var bestMatch = null;
+        var bestDist = 999;
+        for (var i = 0; i < profiles.length; i++) {
+            if (!profiles[i].descriptor) continue;
+            var refDesc = new Float32Array(profiles[i].descriptor);
+            var dist = faceapi.euclideanDistance(queryDesc, refDesc);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestMatch = profiles[i];
+            }
+        }
+        
+        // 閾值 0.5（越小越嚴格）
+        var THRESHOLD = 0.5;
+        if (bestMatch && bestDist < THRESHOLD) {
+            setStatus('✅ 辨識成功：' + bestMatch.name + '（相似度 ' + Math.round((1-bestDist)*100) + '%）');
+            
+            // 驗證帳號仍有效
+            var accounts = loadData('accounts', defaultAccounts);
+            var account = accounts.find(function(a) { return a.username === bestMatch.username; });
+            if (account && (account.status === 'disabled' || account.status === 'locked')) {
+                setStatus('❌ 此帳號已停用/鎖定');
+                btn.disabled = false;
+                return;
+            }
+            
+            setTimeout(function() {
+                closeFaceLogin();
+                doLoginAs({
+                    id: bestMatch.username,
+                    name: bestMatch.name,
+                    role: bestMatch.role
+                });
+                showNotif('🤳 人臉登入成功：' + bestMatch.name);
+            }, 800);
+        } else {
+            setStatus('❌ 辨識失敗' + (bestMatch ? '（相似度過低 ' + Math.round((1-bestDist)*100) + '%）' : '') + '，請重試或改用帳密');
+            btn.disabled = false;
+        }
+    }).catch(function(err) {
+        setStatus('❌ 辨識錯誤：' + err.message);
+        btn.disabled = false;
+    });
+}
+
+// ===== 人臉註冊（需登入後在設定中使用）=====
+function openFaceEnroll() {
+    if (!currentUser) return alert('⚠️ 請先登入');
+    
+    _faceLoginMode = 'enroll';
+    _faceEnrollTarget = currentUser;
+    document.getElementById('faceLoginModal').classList.remove('hidden');
+    document.querySelector('#faceLoginModal h2').textContent = '🤳 註冊人臉：' + currentUser.name;
+    document.getElementById('faceLoginScanBtn').textContent = '📸 拍攝並註冊';
+    document.getElementById('faceLoginScanBtn').setAttribute('onclick', 'doFaceEnroll()');
+    
+    var statusEl = document.getElementById('faceLoginStatus');
+    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
+    
+    setStatus('⏳ 啟動相機中...');
+    document.getElementById('faceLoginScanBtn').disabled = true;
+    
+    loadFaceModels(setStatus).then(function() {
+        return startFaceCamera(setStatus);
+    }).then(function() {
+        setStatus('✅ 請正對鏡頭、光線充足，點「拍攝並註冊」');
+        document.getElementById('faceLoginScanBtn').disabled = false;
+    }).catch(function(err) {
+        setStatus('❌ ' + err.message);
+        alert('❌ 無法啟動相機：' + err.message);
+    });
+}
+
+function doFaceEnroll() {
+    var statusEl = document.getElementById('faceLoginStatus');
+    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
+    var btn = document.getElementById('faceLoginScanBtn');
+    btn.disabled = true;
+    setStatus('🔍 擷取人臉中，請保持不動...');
+    
+    captureFaceDescriptor().then(function(detection) {
+        if (!detection) {
+            setStatus('⚠️ 未偵測到人臉，請靠近並正對鏡頭');
+            btn.disabled = false;
+            return;
+        }
+        
+        var profiles = loadData('faceProfiles', []);
+        // 移除同帳號舊資料
+        profiles = profiles.filter(function(p) { return p.username !== _faceEnrollTarget.id; });
+        
+        profiles.push({
+            username: _faceEnrollTarget.id,
+            name: _faceEnrollTarget.name,
+            role: _faceEnrollTarget.role,
+            descriptor: Array.from(detection.descriptor),  // 128 維轉陣列存儲
+            enrolledAt: new Date().toISOString()
+        });
+        
+        saveData('faceProfiles', profiles);
+        setStatus('✅ 註冊成功！');
+        
+        setTimeout(function() {
+            closeFaceLogin();
+            // 還原 Modal 狀態
+            document.querySelector('#faceLoginModal h2').textContent = '🤳 人臉辨識登入';
+            document.getElementById('faceLoginScanBtn').textContent = '📸 開始辨識';
+            document.getElementById('faceLoginScanBtn').setAttribute('onclick', 'doFaceLoginScan()');
+            alert('🎉 人臉註冊成功！\n\n下次可在登入畫面點「🤳 人臉辨識快速登入」直接刷臉登入。');
+            if (typeof renderFaceProfileList === 'function') renderFaceProfileList();
+        }, 800);
+        
+        logAction('login', '註冊人臉：' + _faceEnrollTarget.name);
+    }).catch(function(err) {
+        setStatus('❌ 註冊錯誤：' + err.message);
+        btn.disabled = false;
+    });
 }
 
 function logout() {
@@ -9801,7 +10065,20 @@ function applyPurchaseReceiptOcr() {
     }
     
     if (newItems.length === 0) {
-        return alert('⚠️ 未辨識出任何資料列。\n\n建議：\n1. 圖片要清晰、平整、光線充足\n2. 或手動修改上方 OCR 文字後再套用\n3. 也可直接點「➕ 新增列」手動輸入');
+        // 🆕 診斷：顯示為何失敗
+        var lineCount = text.split(/\n/).filter(function(l){ return l.trim(); }).length;
+        var hasWords = (_prOcrWords && _prOcrWords.length) ? _prOcrWords.length : 0;
+        return alert('⚠️ 未能從辨識結果解析出資料列。\n\n' +
+                     '📊 診斷：\n' +
+                     '• OCR 文字行數：' + lineCount + '\n' +
+                     '• 文字座標數：' + hasWords + '\n\n' +
+                     '可能原因：\n' +
+                     '1. 圖片不夠清晰（建議平整、光線足、鏡頭平行）\n' +
+                     '2. 表格欄位辨識不全\n\n' +
+                     '💡 解法：\n' +
+                     '① 直接在上方 OCR 文字框「手動修正」後再按套用\n' +
+                     '② 或點表格「➕ 新增列」手動輸入\n' +
+                     '③ 確認每列含「訂單號(10碼)」或「廠商名稱+金額」');
     }
     
     _prCurrentItems = newItems;
@@ -9816,14 +10093,30 @@ function parsePurchaseLineByPattern(line) {
     line = line.trim();
     if (!line) return null;
     
-    // 必須以 1-2 位項次數字開頭
-    var itemNoMatch = line.match(/^(\d{1,2})\b/);
-    if (!itemNoMatch) return null;
-    var itemNo = parseInt(itemNoMatch[1]);
-    if (itemNo < 1 || itemNo > 50) return null;
+    // 🆕 判斷是否為「資料列」：放寬條件
+    // 條件：含有 10 位訂單號 OR 含金額數字（含小數/逗號）OR 開頭是項次
+    var hasOrderNo = /\b\d{10}\b/.test(line);
+    var hasAmount = /\d{1,3}(?:,\d{3})+|\d+\.\d{2}/.test(line);  // 千分位或小數
+    var hasItemNo = /^\d{1,2}\b/.test(line);
+    var hasChinese = /[\u4e00-\u9fa5]/.test(line);
     
-    // 移除開頭項次，留下其餘
-    var rest = line.substring(itemNoMatch[0].length).trim();
+    // 排除表頭、合計、標籤列
+    if (/項目|廠商統編|廠商名稱|訂單.{0,2}發票|成本.{0,2}價|零售.{0,2}價|合\s*計|頁次|店號|店名|列印|庫存日|會計日/.test(line)) {
+        return null;
+    }
+    
+    // 至少要符合「有訂單號」或「有金額且有中文」其中之一
+    if (!hasOrderNo && !(hasAmount && hasChinese) && !(hasItemNo && hasChinese)) {
+        return null;
+    }
+    
+    var rest = line;
+    
+    // 移除開頭項次（若有）
+    var itemNoMatch = rest.match(/^(\d{1,2})\s+/);
+    if (itemNoMatch && parseInt(itemNoMatch[1]) <= 50) {
+        rest = rest.substring(itemNoMatch[0].length).trim();
+    }
     
     // === 用「錨點模式」逐一擷取，擷取後從字串移除，避免互相干擾 ===
     
@@ -9862,20 +10155,16 @@ function parsePurchaseLineByPattern(line) {
     var catMatch = rest.match(/\b(0[1-9]|[1-9][0-9])\b/);
     if (catMatch) {
         category = catMatch[1];
-        // 只移除第一個出現的
         rest = rest.replace(catMatch[0], ' ');
     }
     
     // 6. 成本價、零售價：取「最後兩個」數字
     //    成本通常有小數（1,710.72），零售為整數（2,376）
     var allNums = rest.match(/-?\d{1,3}(?:,\d{3})*(?:\.\d+)?/g) || [];
-    // 過濾掉太小的配本數（通常 < 10 且無小數無逗號的單獨數字可能是配本）
     var cost = 0, retail = 0;
     if (allNums.length >= 2) {
-        // 最後兩個數字 = 成本、零售
         cost = parseFloat(allNums[allNums.length - 2].replace(/,/g, '')) || 0;
         retail = parseFloat(allNums[allNums.length - 1].replace(/,/g, '')) || 0;
-        // 移除這兩個數字以取得乾淨品名
         rest = rest.replace(allNums[allNums.length - 1], ' ');
         rest = rest.replace(allNums[allNums.length - 2], ' ');
     } else if (allNums.length === 1) {
@@ -9895,7 +10184,6 @@ function parsePurchaseLineByPattern(line) {
     var nameMatch = rest.match(/[\u4e00-\u9fa5A-Za-z0-9℃\-]+/g);
     var vendorName = '';
     if (nameMatch) {
-        // 取最長的中文片段當品名
         nameMatch.sort(function(a, b) {
             var ca = (a.match(/[\u4e00-\u9fa5]/g) || []).length;
             var cb = (b.match(/[\u4e00-\u9fa5]/g) || []).length;
@@ -9904,8 +10192,15 @@ function parsePurchaseLineByPattern(line) {
         vendorName = nameMatch[0].trim();
     }
     
-    // 至少要有成本或零售或廠商名稱才算有效列
-    if (cost === 0 && retail === 0 && !vendorName) return null;
+    // 🆕 用廠商編號回查廠商名稱（若名稱空白）
+    if (!vendorName && vendorCode) {
+        var vendors = loadVendors();
+        var vm = vendors.find(function(v) { return v.code === vendorCode; });
+        if (vm) vendorName = vm.name;
+    }
+    
+    // 至少要有成本或零售或廠商名稱或訂單號才算有效列
+    if (cost === 0 && retail === 0 && !vendorName && !orderNo) return null;
     
     return {
         status: status,
@@ -10242,8 +10537,52 @@ function initCashReport() {
     // 載入資料
     loadCashReport();
     
+    // 🆕 啟用 ENTER 跳下一格
+    setupCashReportEnterNav();
+    
     // 🚀 背景預載入 Tesseract OCR 引擎
     setTimeout(preloadTesseract, 2000);
+}
+
+// 🆕 現金日報：按 ENTER 自動跳下一個輸入格
+function setupCashReportEnterNav() {
+    var page = document.getElementById('page-cashReport');
+    if (!page) return;
+    
+    // 避免重複綁定
+    if (page._enterNavBound) return;
+    page._enterNavBound = true;
+    
+    page.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') return;
+        var target = e.target;
+        if (!target || target.tagName !== 'INPUT') return;
+        // 只處理數字/文字輸入框
+        if (target.type !== 'number' && target.type !== 'text') return;
+        
+        e.preventDefault();
+        
+        // 取得頁面內所有可輸入的 input（依出現順序）
+        var inputs = Array.prototype.slice.call(
+            page.querySelectorAll('input[type="number"], input[type="text"]')
+        ).filter(function(el) {
+            return !el.disabled && !el.readOnly && el.offsetParent !== null;  // 可見且可編輯
+        });
+        
+        var idx = inputs.indexOf(target);
+        if (idx >= 0 && idx < inputs.length - 1) {
+            var next = inputs[idx + 1];
+            next.focus();
+            // 若為數字框，選取內容方便直接覆寫
+            try { next.select(); } catch(err) {}
+            // 捲動到可見範圍
+            next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (idx === inputs.length - 1) {
+            // 最後一格，移除焦點
+            target.blur();
+            showNotif('✅ 已到最後一格');
+        }
+    });
 }
 
 // 🏬 載入門市選單
@@ -13038,6 +13377,7 @@ var BACKUP_KEYS = [
     'purchaseReceipts',
     'transferOrders',
     'productCodes',
+    'faceProfiles',
     'vendors',
     'inventoryReports',
     'logs',
