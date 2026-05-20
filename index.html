@@ -181,6 +181,22 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
     background: #f9fafb;
     min-height: 120px;
     padding: 4px;
+    transition: background 0.2s, outline 0.2s;
+}
+.sch-cell[draggable="true"] {
+    cursor: move;
+}
+.sch-cell[draggable="true"]:hover::after {
+    content: "✋ 可拖拉複製";
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 9px;
+    color: #6b7280;
+    background: rgba(255,255,255,0.85);
+    padding: 1px 4px;
+    border-radius: 2px;
+    pointer-events: none;
 }
 .sch-cell .slot-mini {
     background: white;
@@ -468,6 +484,19 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
     text-align: center;
     font-size: 12px;
     font-weight: bold;
+}
+
+/* 🔑 強制 24 小時制：隱藏 AM/PM 選擇器 */
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+    display: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0;
+    visibility: hidden;
+}
+input[type="time"]::-webkit-datetime-edit-hour-field,
+input[type="time"]::-webkit-datetime-edit-minute-field {
+    text-align: center;
 }
 .slot-checkbox {
     display: block;
@@ -1198,6 +1227,7 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                 <div class="submenu-item" onclick="goToPage('cashReport','menu-daily-inv')">💵 現金日報</div>
                 <div class="submenu-item" onclick="goToPage('purchaseReceipt','menu-daily-inv')">📦 進貨驗收</div>
                 <div class="submenu-item" onclick="goToPage('transferOrder','menu-daily-inv')">🔄 51-調撥單</div>
+                <div class="submenu-item" onclick="goToPage('inventoryReport','menu-daily-inv')">📊 日別庫存明細表</div>
                 <div class="submenu-item" onclick="goToPage('productLibrary','menu-daily-inv')">📋 條碼商品庫</div>
             </div>
         </div>
@@ -1252,6 +1282,9 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                 <button class="btn-toolbar" onclick="printSchedule()">🖨 列印</button>
                 <button class="btn-toolbar red" onclick="showWorkList()">↩ 返回</button>
                 <span style="margin-left:auto;" id="weekStatsInline"></span>
+            </div>
+            <div class="filter-row" style="background:#dbeafe; padding:6px 12px; border-radius:6px; border:1px solid #3b82f6; font-size:12px; color:#1e3a8a;">
+                💡 <strong>操作提示：</strong>① 點空格新增排班 ② <strong>拖拉格子可複製到其他日期/員工</strong> ③ 請假類型可填寫時數，自動於假別額度扣除 ④ 時間採 24 小時制
             </div>
             <div class="filter-row" id="schedViewToolbar" style="display:none;">
                 <button class="btn-toolbar" onclick="printSchedule()">🖨 列印我的班表</button>
@@ -1769,6 +1802,95 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                 </div>
             </div>
         </div>
+    </div>
+    
+    <!-- 📊 日別庫存明細表 -->
+    <div id="page-inventoryReport" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 📊 日別庫存 &gt; <strong>📊 日別庫存明細表</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <h3>📊 日別庫存明細表</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="alert-box info" style="margin-bottom:12px;">
+                        💡 <strong>輸入訂單/調撥單編號即可自動帶入！</strong><br>
+                        在下方分別輸入<strong>進貨訂單編號</strong>與<strong>調撥單編號</strong>，系統自動從「進貨驗收」「51-調撥單」抓取明細，填入 05/06/16/17。現金日報的折扣與營業額（23/26）依會計日自動帶入。
+                    </div>
+                    
+                    <div style="background:#f9fafb; padding:12px; border-radius:8px; margin-bottom:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                        <div><label style="font-size:12px; color:#6b7280;">店號：</label><input type="text" id="invStoreCode" placeholder="285861" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;"></div>
+                        <div><label style="font-size:12px; color:#6b7280;">店名：</label><input type="text" id="invStoreName" placeholder="小金" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;"></div>
+                        <div style="display:flex; align-items:flex-end;"><span style="font-size:12px; color:#6b7280;">列印日：<span id="invPrintDate"></span></span></div>
+                    </div>
+                    
+                    <!-- 🆕 編號輸入帶入區 -->
+                    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a); padding:14px; border-radius:10px; margin-bottom:14px; border:2px solid #f59e0b;">
+                        <h4 style="margin:0 0 10px 0; color:#78350f;">🔢 輸入編號自動帶入</h4>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;" id="invRefGrid">
+                            <!-- 進貨訂單編號 -->
+                            <div style="background:white; padding:10px; border-radius:8px;">
+                                <div style="font-weight:bold; color:#1e40af; margin-bottom:6px; font-size:13px;">📦 進貨訂單編號</div>
+                                <div style="display:flex; gap:4px; margin-bottom:6px;">
+                                    <input type="text" id="invPurchaseOrderInput" placeholder="如 0516007075" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:13px;" onkeypress="if(event.key==='Enter')addInvPurchaseOrder()">
+                                    <button onclick="addInvPurchaseOrder()" style="padding:8px 12px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer; font-weight:bold;">➕</button>
+                                </div>
+                                <div id="invPurchaseOrderList" style="display:flex; flex-direction:column; gap:4px;"></div>
+                            </div>
+                            
+                            <!-- 調撥單編號 -->
+                            <div style="background:white; padding:10px; border-radius:8px;">
+                                <div style="font-weight:bold; color:#7c3aed; margin-bottom:6px; font-size:13px;">🔄 調撥單編號</div>
+                                <div style="display:flex; gap:4px; margin-bottom:6px;">
+                                    <input type="text" id="invTransferOrderInput" placeholder="如 TR20260517001" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:13px;" onkeypress="if(event.key==='Enter')addInvTransferOrder()">
+                                    <button onclick="addInvTransferOrder()" style="padding:8px 12px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-weight:bold;">➕</button>
+                                </div>
+                                <div id="invTransferOrderList" style="display:flex; flex-direction:column; gap:4px;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
+                            <label style="font-size:13px; font-weight:bold;">會計日：</label>
+                            <input type="date" id="invDate" onchange="loadInventoryReport()" style="padding:6px; border:1px solid #999; border-radius:4px;">
+                            <button class="btn-confirm" style="padding:8px 18px; font-size:14px; font-weight:bold;" onclick="recalcInventoryReport()">🔍 帶入並計算</button>
+                            <button class="btn-confirm" style="padding:8px 16px; font-size:13px;" onclick="saveInventoryReport()">💾 儲存</button>
+                            <button class="btn-primary" style="padding:8px 16px; font-size:13px;" onclick="printInventoryReport()">🖨️ 列印</button>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x:auto;">
+                        <table class="work-table" style="min-width:760px; font-size:12px;" id="invTable">
+                            <thead>
+                                <tr style="background:#1e40af; color:white;">
+                                    <th style="width:36px;">項</th>
+                                    <th>會計科目</th>
+                                    <th style="width:90px;">廠商統編</th>
+                                    <th style="width:130px;">廠商名稱</th>
+                                    <th style="width:55px;">進貨日</th>
+                                    <th style="width:85px;">成本價</th>
+                                    <th style="width:85px;">零售價</th>
+                                    <th style="width:55px;">稅額</th>
+                                    <th style="width:110px;">訂單/發票號碼</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="invPrintOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:white; z-index:99999; overflow:auto;">
+        <div style="position:sticky; top:0; background:#1e40af; color:white; padding:10px; display:flex; justify-content:space-between; align-items:center;" class="no-print">
+            <span style="font-weight:bold;">📊 日別庫存明細表 - 列印預覽</span>
+            <div>
+                <button onclick="window.print()" style="padding:6px 16px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; margin-right:6px;">🖨️ 列印</button>
+                <button onclick="document.getElementById('invPrintOverlay').style.display='none'" style="padding:6px 16px; background:#ef4444; color:white; border:0; border-radius:4px; cursor:pointer;">✕ 關閉</button>
+            </div>
+        </div>
+        <div id="invPrintContent" style="padding:20px;"></div>
     </div>
     
     <!-- 📋 條碼商品庫獨立頁 -->
@@ -2463,8 +2585,10 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                             <button onclick="resetAutoCalcFields()" style="padding:4px 12px; font-size:11px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer;" title="清除手動覆寫，恢復自動計算">🔄 重置自動計算</button>
                         </div>
                         <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">
-                            💡 黃色欄位（802/803/804/806）為自動計算，可<strong>手動輸入覆寫</strong>。覆寫後系統不會再自動更新該欄。
+                            💡 黃色欄位（802/803/804/806）為自動計算，可<strong>手動輸入覆寫</strong>。覆寫後系統不會再自動更新該欄。<br>
+                            🔒 <strong>留存週轉金（805）上限 $65,000</strong>，超過此金額無法儲存當日現金日報。
                         </div>
+                        <div id="cr805WarnNote" style="display:none; background:#fef2f2; border:2px solid #dc2626; color:#991b1b; padding:10px; border-radius:6px; margin-bottom:8px; font-size:13px; font-weight:bold;"></div>
                         <table class="cr-table">
                             <thead>
                                 <tr><th>會計科目</th><th>金額</th></tr>
@@ -2876,8 +3000,17 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                     </div>
                     
                     <div id="ezSyncSetup" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn-confirm" style="padding:12px 22px; font-size:15px; font-weight:bold; flex:1; min-width:180px;" onclick="ghCreateGistSpace()">🆕 建立同步空間</button>
-                        <button class="btn-primary" style="padding:12px 22px; font-size:15px; font-weight:bold; flex:1; min-width:180px; background:linear-gradient(to bottom,#f59e0b,#d97706);" onclick="ghPromptConnectGist()">📥 連接已有空間</button>
+                        <button class="btn-confirm" style="padding:12px 22px; font-size:15px; font-weight:bold; flex:1; min-width:160px;" onclick="ghCreateGistSpace()">🆕 建立同步空間</button>
+                        <button class="btn-primary" style="padding:12px 22px; font-size:15px; font-weight:bold; flex:1; min-width:160px; background:linear-gradient(to bottom,#f59e0b,#d97706);" onclick="ghPromptConnectGist()">📥 連接已有空間</button>
+                        <button class="btn-primary" style="padding:12px 22px; font-size:15px; font-weight:bold; flex:1; min-width:160px; background:linear-gradient(to bottom,#10b981,#059669);" onclick="ghScanSetupQR()">📷 掃描設定 QR</button>
+                    </div>
+                    
+                    <div style="background:#fef3c7; padding:10px; border-radius:6px; margin-top:8px; font-size:12px; color:#78350f; border-left:4px solid #f59e0b;">
+                        💡 <strong>提示：跨裝置最快方法</strong><br>
+                        1. 在<strong>第一台裝置</strong>建立同步空間（需 GitHub Token）<br>
+                        2. 第一台點「📲 產生跨裝置設定 QR 碼」<br>
+                        3. <strong>其他裝置</strong>點「📷 掃描設定 QR」對準畫面<br>
+                        4. 一秒完成！自動帶入 Token + 代碼
                     </div>
                     
                     <div id="ezSyncActive" style="display:none;">
@@ -2886,16 +3019,28 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
                             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                 <code id="ezSyncCode" style="background:#fef3c7; padding:10px 18px; border-radius:6px; font-size:18px; font-weight:bold; font-family:monospace; flex:1; min-width:200px; text-align:center; color:#78350f; word-break:break-all;">-</code>
                                 <button onclick="ezCopyCode()" style="padding:10px 16px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">📋 複製</button>
-                                <button onclick="ezShowQR()" style="padding:10px 16px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">📱 QR 碼</button>
-                            </div>
-                            <div id="ezQrWrap" style="display:none; text-align:center; margin-top:10px; padding:14px; background:#f9fafb; border-radius:6px;">
-                                <img id="ezQrImg" style="max-width:200px;">
-                                <div style="font-size:12px; color:#6b7280; margin-top:6px;">⚠️ 其他裝置仍需手動貼上 Token</div>
                             </div>
                         </div>
+                        
+                        <!-- 🆕 一鍵掃 QR 跨裝置設定 -->
+                        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a); padding:14px; border-radius:8px; margin-bottom:10px; border:2px solid #f59e0b;">
+                            <div style="font-weight:bold; color:#78350f; margin-bottom:6px;">📲 一鍵設定其他裝置（最快方式！）</div>
+                            <div style="font-size:12px; color:#78350f; margin-bottom:8px;">在這台裝置產生 QR 碼，其他手機/平板用「📷 掃描設定」一秒連接（含 Token + 代碼）</div>
+                            <button onclick="ghShareSetupQR()" style="width:100%; padding:12px; background:linear-gradient(to bottom,#f59e0b,#d97706); color:white; border:0; border-radius:6px; cursor:pointer; font-size:14px; font-weight:bold;">📲 產生「跨裝置設定 QR 碼」</button>
+                        </div>
+                        
+                        <div id="ezQrWrap" style="display:none; text-align:center; padding:14px; background:white; border-radius:8px; margin-bottom:10px; border:2px dashed #f59e0b;">
+                            <div style="font-weight:bold; color:#78350f; margin-bottom:8px;">📲 跨裝置設定 QR 碼</div>
+                            <img id="ezQrImg" style="max-width:280px; width:100%;">
+                            <div style="margin-top:8px; font-size:12px; color:#6b7280;">用另一台手機在【📷 掃描設定】按下後對準此 QR 碼</div>
+                            <div style="margin-top:6px; font-size:11px; color:#dc2626;">⚠️ 此 QR 含 Token 機密資料，請勿讓他人拍照</div>
+                            <button onclick="document.getElementById('ezQrWrap').style.display='none'" style="margin-top:6px; padding:4px 12px; background:#6b7280; color:white; border:0; border-radius:4px; cursor:pointer; font-size:11px;">關閉</button>
+                        </div>
+                        
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button onclick="manualPushToCloud()" style="padding:8px 14px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px;">📤 立即推送</button>
                             <button onclick="manualPullFromCloud()" style="padding:8px 14px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px;">📥 立即拉取</button>
+                            <button onclick="ghRunDiagnostic()" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px;">🔬 同步診斷</button>
                             <button onclick="ghDisconnect()" style="padding:8px 14px; background:#ef4444; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px;">❌ 中斷同步</button>
                         </div>
                     </div>
@@ -3783,6 +3928,7 @@ var PERMISSION_FEATURES = [
         { id: 'cashReport',       name: '💵 現金日報' },
         { id: 'purchaseReceipt',  name: '📦 進貨驗收' },
         { id: 'transferOrder',    name: '🔄 51-調撥單' },
+        { id: 'inventoryReport',  name: '📊 日別庫存明細表' },
         { id: 'productLibrary',   name: '📋 條碼商品庫' }
     ]},
     { group: '⚙️ 系統管理', items: [
@@ -4224,6 +4370,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'purchaseReceipt') initPurchaseReceipt();
     else if (pageName === 'transferOrder') initTransferOrder();
     else if (pageName === 'productLibrary') initProductLibraryPage();
+    else if (pageName === 'inventoryReport') initInventoryReport();
     else if (pageName === 'productLibrary') initProductLibrary();
     else if (pageName === 'insuranceAdd') { /* 加保表單 */ }
     else if (pageName === 'insuranceRemove') loadInsuranceRemoveOptions();
@@ -4626,7 +4773,11 @@ function renderEmpInfoCell(emp, stores) {
 
 // 渲染單一儲存格（包含 2 個 slot）
 function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStoreId, homeStoreId, supportMode) {
-    var html = '<td class="sch-cell">';
+    // 🆕 拖拉複製：管理員可拖拉格子複製排班內容
+    var draggableAttrs = isAdmin && !supportMode 
+        ? ' draggable="true" ondragstart="onSchedDragStart(event,\'' + empId + '\',\'' + dateKey + '\')" ondragover="onSchedDragOver(event)" ondragleave="onSchedDragLeave(event)" ondrop="onSchedDrop(event,\'' + empId + '\',\'' + dateKey + '\')"'
+        : '';
+    var html = '<td class="sch-cell"' + draggableAttrs + '>';
     
     var hasAnySlot = slots.some(function(s) { return s && s.type !== 'empty'; });
     
@@ -4663,6 +4814,12 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
                     html += '<div class="mini-store dispatch">🚐 來支援</div>';
                 }
             }
+            // 🆕 請假顯示時數
+            if (slot.type === 'leave') {
+                var leaveType = slot.leaveType || '其他';
+                var leaveHours = slot.leaveHours || 0;
+                html += '<div class="mini-time" style="font-size:10px;">' + leaveType + ' ' + leaveHours + 'h</div>';
+            }
             html += '</div>';
         }
         
@@ -4676,6 +4833,100 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
     
     html += '</td>';
     return html;
+}
+
+// 🆕 拖拉複製排班功能
+var _schedDragData = null;
+
+function onSchedDragStart(e, empId, dateKey) {
+    _schedDragData = { empId: empId, dateKey: dateKey };
+    e.target.style.opacity = '0.5';
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', empId + '|' + dateKey);
+    }
+}
+
+function onSchedDragOver(e) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    var cell = e.currentTarget;
+    cell.style.background = '#fef3c7';
+    cell.style.outline = '2px dashed #f59e0b';
+}
+
+function onSchedDragLeave(e) {
+    var cell = e.currentTarget;
+    cell.style.background = '';
+    cell.style.outline = '';
+}
+
+function onSchedDrop(e, targetEmpId, targetDateKey) {
+    e.preventDefault();
+    var cell = e.currentTarget;
+    cell.style.background = '';
+    cell.style.outline = '';
+    
+    // 還原來源 cell 透明度
+    var allCells = document.querySelectorAll('.sch-cell');
+    for (var i = 0; i < allCells.length; i++) allCells[i].style.opacity = '';
+    
+    if (!_schedDragData) return;
+    var src = _schedDragData;
+    _schedDragData = null;
+    
+    // 不能拖到同一格
+    if (src.empId === targetEmpId && src.dateKey === targetDateKey) return;
+    
+    // 取得來源資料
+    var shifts = loadData('shifts', {});
+    if (!shifts[src.dateKey] || !shifts[src.dateKey][src.empId]) {
+        showNotif('⚠️ 來源無排班資料');
+        return;
+    }
+    var sourceSlots = shifts[src.dateKey][src.empId].slots || [];
+    
+    if (sourceSlots.length === 0) return showNotif('⚠️ 來源無排班');
+    
+    // 確認複製
+    var targetHasData = shifts[targetDateKey] && shifts[targetDateKey][targetEmpId] && 
+                       shifts[targetDateKey][targetEmpId].slots &&
+                       shifts[targetDateKey][targetEmpId].slots.length > 0;
+    
+    var msg = '📋 複製排班\n\n從：' + src.dateKey + '（' + src.empId + '）\n到：' + targetDateKey + '（' + targetEmpId + '）';
+    if (targetHasData) msg += '\n\n⚠️ 目標格已有排班，將被覆蓋！';
+    msg += '\n\n要繼續嗎？';
+    
+    if (!confirm(msg)) return;
+    
+    // 深拷貝 slots
+    var newSlots = JSON.parse(JSON.stringify(sourceSlots));
+    
+    if (!shifts[targetDateKey]) shifts[targetDateKey] = {};
+    if (!shifts[targetDateKey][targetEmpId]) shifts[targetDateKey][targetEmpId] = {};
+    shifts[targetDateKey][targetEmpId].slots = newSlots;
+    
+    // 🆕 如果有 leave 類型 → 處理假別額度
+    var leaveAdjust = 0;
+    var leaveType = '';
+    for (var s = 0; s < newSlots.length; s++) {
+        if (newSlots[s].type === 'leave' && newSlots[s].leaveHours) {
+            leaveAdjust += parseFloat(newSlots[s].leaveHours) || 0;
+            leaveType = newSlots[s].leaveType || '其他';
+        }
+    }
+    
+    saveData('shifts', shifts);
+    
+    if (leaveAdjust > 0) {
+        applyLeaveDeductionFromShift(targetEmpId, leaveType, leaveAdjust, targetDateKey);
+        showNotif('📋 已複製，扣除 ' + leaveType + ' ' + leaveAdjust + ' 小時');
+    } else {
+        showNotif('📋 已複製排班');
+    }
+    
+    renderScheduleTable();
+    logAction('schedule', '拖拉複製：' + src.empId + '/' + src.dateKey + ' → ' + targetEmpId + '/' + targetDateKey);
 }
 
 // ============= 編輯排班 Modal =============
@@ -4755,6 +5006,29 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         html += '<div class="form-row"><label>節日類別：</label><input type="checkbox"' + (slot.isHolidayCategory ? ' checked' : '') + ' onchange="modalUpdateSlot(' + slotIndex + ',\'isHolidayCategory\',this.checked)" style="width:auto;flex:none;"></div>';
     }
     
+    // 🆕 請假類型：請假時可選擇假別 + 時數，自動扣假
+    if (slot.type === 'leave') {
+        html += '<div style="background:#fef2f2; padding:10px; border-radius:6px; margin-top:6px; border:1px dashed #dc2626;">';
+        html += '<div style="font-size:12px; color:#991b1b; margin-bottom:6px; font-weight:bold;">📋 請假設定（會自動扣除假別額度）</div>';
+        
+        html += '<div class="form-row"><label>假別：</label>';
+        html += '<select onchange="modalUpdateLeaveSlot(' + slotIndex + ',\'leaveType\',this.value)">';
+        var leaveTypes = ['特休假','事假','病假','婚假','喪假','產假','陪產假','育嬰假','公假','生理假','其他'];
+        for (var li = 0; li < leaveTypes.length; li++) {
+            var lsel = (slot.leaveType === leaveTypes[li]) ? ' selected' : '';
+            html += '<option value="' + leaveTypes[li] + '"' + lsel + '>' + leaveTypes[li] + '</option>';
+        }
+        html += '</select></div>';
+        
+        html += '<div class="form-row"><label>請假時數：</label>';
+        html += '<input type="number" step="0.5" min="0" max="24" value="' + (slot.leaveHours || 8) + '" onchange="modalUpdateLeaveSlot(' + slotIndex + ',\'leaveHours\',parseFloat(this.value)||0)" style="width:80px;">';
+        html += '<span style="font-size:11px; color:#6b7280; margin-left:6px;">小時（可填 0.5 半小時）</span>';
+        html += '</div>';
+        
+        html += '<div style="font-size:11px; color:#7c2d12; margin-top:4px;">💡 儲存後系統會自動於「🏖️ 假別額度管理」扣除相應時數</div>';
+        html += '</div>';
+    }
+    
     html += '</div>';
     return html;
 }
@@ -4811,6 +5085,74 @@ function modalUpdateSlot(slotIndex, field, value) {
     if (field === 'workStoreId') {
         openEditShiftModal(editingShift.empId, editingShift.dateKey);
     }
+}
+
+// 🆕 更新請假 slot：自動扣除假別額度
+function modalUpdateLeaveSlot(slotIndex, field, value) {
+    if (!editingShift) return;
+    var shifts = loadData('shifts', {});
+    if (!shifts[editingShift.dateKey]) shifts[editingShift.dateKey] = {};
+    var existing = shifts[editingShift.dateKey][editingShift.empId];
+    if (!existing || !existing.slots) {
+        existing = { slots: getDaySlots(existing) };
+    }
+    if (!existing.slots[slotIndex]) existing.slots[slotIndex] = emptySlot();
+    
+    // 記錄舊值（用於還原扣除）
+    var oldHours = parseFloat(existing.slots[slotIndex].leaveHours) || 0;
+    var oldType = existing.slots[slotIndex].leaveType || '';
+    
+    existing.slots[slotIndex][field] = value;
+    if (existing.slots[slotIndex].type !== 'leave') existing.slots[slotIndex].type = 'leave';
+    
+    shifts[editingShift.dateKey][editingShift.empId] = existing;
+    saveData('shifts', shifts);
+    
+    // 🔑 自動扣除假別額度
+    var newHours = parseFloat(existing.slots[slotIndex].leaveHours) || 0;
+    var newType = existing.slots[slotIndex].leaveType || '其他';
+    
+    if (field === 'leaveHours' || field === 'leaveType') {
+        // 還原舊扣除
+        if (oldHours > 0 && oldType) {
+            applyLeaveDeduction(editingShift.empId, oldType, -oldHours, '排班修改-還原', editingShift.dateKey + ':slot' + slotIndex);
+        }
+        // 套用新扣除
+        if (newHours > 0 && newType) {
+            applyLeaveDeduction(editingShift.empId, newType, newHours, '排班請假', editingShift.dateKey + ':slot' + slotIndex);
+        }
+    }
+    
+    renderScheduleTable();
+    // 重畫 modal 以更新顯示
+    openEditShiftModal(editingShift.empId, editingShift.dateKey);
+}
+
+// 🔑 從排班套用假別額度調整（用於拖拉複製）
+function applyLeaveDeductionFromShift(empId, leaveType, hours, dateKey) {
+    applyLeaveDeduction(empId, leaveType, hours, '排班拖拉', dateKey);
+}
+
+// 🔑 套用假別額度調整（核心函數）
+function applyLeaveDeduction(empId, leaveType, hours, reason, sourceRef) {
+    if (!empId || !leaveType || hours === 0) return;
+    
+    var adjustments = loadData('leaveBalanceAdjustments', []);
+    // 避免重複扣除：若有相同 sourceRef，先移除舊紀錄
+    adjustments = adjustments.filter(function(a) { return a.sourceRef !== sourceRef; });
+    
+    // 新增調整紀錄（負數=扣除）
+    adjustments.push({
+        empId: empId,
+        leaveType: leaveType,
+        hours: -hours,  // 扣除為負
+        reason: reason,
+        sourceRef: sourceRef,
+        date: new Date().toISOString()
+    });
+    
+    saveData('leaveBalanceAdjustments', adjustments);
+    logAction('leaveBalance', '排班自動扣假：' + empId + ' ' + leaveType + ' ' + hours + '小時 (' + sourceRef + ')');
 }
 
 function clearShiftFromModal() {
@@ -6984,6 +7326,458 @@ function exportProductCodes() {
     setTimeout(function() { URL.revokeObjectURL(url); }, 100);
     
     showNotif('💾 已匯出 ' + codes.length + ' 個品號');
+}
+
+// ============= 📊 日別庫存明細表 =============
+// 28 個會計科目（依統一超商日別庫存明細表格式）
+var INVENTORY_ROWS = [
+    { no: '01', name: '期初存貨', kind: 'manual' },
+    { no: '02', name: '非EOS進貨', kind: 'manual' },
+    { no: '03', name: '非EOS退貨', kind: 'manual' },
+    { no: '04', name: '廠商巡貨', kind: 'manual' },
+    { no: '05', name: 'EOS進貨', kind: 'autoPurchase', detail: true },
+    { no: '06', name: 'EOS追加進貨', kind: 'autoPurchaseAdd', detail: true },
+    { no: '07', name: 'EOS退貨', kind: 'manual' },
+    { no: '08', name: 'MDC進貨', kind: 'manual' },
+    { no: '09', name: 'MDC退貨', kind: 'manual' },
+    { no: '10', name: '33報表', kind: 'manual' },
+    { no: '11', name: '進貨修正調整', kind: 'manual' },
+    { no: '12', name: '月進貨結帳單', kind: 'manual' },
+    { no: '13', name: '廠商進貨合計', kind: 'calc' },
+    { no: '14', name: '現金進貨', kind: 'manual' },
+    { no: '15', name: '現金退貨', kind: 'manual' },
+    { no: '16', name: '物流免稅調撥', kind: 'autoTransfer', detail: true },
+    { no: '17', name: '門市調撥', kind: 'autoStoreTransfer' },
+    { no: '18', name: '本日進貨合計', kind: 'calc' },
+    { no: '19', name: '累計進貨合計', kind: 'calc' },
+    { no: '20', name: '商品報廢損壞', kind: 'manual' },
+    { no: '21', name: '類別變更', kind: 'manual' },
+    { no: '22', name: '變價', kind: 'manual' },
+    { no: '23', name: '現金折扣', kind: 'autoCashDiscount' },
+    { no: '24', name: '組合促銷折讓', kind: 'manual' },
+    { no: '25', name: '盤(盈)損', kind: 'manual' },
+    { no: '26', name: '本日營業額', kind: 'autoCashSales' },
+    { no: '27', name: '期末庫存', kind: 'calc' },
+    { no: '28', name: '累計盤盈損', kind: 'manual' }
+];
+
+var _invData = {};       // {date: {rowNo: {retail, cost, tax, manual, details:[...]}}}
+var _invCurrentDate = '';
+var _invPurchaseOrders = [];   // 已輸入的進貨訂單編號
+var _invTransferOrders = [];   // 已輸入的調撥單編號
+
+function initInventoryReport() {
+    var today = new Date();
+    var dateInput = document.getElementById('invDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = today.getFullYear() + '-' + 
+            String(today.getMonth()+1).padStart(2,'0') + '-' + 
+            String(today.getDate()).padStart(2,'0');
+    }
+    
+    var pd = document.getElementById('invPrintDate');
+    if (pd) pd.textContent = formatDateTime(new Date());
+    
+    var stores = loadData('stores', defaultStores);
+    if (stores.length > 0 && !document.getElementById('invStoreCode').value) {
+        document.getElementById('invStoreCode').value = stores[0].code || '';
+        document.getElementById('invStoreName').value = stores[0].name || '';
+    }
+    
+    loadInventoryReport();
+}
+
+// ➕ 加入進貨訂單編號
+function addInvPurchaseOrder() {
+    var input = document.getElementById('invPurchaseOrderInput');
+    var no = (input.value || '').trim();
+    if (!no) return;
+    if (_invPurchaseOrders.indexOf(no) >= 0) {
+        showNotif('⚠️ 此訂單編號已加入');
+        input.value = '';
+        return;
+    }
+    
+    // 查詢是否存在
+    var found = lookupPurchaseByOrderNo(no);
+    if (found.length === 0) {
+        if (!confirm('⚠️ 在進貨驗收中找不到訂單編號「' + no + '」\n\n仍要加入嗎？（之後補登進貨後會自動帶入）')) {
+            return;
+        }
+    } else {
+        showNotif('✅ 找到 ' + found.length + ' 筆進貨明細');
+    }
+    
+    _invPurchaseOrders.push(no);
+    input.value = '';
+    renderInvRefLists();
+    recalcInventoryReport();
+}
+
+// ➕ 加入調撥單編號
+function addInvTransferOrder() {
+    var input = document.getElementById('invTransferOrderInput');
+    var no = (input.value || '').trim();
+    if (!no) return;
+    if (_invTransferOrders.indexOf(no) >= 0) {
+        showNotif('⚠️ 此調撥單編號已加入');
+        input.value = '';
+        return;
+    }
+    
+    var transfers = loadData('transferOrders', {});
+    if (!transfers[no]) {
+        if (!confirm('⚠️ 找不到調撥單編號「' + no + '」\n\n仍要加入嗎？')) {
+            return;
+        }
+    } else {
+        var itemCount = (transfers[no].items || []).length;
+        showNotif('✅ 找到調撥單（' + itemCount + ' 品項）');
+    }
+    
+    _invTransferOrders.push(no);
+    input.value = '';
+    renderInvRefLists();
+    recalcInventoryReport();
+}
+
+// 移除編號
+function removeInvPurchaseOrder(no) {
+    _invPurchaseOrders = _invPurchaseOrders.filter(function(x) { return x !== no; });
+    renderInvRefLists();
+    recalcInventoryReport();
+}
+function removeInvTransferOrder(no) {
+    _invTransferOrders = _invTransferOrders.filter(function(x) { return x !== no; });
+    renderInvRefLists();
+    recalcInventoryReport();
+}
+
+// 渲染已輸入編號清單
+function renderInvRefLists() {
+    var pList = document.getElementById('invPurchaseOrderList');
+    var tList = document.getElementById('invTransferOrderList');
+    
+    if (pList) {
+        if (_invPurchaseOrders.length === 0) {
+            pList.innerHTML = '<div style="font-size:11px; color:#9ca3af;">尚未輸入</div>';
+        } else {
+            pList.innerHTML = _invPurchaseOrders.map(function(no) {
+                var found = lookupPurchaseByOrderNo(no);
+                var badge = found.length > 0 
+                    ? '<span style="color:#059669; font-size:10px;">✓' + found.length + '筆</span>' 
+                    : '<span style="color:#dc2626; font-size:10px;">未找到</span>';
+                return '<div style="display:flex; justify-content:space-between; align-items:center; background:#eff6ff; padding:4px 8px; border-radius:4px; font-size:12px;">' +
+                       '<span style="font-family:monospace;">' + no + ' ' + badge + '</span>' +
+                       '<span onclick="removeInvPurchaseOrder(\'' + no + '\')" style="cursor:pointer; color:#dc2626; font-weight:bold;">✕</span></div>';
+            }).join('');
+        }
+    }
+    
+    if (tList) {
+        if (_invTransferOrders.length === 0) {
+            tList.innerHTML = '<div style="font-size:11px; color:#9ca3af;">尚未輸入</div>';
+        } else {
+            var transfers = loadData('transferOrders', {});
+            tList.innerHTML = _invTransferOrders.map(function(no) {
+                var badge = transfers[no] 
+                    ? '<span style="color:#059669; font-size:10px;">✓' + ((transfers[no].items||[]).length) + '品</span>' 
+                    : '<span style="color:#dc2626; font-size:10px;">未找到</span>';
+                return '<div style="display:flex; justify-content:space-between; align-items:center; background:#f5f3ff; padding:4px 8px; border-radius:4px; font-size:12px;">' +
+                       '<span style="font-family:monospace;">' + no + ' ' + badge + '</span>' +
+                       '<span onclick="removeInvTransferOrder(\'' + no + '\')" style="cursor:pointer; color:#dc2626; font-weight:bold;">✕</span></div>';
+            }).join('');
+        }
+    }
+}
+
+// 🔍 依訂單編號搜尋進貨明細（跨所有進貨驗收）
+function lookupPurchaseByOrderNo(orderNo) {
+    var results = [];
+    var receipts = loadData('purchaseReceipts', {});
+    for (var date in receipts) {
+        if (!receipts.hasOwnProperty(date)) continue;
+        var rec = receipts[date];
+        if (!rec.items) continue;
+        for (var i = 0; i < rec.items.length; i++) {
+            var item = rec.items[i];
+            if (String(item.orderNo || '').trim() === String(orderNo).trim()) {
+                results.push({
+                    date: rec.date,
+                    category: item.category || '10',
+                    vendorId: item.vendorCode || '',
+                    vendorName: item.vendorName || '',
+                    cost: parseFloat(item.costSubtotal) || 0,
+                    retail: parseFloat(item.retailSubtotal) || 0,
+                    tax: 0,
+                    orderNo: item.orderNo || ''
+                });
+            }
+        }
+    }
+    return results;
+}
+
+function loadInventoryReport() {
+    var dateVal = document.getElementById('invDate').value;
+    if (!dateVal) return;
+    _invCurrentDate = dateVal;
+    
+    var saved = loadData('inventoryReports', {});
+    if (saved[dateVal]) {
+        _invData[dateVal] = saved[dateVal];
+        if (saved[dateVal]._storeCode) document.getElementById('invStoreCode').value = saved[dateVal]._storeCode;
+        if (saved[dateVal]._storeName) document.getElementById('invStoreName').value = saved[dateVal]._storeName;
+        // 還原已存的編號清單
+        if (saved[dateVal]._purchaseOrders) _invPurchaseOrders = saved[dateVal]._purchaseOrders.slice();
+        if (saved[dateVal]._transferOrders) _invTransferOrders = saved[dateVal]._transferOrders.slice();
+    } else {
+        _invData[dateVal] = {};
+    }
+    
+    renderInvRefLists();
+    recalcInventoryReport();
+}
+
+// 從編號帶入資料並計算
+function recalcInventoryReport() {
+    var dateVal = document.getElementById('invDate').value;
+    if (!dateVal) return alert('⚠️ 請選擇會計日');
+    _invCurrentDate = dateVal;
+    
+    if (!_invData[dateVal]) _invData[dateVal] = {};
+    var data = _invData[dateVal];
+    
+    for (var i = 0; i < INVENTORY_ROWS.length; i++) {
+        var no = INVENTORY_ROWS[i].no;
+        if (!data[no]) data[no] = { retail: 0, cost: 0, tax: 0, details: [] };
+    }
+    
+    // ===== 來源 1：進貨訂單編號 → 05 EOS進貨、06 EOS追加進貨 =====
+    data['05'].details = [];
+    data['06'].details = [];
+    var sum05Retail = 0, sum06Retail = 0;
+    
+    for (var p = 0; p < _invPurchaseOrders.length; p++) {
+        var matches = lookupPurchaseByOrderNo(_invPurchaseOrders[p]);
+        for (var m = 0; m < matches.length; m++) {
+            var det = matches[m];
+            var cat = String(det.category || '');
+            // 追加進貨：類別 06/31，其餘進 05
+            if (cat.indexOf('06') >= 0 || cat.indexOf('31') >= 0) {
+                data['06'].details.push(det);
+                sum06Retail += det.retail;
+            } else {
+                data['05'].details.push(det);
+                sum05Retail += det.retail;
+            }
+        }
+    }
+    data['05'].retail = sum05Retail;
+    data['06'].retail = sum06Retail;
+    
+    // ===== 來源 2：調撥單編號 → 16 物流免稅調撥、17 門市調撥 =====
+    var transfers = loadData('transferOrders', {});
+    data['16'].details = [];
+    var sum16Retail = 0, sum17Retail = 0;
+    var myStoreCode = document.getElementById('invStoreCode').value;
+    
+    for (var t = 0; t < _invTransferOrders.length; t++) {
+        var to = transfers[_invTransferOrders[t]];
+        if (!to) continue;
+        
+        var toRetail = 0, toCost = 0;
+        if (to.items) {
+            for (var ti = 0; ti < to.items.length; ti++) {
+                var qty = parseFloat(to.items[ti].quantity) || 0;
+                toRetail += qty * (parseFloat(to.items[ti].retailPrice) || 0);
+                toCost += qty * (parseFloat(to.items[ti].costPrice) || 0);
+            }
+        }
+        // 判斷調入/調出
+        var isInbound = (to.inStoreCode === myStoreCode);
+        var signedRetail = isInbound ? toRetail : -toRetail;
+        
+        // 加入 16 物流免稅調撥明細
+        data['16'].details.push({
+            vendorId: to.orderNo,
+            vendorName: (isInbound ? '調入←' : '調出→') + (isInbound ? to.outStoreName : to.inStoreName),
+            purchaseDate: to.date ? to.date.substring(5) : '',
+            cost: toCost,
+            retail: signedRetail,
+            tax: 0,
+            orderNo: to.orderNo
+        });
+        sum16Retail += signedRetail;
+    }
+    data['16'].retail = sum16Retail;
+    data['17'].retail = sum17Retail;
+    
+    // ===== 來源 3：現金日報 → 23 現金折扣、26 本日營業額 =====
+    var cashReports = loadData('dailyCashReports', {});
+    var cr = cashReports[dateVal];
+    if (cr && cr.registers) {
+        var reg = cr.registers;
+        var disc106A = -(Math.abs(parseFloat(reg['cr_amt_106A']) || 0));
+        var disc116 = -(Math.abs(parseFloat(reg['cr_amt_116']) || 0));
+        data['23'].retail = disc106A + disc116;
+        data['23'].sub106A = disc106A;
+        data['23'].sub116 = disc116;
+        
+        var sales111 = parseFloat(reg['cr_amt_111']) || 0;
+        data['26'].retail = -Math.abs(sales111);
+    }
+    
+    // ===== 計算合計 =====
+    var num = function(no) { return parseFloat(data[no].retail) || 0; };
+    
+    data['13'].retail = num('05') + num('06') + num('07') + num('08') + num('09') + num('10') + num('11') + num('12');
+    data['18'].retail = num('13') + num('14') + num('15') + num('16') + num('17');
+    
+    var prevDate = getInvPrevDate(dateVal);
+    var savedReports = loadData('inventoryReports', {});
+    var prevCumulative = (savedReports[prevDate] && savedReports[prevDate]['19']) ? parseFloat(savedReports[prevDate]['19'].retail) || 0 : 0;
+    data['19'].retail = prevCumulative + num('18');
+    
+    if (!data['01']._manualSet) {
+        var prevEnding = (savedReports[prevDate] && savedReports[prevDate]['27']) ? parseFloat(savedReports[prevDate]['27'].retail) || 0 : num('01');
+        if (prevEnding) data['01'].retail = prevEnding;
+    }
+    
+    data['27'].retail = num('01') + num('18') + num('20') + num('21') + num('22') + num('23') + num('24') + num('25') + num('26');
+    
+    renderInventoryTable();
+}
+
+function getInvPrevDate(dateVal) {
+    var d = new Date(dateVal);
+    d.setDate(d.getDate() - 1);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function renderInventoryTable() {
+    var tbody = document.getElementById('invTableBody');
+    if (!tbody) return;
+    var data = _invData[_invCurrentDate] || {};
+    
+    var html = '';
+    for (var i = 0; i < INVENTORY_ROWS.length; i++) {
+        var row = INVENTORY_ROWS[i];
+        var d = data[row.no] || { retail: 0, cost: 0, tax: 0, details: [] };
+        
+        var isManual = row.kind === 'manual';
+        var isCalc = row.kind === 'calc';
+        var bgColor = isCalc ? '#dbeafe' : (isManual ? 'white' : '#f0fdf4');
+        var retailVal = parseFloat(d.retail) || 0;
+        
+        // 主科目列
+        html += '<tr style="background:' + bgColor + ';">';
+        html += '<td style="text-align:center; font-weight:bold;">' + row.no + '</td>';
+        html += '<td style="font-weight:' + (isCalc ? 'bold' : 'normal') + ';">' + row.name + 
+                (row.kind !== 'manual' && row.kind !== 'calc' ? ' <span style="font-size:9px; color:#059669;">[自動]</span>' : '') + '</td>';
+        html += '<td></td><td></td><td></td><td></td>';
+        // 零售價欄
+        if (isManual) {
+            html += '<td><input type="number" value="' + retailVal + '" onchange="updateInvManual(\'' + row.no + '\',this.value)" style="width:100%; padding:3px; border:1px solid #ccc; border-radius:3px; text-align:right;"></td>';
+        } else {
+            html += '<td style="text-align:right; font-weight:bold;' + (isCalc ? 'color:#1e40af;' : '') + '">' + retailVal.toLocaleString() + '</td>';
+        }
+        html += '<td></td><td></td>';
+        html += '</tr>';
+        
+        // 明細列（05/06/16）
+        if (row.detail && d.details && d.details.length > 0) {
+            for (var j = 0; j < d.details.length; j++) {
+                var det = d.details[j];
+                html += '<tr style="background:#fafafa; font-size:11px;">';
+                html += '<td></td><td></td>';
+                html += '<td style="font-family:monospace;">' + (det.vendorId || '') + '</td>';
+                html += '<td>' + (det.vendorName || '') + '</td>';
+                html += '<td style="text-align:center;">' + (det.purchaseDate || '') + '</td>';
+                html += '<td style="text-align:right;">' + (parseFloat(det.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>';
+                html += '<td style="text-align:right;">' + (parseFloat(det.retail)||0).toLocaleString() + '</td>';
+                html += '<td style="text-align:right;">' + (parseFloat(det.tax)||0) + '</td>';
+                html += '<td style="font-family:monospace; font-size:10px;">' + (det.orderNo || '') + '</td>';
+                html += '</tr>';
+            }
+        }
+        
+        // 23 現金折扣子項
+        if (row.no === '23' && (d.sub106A || d.sub116)) {
+            html += '<tr style="background:#fafafa; font-size:11px;"><td></td><td style="padding-left:20px;">106A -折扣(免稅)</td><td></td><td></td><td></td><td></td><td style="text-align:right;">' + (parseFloat(d.sub106A)||0).toLocaleString() + '</td><td style="text-align:right;">0</td><td></td></tr>';
+            html += '<tr style="background:#fafafa; font-size:11px;"><td></td><td style="padding-left:20px;">116 -商品兌換券/卡(免稅)</td><td></td><td></td><td></td><td></td><td style="text-align:right;">' + (parseFloat(d.sub116)||0).toLocaleString() + '</td><td style="text-align:right;">0</td><td></td></tr>';
+        }
+    }
+    tbody.innerHTML = html;
+}
+
+function updateInvManual(rowNo, value) {
+    if (!_invData[_invCurrentDate]) _invData[_invCurrentDate] = {};
+    if (!_invData[_invCurrentDate][rowNo]) _invData[_invCurrentDate][rowNo] = { retail: 0, cost: 0, tax: 0, details: [] };
+    _invData[_invCurrentDate][rowNo].retail = parseFloat(value) || 0;
+    _invData[_invCurrentDate][rowNo]._manualSet = true;
+    recalcInventoryReport();
+}
+
+function saveInventoryReport() {
+    var dateVal = document.getElementById('invDate').value;
+    if (!dateVal) return alert('⚠️ 請選擇會計日');
+    
+    recalcInventoryReport();
+    
+    var data = _invData[dateVal] || {};
+    data._storeCode = document.getElementById('invStoreCode').value;
+    data._storeName = document.getElementById('invStoreName').value;
+    data._purchaseOrders = _invPurchaseOrders.slice();
+    data._transferOrders = _invTransferOrders.slice();
+    data._savedAt = new Date().toISOString();
+    
+    var saved = loadData('inventoryReports', {});
+    saved[dateVal] = data;
+    saveData('inventoryReports', saved);
+    
+    showNotif('💾 已儲存日別庫存明細表：' + dateVal);
+    logAction('inventoryReport', '儲存日別庫存明細表：' + dateVal);
+}
+
+function printInventoryReport() {
+    var dateVal = document.getElementById('invDate').value;
+    if (!dateVal) return alert('⚠️ 請選擇會計日');
+    
+    var data = _invData[dateVal] || {};
+    var storeCode = document.getElementById('invStoreCode').value;
+    var storeName = document.getElementById('invStoreName').value;
+    var d = new Date(dateVal);
+    var weekDay = ['日','一','二','三','四','五','六'][d.getDay()];
+    
+    var fmt = function(n) { return (parseFloat(n)||0).toLocaleString(); };
+    var fmt2 = function(n) { return (parseFloat(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
+    
+    var html = '<div style="font-family:monospace; max-width:800px; margin:0 auto;">';
+    html += '<h2 style="text-align:center;">日別庫存明細表</h2>';
+    html += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;">';
+    html += '<div>店號：' + storeCode + '<br>店名：' + storeName + '</div>';
+    html += '<div>列印日：' + formatDateTime(new Date()) + '</div>';
+    html += '</div>';
+    html += '<div style="margin-bottom:10px;">庫存日(會計日)：' + d.getFullYear() + '年 ' + (d.getMonth()+1) + '月' + d.getDate() + '日(' + weekDay + ')</div>';
+    html += '<table style="width:100%; border-collapse:collapse; font-size:11px;">';
+    html += '<thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">項</th><th style="text-align:left;">會計科目</th><th style="text-align:left;">廠商統編</th><th style="text-align:left;">廠商名稱</th><th>進貨日</th><th style="text-align:right;">成本價</th><th style="text-align:right;">零售價</th><th style="text-align:right;">稅額</th><th>訂單/發票號碼</th></tr></thead><tbody>';
+    
+    for (var i = 0; i < INVENTORY_ROWS.length; i++) {
+        var row = INVENTORY_ROWS[i];
+        var rd = data[row.no] || { retail: 0, details: [] };
+        html += '<tr><td>' + row.no + '</td><td>' + row.name + '</td><td></td><td></td><td></td><td></td><td style="text-align:right;">' + fmt(rd.retail) + '</td><td></td><td></td></tr>';
+        if (row.detail && rd.details) {
+            for (var j = 0; j < rd.details.length; j++) {
+                var det = rd.details[j];
+                html += '<tr style="font-size:10px;"><td></td><td></td><td>' + (det.vendorId||'') + '</td><td>' + (det.vendorName||'') + '</td><td>' + (det.purchaseDate||'') + '</td><td style="text-align:right;">' + fmt2(det.cost) + '</td><td style="text-align:right;">' + fmt(det.retail) + '</td><td style="text-align:right;">' + (det.tax||0) + '</td><td>' + (det.orderNo||'') + '</td></tr>';
+            }
+        }
+    }
+    html += '</tbody></table></div>';
+    
+    document.getElementById('invPrintContent').innerHTML = html;
+    document.getElementById('invPrintOverlay').style.display = 'block';
 }
 
 // ============= 📋 條碼商品庫獨立頁 =============
@@ -9300,6 +10094,30 @@ function recalcCashReport() {
     var actual804 = num('cr_amt_804');
     softSetVal('cr_amt_806', num('cr_amt_805') - actual804);
     
+    // 🔒 留存週轉金（805）即時警告 - 超過 65000 視覺提示
+    var el805 = document.getElementById('cr_amt_805');
+    var warnEl = document.getElementById('cr805WarnNote');
+    if (el805) {
+        var val805 = parseFloat(el805.value) || 0;
+        if (val805 > 65000) {
+            el805.style.background = '#fef2f2';
+            el805.style.border = '2px solid #dc2626';
+            el805.style.fontWeight = 'bold';
+            el805.style.color = '#dc2626';
+            if (warnEl) {
+                warnEl.style.display = 'block';
+                warnEl.innerHTML = '⛔ <strong>留存週轉金超過上限！</strong> 目前 $' + val805.toLocaleString() + 
+                                   '，上限 $65,000，無法儲存當日現報。請調整匯款額。';
+            }
+        } else {
+            el805.style.background = '';
+            el805.style.border = '';
+            el805.style.fontWeight = '';
+            el805.style.color = '';
+            if (warnEl) warnEl.style.display = 'none';
+        }
+    }
+    
     // 更新公式說明區
     updateFormulaInfo({
         s801: num('cr_amt_801'),
@@ -9496,6 +10314,29 @@ function saveCashReport() {
     if (!dateVal) return alert('⚠️ 請選擇會計日');
     
     recalcCashReport();
+    
+    // 🔒 關鍵驗證：留存週轉金（805 本日實際清點週轉金）上限 65,000
+    var capital805 = parseFloat((document.getElementById('cr_amt_805') || {}).value) || 0;
+    if (capital805 > 65000) {
+        alert('⛔ 無法儲存當日現金日報！\n\n' +
+              '📌 留存週轉金（本日實際清點）：$' + capital805.toLocaleString() + '\n' +
+              '⚠️ 已超過上限 $65,000，請先繳金/匯款後再儲存\n\n' +
+              '💡 處理建議：\n' +
+              '① 點「🏦 週轉金」區，調整 803A/B/C 匯款額\n' +
+              '② 確保留存週轉金 ≤ $65,000');
+        // 滾動到 805 欄位
+        var el805 = document.getElementById('cr_amt_805');
+        if (el805) {
+            el805.style.background = '#fef2f2';
+            el805.style.border = '2px solid #dc2626';
+            el805.scrollIntoView({behavior:'smooth', block:'center'});
+            setTimeout(function() {
+                el805.style.background = '';
+                el805.style.border = '';
+            }, 5000);
+        }
+        return;
+    }
     
     var registers = {};
     var inputs = document.querySelectorAll('#page-cashReport input[id^="cr_"]');
@@ -11787,6 +12628,7 @@ var BACKUP_KEYS = [
     'purchaseReceipts',
     'transferOrders',
     'productCodes',
+    'inventoryReports',
     'logs',
     'systemSettings',
     'customRolePermissions',
@@ -12087,6 +12929,277 @@ function ghDisconnect() {
     addSyncLog('已中斷同步', 'info');
     showNotif('⚫ 已中斷同步');
     ezShowSetupPanel();
+}
+
+// ============= 📲 跨裝置 QR 快速設定 =============
+
+// 產生跨裝置設定 QR 碼（含 Token + Gist ID）
+function ghShareSetupQR() {
+    var token = ghGetToken();
+    var gistId = ghGetGistId();
+    if (!token || !gistId) {
+        return alert('⚠️ 必須先完成同步空間建立才能產生 QR 碼');
+    }
+    
+    // 編碼設定資料：HRSYNC:base64(token|gistId)
+    var setupString;
+    try {
+        var raw = token + '|' + gistId;
+        setupString = 'HRSYNC:' + btoa(unescape(encodeURIComponent(raw)));
+    } catch(e) {
+        return alert('❌ 編碼失敗：' + e.message);
+    }
+    
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&ecc=M&data=' + encodeURIComponent(setupString);
+    
+    var qrImg = document.getElementById('ezQrImg');
+    var qrWrap = document.getElementById('ezQrWrap');
+    if (qrImg && qrWrap) {
+        qrImg.src = qrUrl;
+        qrWrap.style.display = 'block';
+        qrWrap.scrollIntoView({behavior:'smooth', block:'center'});
+        showNotif('📲 QR 已產生，請用其他裝置掃描');
+    }
+}
+
+// 掃描設定 QR
+function ghScanSetupQR() {
+    if (typeof Html5Qrcode === 'undefined') {
+        return alert('⚠️ 掃描功能未載入');
+    }
+    
+    // 開啟條碼掃描 Modal，但設定為 setup 模式
+    window._scanMode = 'syncSetup';
+    document.getElementById('barcodeScannerModal').classList.remove('hidden');
+    document.getElementById('scanResult').innerHTML = '<span style="color:#1e40af; font-weight:bold;">📲 請對準另一台裝置的「跨裝置設定 QR 碼」...</span>';
+    
+    if (typeof _currentScanner !== 'undefined' && _currentScanner) {
+        try { _currentScanner.stop().catch(function(){}); } catch(e){}
+        _currentScanner = null;
+    }
+    
+    setTimeout(function() {
+        _currentScanner = new Html5Qrcode("barcodeReader");
+        _currentScanner.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: 250, formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE] },
+            function(decodedText) {
+                if (decodedText.indexOf('HRSYNC:') === 0) {
+                    closeBarcodeScanner();
+                    window._scanMode = null;
+                    ghApplySetupString(decodedText);
+                }
+            },
+            function() { /* ignore */ }
+        ).then(function() {
+            setTimeout(addScannerAimingLine, 300);
+        }).catch(function(err) {
+            document.getElementById('scanResult').innerHTML = '<span style="color:#dc2626;">❌ 相機啟動失敗：' + err + '</span>';
+        });
+    }, 200);
+}
+
+// 套用掃描到的設定字串
+function ghApplySetupString(str) {
+    if (!str || str.indexOf('HRSYNC:') !== 0) {
+        return alert('⚠️ 不是有效的設定 QR 碼');
+    }
+    
+    try {
+        var encoded = str.substring(7);
+        var decoded = decodeURIComponent(escape(atob(encoded)));
+        var parts = decoded.split('|');
+        if (parts.length !== 2) throw new Error('格式錯誤');
+        
+        var token = parts[0];
+        var gistId = parts[1];
+        if (!token || !gistId) throw new Error('資料不完整');
+        
+        if (!confirm('📲 掃描成功！\n\n• Token：' + token.substring(0, 10) + '...\n• Gist ID：' + gistId + '\n\n要套用此設定並連接同步嗎？')) return;
+        
+        showNotif('🔌 連接中...');
+        
+        // 先儲存 Token 並驗證
+        ezFetch(GH_API_BASE + '/user', {
+            headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' }
+        }, 8000).then(function(r) {
+            if (!r.ok) throw new Error('Token 無效');
+            return r.json();
+        }).then(function(user) {
+            ghSetToken(token);
+            addSyncLog('QR 掃描：Token 驗證 @' + user.login, 'success');
+            
+            // 取得 Gist 並下載資料
+            return ezFetch(GH_API_BASE + '/gists/' + gistId, {
+                headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' }
+            }, 10000);
+        }).then(function(r) {
+            if (r.status === 404) throw new Error('Gist 不存在');
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).then(function(gist) {
+            var file = gist.files && gist.files[GH_SYNC_FILENAME];
+            if (!file) throw new Error('Gist 中找不到資料檔');
+            
+            var data = JSON.parse(file.content);
+            var dataKeyCount = Object.keys(data).filter(function(k){return BACKUP_KEYS.indexOf(k)>=0;}).length;
+            
+            // 套用資料
+            var applied = 0;
+            for (var k = 0; k < BACKUP_KEYS.length; k++) {
+                var key = BACKUP_KEYS[k];
+                if (data[key] !== undefined && data[key] !== null) {
+                    localStorage.setItem(key, typeof data[key] === 'string' ? data[key] : JSON.stringify(data[key]));
+                    applied++;
+                }
+            }
+            
+            ghSetGistId(gistId);
+            ghUpdateTokenStatus();
+            addSyncLog('✅ QR 設定完成，同步 ' + applied + ' 項資料', 'success');
+            ezShowActivePanel();
+            startAutoPull();
+            
+            alert('🎉 跨裝置同步設定完成！\n\n已下載 ' + applied + ' 項資料\n建議重新整理頁面以套用變更。');
+        }).catch(function(err) {
+            addSyncLog('❌ QR 設定失敗：' + err.message, 'error');
+            alert('❌ 設定失敗：' + err.message);
+        });
+    } catch(e) {
+        alert('❌ QR 解碼失敗：' + e.message);
+    }
+}
+
+// ============= 🔬 同步診斷工具 =============
+function ghRunDiagnostic() {
+    var token = ghGetToken();
+    var gistId = ghGetGistId();
+    var enabled = localStorage.getItem('_cs_enabled') === '1';
+    var autoPush = localStorage.getItem('_cs_autoPush') !== '0';
+    var autoPull = localStorage.getItem('_cs_autoPull') !== '0';
+    var lastPush = parseInt(localStorage.getItem('_cs_lastPush') || '0');
+    var lastPull = parseInt(localStorage.getItem('_cs_lastPull') || '0');
+    
+    var report = '🔬 同步系統診斷報告\n';
+    report += '====================\n\n';
+    
+    // 1. 基本設定
+    report += '【1】基本設定：\n';
+    report += '  • 同步啟用：' + (enabled ? '✅' : '❌') + '\n';
+    report += '  • GitHub Token：' + (token ? ('✅ (' + token.substring(0,10) + '...)') : '❌ 未設定') + '\n';
+    report += '  • Gist ID：' + (gistId ? ('✅ (' + gistId + ')') : '❌ 未設定') + '\n';
+    report += '  • 自動推送：' + (autoPush ? '✅' : '⚫') + '\n';
+    report += '  • 自動拉取：' + (autoPull ? '✅' : '⚫') + '\n';
+    report += '  • 最近推送：' + (lastPush ? new Date(lastPush).toLocaleString() : '從未') + '\n';
+    report += '  • 最近拉取：' + (lastPull ? new Date(lastPull).toLocaleString() : '從未') + '\n\n';
+    
+    if (!token || !gistId) {
+        report += '❌ 設定不完整，請完成同步空間建立後再診斷';
+        alert(report);
+        return;
+    }
+    
+    showNotif('🔬 診斷中...');
+    
+    // 2. 測試 GitHub API
+    var apiStatus = '檢查中...';
+    var gistReadStatus = '檢查中...';
+    var gistWriteStatus = '檢查中...';
+    
+    ezFetch(GH_API_BASE + '/user', {
+        headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' }
+    }, 8000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        apiStatus = '✅ 連線正常';
+        return r.json();
+    }).then(function(user) {
+        apiStatus += ' (@' + user.login + ')';
+        // 測試 Gist 讀取
+        return ezFetch(GH_API_BASE + '/gists/' + gistId, {
+            headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' }
+        }, 10000);
+    }).then(function(r) {
+        if (r.status === 404) {
+            gistReadStatus = '❌ Gist 不存在';
+            throw new Error('Gist not found');
+        }
+        if (!r.ok) {
+            gistReadStatus = '❌ HTTP ' + r.status;
+            throw new Error('HTTP ' + r.status);
+        }
+        gistReadStatus = '✅ 可讀取';
+        return r.json();
+    }).then(function(gist) {
+        var file = gist.files && gist.files[GH_SYNC_FILENAME];
+        if (!file) {
+            gistReadStatus = '⚠️ Gist 存在但缺少 ' + GH_SYNC_FILENAME;
+        } else {
+            try {
+                var data = JSON.parse(file.content);
+                var dataKeys = Object.keys(data).filter(function(k){return BACKUP_KEYS.indexOf(k)>=0;}).length;
+                gistReadStatus += '（雲端 ' + dataKeys + ' 項）';
+            } catch(e) {}
+        }
+        
+        // 測試寫入
+        return ezFetch(GH_API_BASE + '/gists/' + gistId, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': 'token ' + token,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                description: 'HR System Sync Data (Diagnostic ' + new Date().toISOString().substring(11,19) + ')'
+            })
+        }, 10000);
+    }).then(function(r) {
+        if (!r.ok) {
+            gistWriteStatus = '❌ HTTP ' + r.status + (r.status === 403 ? '（Token 缺少 gist 寫入權限）' : '');
+        } else {
+            gistWriteStatus = '✅ 可寫入';
+        }
+    }).catch(function(err) {
+        if (apiStatus.indexOf('檢查中') === 0) apiStatus = '❌ ' + err.message;
+        if (gistReadStatus.indexOf('檢查中') === 0) gistReadStatus = '❌ ' + err.message;
+        if (gistWriteStatus.indexOf('檢查中') === 0) gistWriteStatus = '❌ ' + err.message;
+    }).then(function() {
+        // 顯示最終診斷結果
+        var finalReport = report + '【2】API 連線測試：\n';
+        finalReport += '  • GitHub API：' + apiStatus + '\n';
+        finalReport += '  • Gist 讀取：' + gistReadStatus + '\n';
+        finalReport += '  • Gist 寫入：' + gistWriteStatus + '\n\n';
+        
+        // 3. 本機資料統計
+        var dataCount = 0, dataSize = 0;
+        for (var i = 0; i < BACKUP_KEYS.length; i++) {
+            var v = localStorage.getItem(BACKUP_KEYS[i]);
+            if (v !== null) {
+                dataCount++;
+                dataSize += v.length;
+            }
+        }
+        finalReport += '【3】本機資料：\n';
+        finalReport += '  • 項數：' + dataCount + ' / ' + BACKUP_KEYS.length + '\n';
+        finalReport += '  • 大小：' + (dataSize / 1024).toFixed(1) + ' KB\n\n';
+        
+        finalReport += '【建議】\n';
+        if (apiStatus.indexOf('❌') >= 0) {
+            finalReport += '⚠️ GitHub API 無法連線，請檢查網路或 Token\n';
+        } else if (gistWriteStatus.indexOf('❌') >= 0) {
+            finalReport += '⚠️ 無法寫入 Gist，請重新取得 Token 並務必勾選「gist」權限\n';
+        } else if (gistReadStatus.indexOf('❌') >= 0) {
+            finalReport += '⚠️ Gist 不存在，請重新「建立同步空間」\n';
+        } else {
+            finalReport += '✅ 同步系統正常運作！\n';
+            finalReport += '\n如其他裝置看不到資料：\n';
+            finalReport += '① 在那台裝置點「📥 立即拉取」\n';
+            finalReport += '② 確認那台裝置已用相同 Token + Gist ID 連接\n';
+            finalReport += '③ 用「📲 產生 QR」+「📷 掃描設定」最快';
+        }
+        
+        alert(finalReport);
+    });
 }
 
 // 取得目前啟用的同步端點（GitHub 優先）
