@@ -6595,45 +6595,86 @@ function renderRcDetail() {
     
     html += '<div style="background:white; padding:12px; border-radius:10px; overflow-x:auto;">';
     if (isEdit) {
-        html += '<button onclick="openRcItemModal()" style="margin-bottom:10px; padding:8px 16px; background:#10b981; color:white; border:0; border-radius:6px; cursor:pointer; font-weight:bold;">➕ 新增退貨商品</button>';
+        html += '<div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">';
+        html += '<button onclick="addRcInlineRow()" style="padding:8px 16px; background:#10b981; color:white; border:0; border-radius:6px; cursor:pointer; font-weight:bold;">➕ 新增一列商品</button>';
+        html += '<button onclick="rcQuickScanAdd()" style="padding:8px 16px; background:linear-gradient(to bottom,#8b5cf6,#7c3aed); color:white; border:0; border-radius:6px; cursor:pointer; font-weight:bold;">📷 連續掃碼新增</button>';
+        html += '<span style="font-size:12px; color:#6b7280; align-self:center;">💡 直接在表格內編輯，免開關視窗</span>';
+        html += '</div>';
     }
-    html += '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:600px;">';
+    html += '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:' + (isEdit ? '820px' : '700px') + ';">';
     html += '<thead><tr style="background:#374151; color:white;">';
-    html += '<th style="padding:8px; border:1px solid #ccc;">品號</th>';
+    html += '<th style="padding:8px; border:1px solid #ccc; width:90px;">品號</th>';
     html += '<th style="padding:8px; border:1px solid #ccc;">品名</th>';
+    html += '<th style="padding:8px; border:1px solid #ccc; width:80px;">照片</th>';
     html += '<th style="padding:8px; border:1px solid #ccc;">條碼</th>';
-    html += '<th style="padding:8px; border:1px solid #ccc;">零售(本)<br>零售(贈)</th>';
-    html += '<th style="padding:8px; border:1px solid #ccc; width:90px;">數量</th>';
+    html += '<th style="padding:8px; border:1px solid #ccc; width:70px;">零售(本)<br>零售(贈)</th>';
+    html += '<th style="padding:8px; border:1px solid #ccc; width:80px;">退貨數量</th>';
+    html += '<th style="padding:8px; border:1px solid #ccc; width:80px;">門市既有庫存</th>';
     if (isEdit) html += '<th style="padding:8px; border:1px solid #ccc; width:50px;">操作</th>';
     html += '</tr></thead><tbody>';
     
     var submissions = loadData('returnSubmissions', {});
     var mySid = getUserStoreId();
     var subKey = c.id + '_' + mySid;
-    var myQty = (submissions[subKey] && submissions[subKey].quantities) ? submissions[subKey].quantities : {};
+    var mySub = submissions[subKey] || {};
+    var myQty = mySub.quantities || {};
+    var myInv = mySub.inventory || {};
     
+    var colspan = isEdit ? 8 : 7;
     if (!c.items || c.items.length === 0) {
-        html += '<tr><td colspan="' + (isEdit?6:5) + '" style="text-align:center; padding:20px; color:#9ca3af;">尚無商品</td></tr>';
+        html += '<tr><td colspan="' + colspan + '" style="text-align:center; padding:20px; color:#9ca3af;">尚無商品，' + (isEdit ? '點「➕ 新增一列商品」或「📷 連續掃碼新增」開始' : '請等待管理員建檔') + '</td></tr>';
     } else {
         for (var i = 0; i < c.items.length; i++) {
             var it = c.items[i];
             html += '<tr>';
-            html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;"><div style="font-size:11px; color:#6b7280;">' + (it.category||'') + '</div><strong>' + (it.code||'') + '</strong></td>';
-            html += '<td style="padding:6px; border:1px solid #ccc;">' + (it.name||'') + '</td>';
-            // 🆕 真實條碼圖
-            if (it.barcode) {
-                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;"><svg class="rc-barcode" data-code="' + it.barcode + '"></svg><div style="font-family:monospace; font-size:10px; color:#6b7280;">' + it.barcode + '</div></td>';
-            } else {
-                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center; color:#9ca3af; font-size:11px;">無條碼</td>';
-            }
-            html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;">' + (it.retailBox||0) + '<br>' + (it.retailGift||0) + '</td>';
-            if (_rcMode === 'return') {
-                html += '<td style="padding:6px; border:1px solid #ccc;"><input type="number" min="0" value="' + (myQty[it.code]||'') + '" onchange="updateRcQty(\'' + it.code + '\',this.value)" style="width:100%; padding:4px; border:1px solid #999; border-radius:4px; text-align:center;"></td>';
-            } else {
-                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center; background:#f9fafb;"></td>';
-            }
+            
             if (isEdit) {
-                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;"><button onclick="deleteRcItem(' + i + ')" style="padding:3px 8px; background:#ef4444; color:white; border:0; border-radius:4px; cursor:pointer; font-size:11px;">🗑️</button></td>';
+                // === 管理員：內嵌編輯 ===
+                html += '<td style="padding:4px; border:1px solid #ccc;">' +
+                        '<input type="text" value="' + (it.category||'') + '" placeholder="類別" onchange="updateRcItemField(' + i + ',\'category\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; font-size:11px; margin-bottom:2px;">' +
+                        '<input type="text" value="' + (it.code||'') + '" placeholder="品號" onchange="updateRcItemField(' + i + ',\'code\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; font-family:monospace;"></td>';
+                html += '<td style="padding:4px; border:1px solid #ccc;"><input type="text" value="' + (it.name||'').replace(/"/g,'&quot;') + '" placeholder="品名" onchange="updateRcItemField(' + i + ',\'name\',this.value)" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px;"></td>';
+                // 照片欄（拍照上傳）
+                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center;">';
+                if (it.photo) {
+                    html += '<img src="' + it.photo + '" style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;" onclick="viewRcPhoto(' + i + ')"><br>';
+                }
+                html += '<label style="display:inline-block; padding:3px 8px; background:#3b82f6; color:white; border-radius:4px; cursor:pointer; font-size:10px; margin-top:2px;">📷 ' + (it.photo ? '更換' : '拍照') + '<input type="file" accept="image/*" capture="environment" onchange="uploadRcPhoto(' + i + ',this)" style="display:none;"></label>';
+                html += '</td>';
+                // 條碼
+                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center;">';
+                if (it.barcode) html += '<svg class="rc-barcode" data-code="' + it.barcode + '"></svg><br>';
+                html += '<input type="text" value="' + (it.barcode||'') + '" placeholder="條碼" onchange="updateRcItemField(' + i + ',\'barcode\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; font-family:monospace; font-size:10px;"></td>';
+                // 零售
+                html += '<td style="padding:4px; border:1px solid #ccc;">' +
+                        '<input type="number" value="' + (it.retailBox||0) + '" onchange="updateRcItemField(' + i + ',\'retailBox\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; text-align:right; margin-bottom:2px;">' +
+                        '<input type="number" value="' + (it.retailGift||0) + '" onchange="updateRcItemField(' + i + ',\'retailGift\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; text-align:right;"></td>';
+                // 退貨數量（admin 預覽不填）
+                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center; background:#f9fafb; color:#9ca3af; font-size:11px;">門市填寫</td>';
+                // 門市既有庫存（admin 預覽不填）
+                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center; background:#f9fafb; color:#9ca3af; font-size:11px;">門市填寫</td>';
+                // 操作
+                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center;"><button onclick="deleteRcItem(' + i + ')" style="padding:3px 8px; background:#ef4444; color:white; border:0; border-radius:4px; cursor:pointer; font-size:11px;">🗑️</button></td>';
+            } else {
+                // === 門市：唯讀商品 + 填數量/庫存 ===
+                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;"><div style="font-size:11px; color:#6b7280;">' + (it.category||'') + '</div><strong>' + (it.code||'') + '</strong></td>';
+                html += '<td style="padding:6px; border:1px solid #ccc;">' + (it.name||'') + '</td>';
+                // 照片
+                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;">';
+                if (it.photo) html += '<img src="' + it.photo + '" style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;" onclick="viewRcPhoto(' + i + ')">';
+                else html += '<span style="color:#9ca3af; font-size:11px;">無</span>';
+                html += '</td>';
+                // 條碼
+                if (it.barcode) {
+                    html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;"><svg class="rc-barcode" data-code="' + it.barcode + '"></svg><div style="font-family:monospace; font-size:10px; color:#6b7280;">' + it.barcode + '</div></td>';
+                } else {
+                    html += '<td style="padding:6px; border:1px solid #ccc; text-align:center; color:#9ca3af; font-size:11px;">無條碼</td>';
+                }
+                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;">' + (it.retailBox||0) + '<br>' + (it.retailGift||0) + '</td>';
+                // 退貨數量
+                html += '<td style="padding:6px; border:1px solid #ccc;"><input type="number" min="0" value="' + (myQty[it.code]||'') + '" onchange="updateRcQty(\'' + it.code + '\',this.value)" placeholder="0" style="width:100%; padding:4px; border:1px solid #999; border-radius:4px; text-align:center;"></td>';
+                // 🆕 門市既有庫存
+                html += '<td style="padding:6px; border:1px solid #ccc;"><input type="number" min="0" value="' + (myInv[it.code]||'') + '" onchange="updateRcInventory(\'' + it.code + '\',this.value)" placeholder="0" style="width:100%; padding:4px; border:1px solid #999; border-radius:4px; text-align:center; background:#f0f9ff;"></td>';
             }
             html += '</tr>';
         }
@@ -6644,8 +6685,8 @@ function renderRcDetail() {
     document.getElementById('rcDetailOverlay').style.display = 'block';
     
     _rcReturnQty = JSON.parse(JSON.stringify(myQty));
+    _rcReturnInv = JSON.parse(JSON.stringify(myInv));
     
-    // 🆕 產生所有真實條碼圖
     renderAllBarcodes();
 }
 
@@ -6677,6 +6718,156 @@ function renderAllBarcodes() {
 
 function updateRcQty(code, val) {
     _rcReturnQty[code] = parseInt(val) || 0;
+}
+
+// 🆕 門市既有庫存
+var _rcReturnInv = {};
+function updateRcInventory(code, val) {
+    _rcReturnInv[code] = parseInt(val) || 0;
+}
+
+// 🆕 內嵌編輯：更新商品欄位（admin）
+function updateRcItemField(idx, field, val) {
+    if (!_rcCurrentCampaign || !_rcCurrentCampaign.items[idx]) return;
+    if (field === 'retailBox' || field === 'retailGift') {
+        _rcCurrentCampaign.items[idx][field] = parseInt(val) || 0;
+    } else {
+        _rcCurrentCampaign.items[idx][field] = val;
+    }
+    // 條碼改變 → 重繪條碼圖
+    if (field === 'barcode') {
+        renderRcDetail();
+    }
+}
+
+// 🆕 新增一列空白商品（內嵌，免 Modal）
+function addRcInlineRow() {
+    if (!_rcCurrentCampaign.items) _rcCurrentCampaign.items = [];
+    _rcCurrentCampaign.items.push({
+        category: '', code: '', name: '', barcode: '', photo: '', retailBox: 0, retailGift: 0
+    });
+    renderRcDetail();
+    // 捲到最底
+    var content = document.getElementById('rcDetailContent');
+    if (content) content.scrollTop = content.scrollHeight;
+    showNotif('➕ 已新增一列，請直接在表格內填寫');
+}
+
+// 🆕 上傳商品照片（拍照壓縮）
+function uploadRcPhoto(idx, input) {
+    var file = input.files[0];
+    if (!file) return;
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            // 壓縮到最大寬 400px
+            var canvas = document.createElement('canvas');
+            var maxW = 400;
+            var scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            var compressed = canvas.toDataURL('image/jpeg', 0.7);
+            
+            _rcCurrentCampaign.items[idx].photo = compressed;
+            renderRcDetail();
+            showNotif('📷 已上傳商品照片');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// 檢視商品照片（放大）
+function viewRcPhoto(idx) {
+    var it = _rcCurrentCampaign.items[idx];
+    if (!it || !it.photo) return;
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:100001;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    overlay.onclick = function() { document.body.removeChild(overlay); };
+    overlay.innerHTML = '<div style="text-align:center;"><img src="' + it.photo + '" style="max-width:90%;max-height:80vh;border-radius:8px;"><div style="color:white;margin-top:10px;">' + (it.name||'') + '（點擊關閉）</div></div>';
+    document.body.appendChild(overlay);
+}
+
+// 🆕 連續掃碼新增（掃一個加一列）
+function rcQuickScanAdd() {
+    if (typeof Html5Qrcode === 'undefined') return alert('⚠️ 掃描功能未載入，請檢查網路');
+    window._scanMode = 'rcQuickAdd';
+    var modal = document.getElementById('barcodeScannerModal');
+    modal.classList.remove('hidden');
+    // 🔑 提高 z-index 蓋過檔期編輯全螢幕（rcDetailOverlay=9000）
+    modal.style.zIndex = '99999';
+    
+    var resultEl = document.getElementById('scanResult');
+    if (resultEl) resultEl.innerHTML = '<span style="color:#7c3aed; font-weight:bold;">⏳ 啟動相機中...掃一個自動加一列</span>';
+    
+    if (typeof _currentScanner !== 'undefined' && _currentScanner) {
+        try { _currentScanner.stop().catch(function(){}); } catch(e){}
+        _currentScanner = null;
+    }
+    setTimeout(function() {
+        _currentScanner = new Html5Qrcode("barcodeReader");
+        _currentScanner.start(
+            { facingMode: 'environment' },
+            {
+                fps: 10,
+                qrbox: function(vw, vh) {
+                    var w = Math.floor(vw * 0.9);
+                    var h = Math.floor(vh * 0.22);
+                    if (h > 150) h = 150;
+                    if (h < 80) h = 80;
+                    return { width: w, height: h };
+                },
+                aspectRatio: 1.7777,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.QR_CODE
+                ]
+            },
+            function(decodedText) {
+                if (!_rcCurrentCampaign.items) _rcCurrentCampaign.items = [];
+                // 避免極短時間重複掃同一條碼
+                var now = Date.now();
+                if (window._rcLastScan && window._rcLastScan.code === decodedText && (now - window._rcLastScan.time) < 1500) {
+                    return;
+                }
+                window._rcLastScan = { code: decodedText, time: now };
+                
+                var newItem = { category: '', code: decodedText.substring(0,6), name: '', barcode: decodedText, photo: '', retailBox: 0, retailGift: 0 };
+                // 從商品庫帶入
+                var productCodes = loadData('productCodes', {});
+                for (var code in productCodes) {
+                    if (productCodes[code].lastBarcode === decodedText || decodedText.indexOf(code) === 0) {
+                        newItem.code = code;
+                        newItem.name = productCodes[code].productName || '';
+                        newItem.retailBox = productCodes[code].retailPrice || 0;
+                        newItem.retailGift = productCodes[code].retailPrice || 0;
+                        break;
+                    }
+                }
+                _rcCurrentCampaign.items.push(newItem);
+                if (typeof playBeep === 'function') playBeep();
+                
+                // 即時更新掃描視窗內的計數提示
+                if (resultEl) resultEl.innerHTML = '<span style="color:#059669; font-weight:bold;">✅ 已加入 ' + _rcCurrentCampaign.items.length + ' 項｜最新：' + decodedText + (newItem.name ? '（' + newItem.name + '）' : '') + '<br>繼續掃下一個，或點下方關閉</span>';
+            },
+            function() { /* ignore */ }
+        ).then(function() {
+            if (resultEl) resultEl.innerHTML = '<span style="color:#7c3aed; font-weight:bold;">📷 連續掃碼中，掃一個自動加一列...</span>';
+            if (typeof addScannerAimingLine === 'function') setTimeout(addScannerAimingLine, 300);
+        }).catch(function(err) {
+            if (resultEl) resultEl.innerHTML = '<span style="color:#dc2626;">❌ 無法啟動相機：' + err + '<br>請確認：1) 已授權相機 2) HTTPS 連線</span>';
+        });
+    }, 250);
 }
 
 function closeRcDetail() {
@@ -6738,6 +6929,7 @@ function submitRcReturn() {
         storeCode: myStore ? myStore.code : '',
         storeName: myStore ? myStore.name : (currentUser.name || ''),
         quantities: JSON.parse(JSON.stringify(_rcReturnQty)),
+        inventory: JSON.parse(JSON.stringify(_rcReturnInv || {})),
         submittedAt: new Date().toISOString(),
         submittedBy: currentUser.id
     };
@@ -6899,9 +7091,12 @@ function deleteRcItem(idx) {
 function rcScanBarcode() {
     if (typeof Html5Qrcode === 'undefined') return alert('⚠️ 掃描功能未載入');
     window._scanMode = 'rcItem';
-    document.getElementById('barcodeScannerModal').classList.remove('hidden');
+    var modal = document.getElementById('barcodeScannerModal');
+    modal.classList.remove('hidden');
+    modal.style.zIndex = '99999';  // 蓋過 Modal/Overlay
     if (typeof _currentScanner !== 'undefined' && _currentScanner) {
         try { _currentScanner.stop().catch(function(){}); } catch(e){}
+        _currentScanner = null;
     }
     setTimeout(function() {
         _currentScanner = new Html5Qrcode("barcodeReader");
@@ -6910,7 +7105,6 @@ function rcScanBarcode() {
                 document.getElementById('rcItemBarcode').value = decodedText;
                 closeBarcodeScanner();
                 window._scanMode = null;
-                // 確保 Modal 開啟
                 document.getElementById('rcItemModal').classList.remove('hidden');
                 rcRenderBarcodePreview(decodedText);
                 rcAutoFillFromLibrary(decodedText);
@@ -8217,9 +8411,17 @@ function closeBarcodeScanner() {
             _currentScanner = null;
         }
     }
-    document.getElementById('barcodeScannerModal').classList.add('hidden');
+    var modalEl = document.getElementById('barcodeScannerModal');
+    modalEl.classList.add('hidden');
+    modalEl.style.zIndex = '';  // 還原 z-index
     var sc = document.getElementById('toScanFeedback');
     if (sc) updateScanFeedback();
+    
+    // 🆕 若為檔期退貨連續掃碼模式，關閉後重繪表格
+    if (window._scanMode === 'rcQuickAdd') {
+        window._scanMode = null;
+        if (typeof renderRcDetail === 'function' && _rcCurrentCampaign) renderRcDetail();
+    }
 }
 
 function updateScanFeedback() {
