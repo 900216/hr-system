@@ -6,7 +6,6 @@
 <title>考勤管理系統 Rostering System</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1080,6 +1079,22 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
     .print-area, .print-area * { visibility: visible; }
     .print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 10px; background: white; }
     .no-print { display: none !important; }
+    /* 🆕 雙週刊 overlay 列印：解除 fixed 限制，完整顯示內容 */
+    .printing-overlay-active {
+        position: static !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        background: white !important;
+        display: block !important;
+    }
+    .printing-overlay-active * { visibility: visible !important; }
+    /* 列印時強制保留照片與條碼顏色 */
+    .printing-overlay-active img,
+    .printing-overlay-active svg {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 }
 
 .print-area {
@@ -1177,7 +1192,7 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                 <button class="btn-action btn-signout" onclick="handleSignOut()">📤 簽退</button>
                 <button class="btn-action btn-login" onclick="handleLogin()">🔓 登入</button>
             </div>
-            <button class="btn-action" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; font-weight:bold; padding:14px; border:0; border-radius:8px; cursor:pointer; font-size:16px;" onclick="openFaceLogin()">🤳 人臉辨識快速登入</button>
+            <button class="btn-action" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; font-weight:bold; padding:14px; border:0; border-radius:8px; cursor:pointer; font-size:16px;" onclick="openFaceLogin()">🤳 快速登入（Face ID / 指紋）</button>
             <button class="btn-action" style="width:100%; margin-top:8px; background:linear-gradient(135deg,#10b981,#059669); color:white; font-weight:bold; padding:10px; border:0; border-radius:8px; cursor:pointer; font-size:14px;" onclick="loginPageSync()">☁️ 同步雲端帳號（換裝置必按）</button>
             <div id="loginSyncStatus" style="margin-top:6px; font-size:12px; color:#6b7280; text-align:center;"></div>
             <div style="margin-top:15px; padding:10px; background:#fef3c7; border-radius:4px; font-size:12px;">
@@ -1187,30 +1202,6 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                 🟢 <code>staff01</code> 一般職員（僅看班表、請假）<br>
                 🟢 <code>user12345</code> 時薪人員（同一般職員）
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- 🤳 人臉辨識登入 Modal -->
-<div id="faceLoginModal" class="hidden" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:100000; display:flex; align-items:center; justify-content:center;">
-    <div style="background:white; border-radius:16px; padding:20px; max-width:420px; width:92%; text-align:center;">
-        <h2 style="margin:0 0 6px 0; color:#6d28d9;">🤳 人臉辨識登入</h2>
-        <div id="faceLoginStatus" style="font-size:13px; color:#6b7280; margin-bottom:12px;">準備中...</div>
-        
-        <div style="position:relative; width:100%; max-width:320px; margin:0 auto; border-radius:12px; overflow:hidden; background:#000; aspect-ratio:1/1;">
-            <video id="faceVideo" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
-            <canvas id="faceCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; transform:scaleX(-1);"></canvas>
-            <!-- 對準圈 -->
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:65%; height:65%; border:3px dashed rgba(139,92,246,0.8); border-radius:50%; pointer-events:none;"></div>
-        </div>
-        
-        <div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
-            <button id="faceLoginScanBtn" onclick="doFaceLoginScan()" style="padding:14px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; border:0; border-radius:8px; cursor:pointer; font-size:16px; font-weight:bold;">📸 開始辨識</button>
-            <button onclick="closeFaceLogin()" style="padding:10px; background:#6b7280; color:white; border:0; border-radius:8px; cursor:pointer; font-size:14px;">✕ 取消，改用帳密</button>
-        </div>
-        
-        <div style="margin-top:12px; font-size:11px; color:#9ca3af;">
-            💡 尚未註冊人臉？請先用帳密登入，到「🤳 人臉登入設定」註冊。
         </div>
     </div>
 </div>
@@ -1229,7 +1220,7 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
         </div>
         <div class="header-buttons">
             <button class="header-btn" onclick="showWorkList()">📋 工作清單</button>
-            <button class="header-btn" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);" onclick="openFaceEnroll()">🤳 人臉登入設定</button>
+            <button class="header-btn" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);" onclick="openFaceEnroll()">🤳 快速登入設定</button>
             <button class="header-btn logout" onclick="logout()">🚪 登出</button>
         </div>
     </div>
@@ -3412,6 +3403,13 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                     <option value="none">無</option>
                 </select>
             </td></tr>
+            <tr><td class="label-col">指派給：</td><td>
+                <select id="wAssignee">
+                    <option value="">📢 全部人員（公告）</option>
+                </select>
+                <div style="font-size:11px; color:#6b7280; margin-top:4px;">選特定員工 → 只推播給他，並出現在他的工作清單</div>
+            </td></tr>
+            <tr><td class="label-col">說明：</td><td><textarea id="wDesc" placeholder="工作內容說明（選填）" style="width:100%; min-height:50px; padding:6px; border:1px solid #ccc; border-radius:4px;"></textarea></td></tr>
         </table>
         <div style="text-align:center; margin-top:15px;">
             <button class="btn-confirm" onclick="saveWork()">✅ 儲存</button>
@@ -4095,13 +4093,13 @@ function triggerLoginSync() {
     var enabled = localStorage.getItem('_cs_enabled') === '1';
     if (!enabled) {
         // 即使沒同步，也檢查本機待簽收調撥單
-        setTimeout(checkPendingTransfers, 1500);
+        setTimeout(function(){ checkPendingTransfers(); checkTaskNotifications(); }, 1500);
         return;
     }
     
     var endpoint = (typeof getActiveSyncEndpoint === 'function') ? getActiveSyncEndpoint() : null;
     if (!endpoint) {
-        setTimeout(checkPendingTransfers, 1500);
+        setTimeout(function(){ checkPendingTransfers(); checkTaskNotifications(); }, 1500);
         return;
     }
     
@@ -4122,7 +4120,37 @@ function triggerLoginSync() {
     setTimeout(function() {
         showNotif('✅ 已同步雲端最新資料');
         checkPendingTransfers();
+        checkTaskNotifications();
     }, 1800);
+}
+
+// 🆕 檢查指派工作推播通知
+function checkTaskNotifications() {
+    if (!currentUser) return;
+    var notifs = loadData('taskNotifications', {});
+    var mine = notifs[currentUser.id] || [];
+    var unread = mine.filter(function(n) { return !n.read; });
+    
+    if (unread.length > 0) {
+        var msg = '📬 您有 ' + unread.length + ' 項新指派工作！\n\n';
+        for (var i = 0; i < Math.min(unread.length, 5); i++) {
+            msg += '📌 ' + unread[i].title;
+            if (unread[i].fromName) msg += '（來自 ' + unread[i].fromName + '）';
+            msg += '\n';
+            if (unread[i].desc) msg += '   ' + unread[i].desc + '\n';
+        }
+        if (unread.length > 5) msg += '...等共 ' + unread.length + ' 項\n';
+        msg += '\n請至「📋 工作清單」查看。';
+        
+        showNotif('📬 有 ' + unread.length + ' 項新指派工作！');
+        setTimeout(function() {
+            alert(msg);
+            // 標記為已讀
+            for (var j = 0; j < mine.length; j++) mine[j].read = true;
+            notifs[currentUser.id] = mine;
+            saveData('taskNotifications', notifs);
+        }, 1200);
+    }
 }
 
 // 🆕 檢查待簽收的調撥單（本店為調入店但尚未簽收）
@@ -4188,238 +4216,140 @@ function loginPageSync() {
     }, 2000);
 }
 
-// ============= 🤳 人臉辨識登入 =============
-var FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-var _faceModelsLoaded = false;
-var _faceStream = null;
-var _faceLoginMode = 'login';  // 'login' or 'enroll'
-var _faceEnrollTarget = null;  // 註冊時的目標帳號
+// ============= 🤳 手機內建生物辨識登入（Face ID / Touch ID / 指紋）=============
+// 使用 WebAuthn，呼叫手機系統內建的生物辨識
+var _bioEnrollTarget = null;
 
-// 載入人臉模型
-function loadFaceModels(statusCb) {
-    if (_faceModelsLoaded) return Promise.resolve();
-    if (typeof faceapi === 'undefined') {
-        return Promise.reject(new Error('人臉辨識引擎未載入，請檢查網路'));
-    }
-    if (statusCb) statusCb('⏳ 載入人臉辨識模型中...');
-    return faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL)
-        .then(function() { return faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL); })
-        .then(function() { return faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL); })
-        .then(function() { _faceModelsLoaded = true; });
+// 工具：ArrayBuffer 轉 base64url
+function bufToB64url(buf) {
+    var bytes = new Uint8Array(buf);
+    var str = '';
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+// base64url 轉 Uint8Array
+function b64urlToBuf(b64url) {
+    var b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+    while (b64.length % 4) b64 += '=';
+    var str = atob(b64);
+    var bytes = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+    return bytes;
+}
+function randomChallenge() {
+    var arr = new Uint8Array(32);
+    (window.crypto || window.msCrypto).getRandomValues(arr);
+    return arr;
 }
 
-// 開啟相機
-function startFaceCamera(statusCb) {
-    var video = document.getElementById('faceVideo');
-    return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
-        .then(function(stream) {
-            _faceStream = stream;
-            video.srcObject = stream;
-            return new Promise(function(resolve) {
-                video.onloadedmetadata = function() { video.play(); resolve(); };
-            });
-        });
+// 檢查瀏覽器是否支援
+function bioSupported() {
+    return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
 }
 
-function stopFaceCamera() {
-    if (_faceStream) {
-        _faceStream.getTracks().forEach(function(t) { t.stop(); });
-        _faceStream = null;
-    }
-    var video = document.getElementById('faceVideo');
-    if (video) video.srcObject = null;
-}
-
-// 開啟人臉登入
-function openFaceLogin() {
-    // 🆕 先嘗試從雲端同步最新人臉資料（確保其他裝置剛註冊的臉也能登入）
-    var enabled = localStorage.getItem('_cs_enabled') === '1';
-    var endpoint = (typeof getActiveSyncEndpoint === 'function') ? getActiveSyncEndpoint() : null;
-    
-    if (enabled && endpoint && typeof manualPullFromCloud === 'function') {
-        showNotif('🔄 同步最新人臉資料...');
-        manualPullFromCloud(true);
-        // 等同步完成再開啟（給 1.2 秒）
-        setTimeout(_openFaceLoginAfterSync, 1200);
-    } else {
-        _openFaceLoginAfterSync();
-    }
-}
-
-function _openFaceLoginAfterSync() {
-    var profiles = loadData('faceProfiles', []);
-    if (profiles.length === 0) {
-        return alert('⚠️ 尚未註冊任何人臉\n\n請先用「帳號密碼」登入，\n再到「🤳 人臉登入設定」註冊您的臉。\n\n💡 若已在其他裝置註冊，請先點\n「☁️ 同步雲端帳號」按鈕。');
-    }
-    
-    _faceLoginMode = 'login';
-    document.getElementById('faceLoginModal').classList.remove('hidden');
-    var statusEl = document.getElementById('faceLoginStatus');
-    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
-    
-    setStatus('⏳ 啟動相機中...（已載入 ' + profiles.length + ' 組人臉）');
-    document.getElementById('faceLoginScanBtn').disabled = true;
-    
-    loadFaceModels(setStatus).then(function() {
-        return startFaceCamera(setStatus);
-    }).then(function() {
-        setStatus('✅ 請將臉對準圓圈，點「開始辨識」');
-        document.getElementById('faceLoginScanBtn').disabled = false;
-    }).catch(function(err) {
-        setStatus('❌ ' + err.message);
-        alert('❌ 無法啟動人臉辨識：' + err.message + '\n\n請確認：\n1. 已允許相機權限\n2. 使用 HTTPS（https://）\n3. 網路正常（需下載模型）');
-    });
-}
-
-function closeFaceLogin() {
-    stopFaceCamera();
-    document.getElementById('faceLoginModal').classList.add('hidden');
-}
-
-// 擷取目前畫面的人臉描述子
-function captureFaceDescriptor() {
-    var video = document.getElementById('faceVideo');
-    var opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
-    return faceapi.detectSingleFace(video, opts)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-}
-
-// 執行人臉登入辨識
-function doFaceLoginScan() {
-    var statusEl = document.getElementById('faceLoginStatus');
-    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
-    var btn = document.getElementById('faceLoginScanBtn');
-    btn.disabled = true;
-    setStatus('🔍 辨識中，請保持不動...');
-    
-    captureFaceDescriptor().then(function(detection) {
-        if (!detection) {
-            setStatus('⚠️ 未偵測到人臉，請靠近並對準圓圈');
-            btn.disabled = false;
-            return;
-        }
-        
-        var profiles = loadData('faceProfiles', []);
-        var queryDesc = detection.descriptor;
-        
-        // 比對所有已註冊人臉，找最近的
-        var bestMatch = null;
-        var bestDist = 999;
-        for (var i = 0; i < profiles.length; i++) {
-            if (!profiles[i].descriptor) continue;
-            var refDesc = new Float32Array(profiles[i].descriptor);
-            var dist = faceapi.euclideanDistance(queryDesc, refDesc);
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestMatch = profiles[i];
-            }
-        }
-        
-        // 閾值 0.5（越小越嚴格）
-        var THRESHOLD = 0.5;
-        if (bestMatch && bestDist < THRESHOLD) {
-            setStatus('✅ 辨識成功：' + bestMatch.name + '（相似度 ' + Math.round((1-bestDist)*100) + '%）');
-            
-            // 驗證帳號仍有效
-            var accounts = loadData('accounts', defaultAccounts);
-            var account = accounts.find(function(a) { return a.username === bestMatch.username; });
-            if (account && (account.status === 'disabled' || account.status === 'locked')) {
-                setStatus('❌ 此帳號已停用/鎖定');
-                btn.disabled = false;
-                return;
-            }
-            
-            setTimeout(function() {
-                closeFaceLogin();
-                doLoginAs({
-                    id: bestMatch.username,
-                    name: bestMatch.name,
-                    role: bestMatch.role
-                });
-                showNotif('🤳 人臉登入成功：' + bestMatch.name);
-            }, 800);
-        } else {
-            setStatus('❌ 辨識失敗' + (bestMatch ? '（相似度過低 ' + Math.round((1-bestDist)*100) + '%）' : '') + '，請重試或改用帳密');
-            btn.disabled = false;
-        }
-    }).catch(function(err) {
-        setStatus('❌ 辨識錯誤：' + err.message);
-        btn.disabled = false;
-    });
-}
-
-// ===== 人臉註冊（需登入後在設定中使用）=====
+// === 設定（註冊）手機生物辨識 ===
 function openFaceEnroll() {
     if (!currentUser) return alert('⚠️ 請先登入');
+    if (!bioSupported()) {
+        return alert('❌ 此裝置或瀏覽器不支援生物辨識登入。\n\n請確認：\n1. 使用 Safari（iPhone）或 Chrome（Android）\n2. 網址為 https://（安全連線）\n3. 手機已設定 Face ID / Touch ID / 指紋');
+    }
     
-    _faceLoginMode = 'enroll';
-    _faceEnrollTarget = currentUser;
-    document.getElementById('faceLoginModal').classList.remove('hidden');
-    document.querySelector('#faceLoginModal h2').textContent = '🤳 註冊人臉：' + currentUser.name;
-    document.getElementById('faceLoginScanBtn').textContent = '📸 拍攝並註冊';
-    document.getElementById('faceLoginScanBtn').setAttribute('onclick', 'doFaceEnroll()');
+    var rpId = window.location.hostname;
+    var userIdStr = currentUser.id + '|' + Date.now();
+    var options = {
+        publicKey: {
+            challenge: randomChallenge(),
+            rp: { name: '考勤管理系統', id: rpId },
+            user: {
+                id: new TextEncoder().encode(userIdStr),
+                name: currentUser.id,
+                displayName: currentUser.name
+            },
+            pubKeyCredParams: [
+                { alg: -7, type: 'public-key' },
+                { alg: -257, type: 'public-key' }
+            ],
+            authenticatorSelection: {
+                authenticatorAttachment: 'platform',
+                userVerification: 'required',
+                residentKey: 'preferred'
+            },
+            timeout: 60000,
+            attestation: 'none'
+        }
+    };
     
-    var statusEl = document.getElementById('faceLoginStatus');
-    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
-    
-    setStatus('⏳ 啟動相機中...');
-    document.getElementById('faceLoginScanBtn').disabled = true;
-    
-    loadFaceModels(setStatus).then(function() {
-        return startFaceCamera(setStatus);
-    }).then(function() {
-        setStatus('✅ 請正對鏡頭、光線充足，點「拍攝並註冊」');
-        document.getElementById('faceLoginScanBtn').disabled = false;
+    showNotif('🔐 請完成手機生物辨識...');
+    navigator.credentials.create(options).then(function(cred) {
+        var credId = bufToB64url(cred.rawId);
+        // 儲存：本機憑證對應（裝置綁定）
+        var creds = loadData('bioCredentials', []);
+        // 移除同帳號舊憑證
+        creds = creds.filter(function(c){ return c.username !== currentUser.id; });
+        creds.push({
+            username: currentUser.id,
+            name: currentUser.name,
+            role: currentUser.role,
+            credentialId: credId,
+            enrolledAt: new Date().toISOString()
+        });
+        saveData('bioCredentials', creds);
+        logAction('login', '設定生物辨識登入：' + currentUser.name);
+        alert('🎉 設定成功！\n\n下次可在登入畫面點「🤳 快速登入」，\n用手機 Face ID / Touch ID / 指紋直接登入。\n\n⚠️ 此設定僅綁定本支手機。換手機需重新設定。');
     }).catch(function(err) {
-        setStatus('❌ ' + err.message);
-        alert('❌ 無法啟動相機：' + err.message);
+        var msg = err && err.message ? err.message : err;
+        if (err && err.name === 'NotAllowedError') msg = '已取消或逾時';
+        alert('❌ 設定失敗：' + msg + '\n\n請確認手機已啟用 Face ID / Touch ID / 指紋。');
     });
 }
 
-function doFaceEnroll() {
-    var statusEl = document.getElementById('faceLoginStatus');
-    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
-    var btn = document.getElementById('faceLoginScanBtn');
-    btn.disabled = true;
-    setStatus('🔍 擷取人臉中，請保持不動...');
+// === 快速登入（呼叫手機生物辨識）===
+function openFaceLogin() {
+    if (!bioSupported()) {
+        return alert('❌ 此裝置或瀏覽器不支援生物辨識登入。\n\n請改用帳號密碼，或確認：\n1. 使用 Safari/Chrome\n2. 網址為 https://');
+    }
     
-    captureFaceDescriptor().then(function(detection) {
-        if (!detection) {
-            setStatus('⚠️ 未偵測到人臉，請靠近並正對鏡頭');
-            btn.disabled = false;
-            return;
+    var creds = loadData('bioCredentials', []);
+    if (creds.length === 0) {
+        return alert('⚠️ 本手機尚未設定生物辨識登入。\n\n請先用「帳號密碼」登入，\n再點右上角「🤳 快速登入設定」完成設定。');
+    }
+    
+    var rpId = window.location.hostname;
+    var allowList = creds.map(function(c) {
+        return { id: b64urlToBuf(c.credentialId), type: 'public-key', transports: ['internal'] };
+    });
+    
+    var options = {
+        publicKey: {
+            challenge: randomChallenge(),
+            allowCredentials: allowList,
+            userVerification: 'required',
+            timeout: 60000,
+            rpId: rpId
+        }
+    };
+    
+    showNotif('🔐 請完成手機生物辨識...');
+    navigator.credentials.get(options).then(function(assertion) {
+        var usedId = bufToB64url(assertion.rawId);
+        var matched = creds.find(function(c){ return c.credentialId === usedId; });
+        if (!matched) {
+            return alert('❌ 找不到對應帳號，請改用帳號密碼登入。');
         }
         
-        var profiles = loadData('faceProfiles', []);
-        // 移除同帳號舊資料
-        profiles = profiles.filter(function(p) { return p.username !== _faceEnrollTarget.id; });
+        // 驗證帳號仍有效
+        var accounts = loadData('accounts', defaultAccounts);
+        var account = accounts.find(function(a){ return a.username === matched.username; });
+        if (account && (account.status === 'disabled' || account.status === 'locked')) {
+            return alert('❌ 此帳號已停用或鎖定');
+        }
         
-        profiles.push({
-            username: _faceEnrollTarget.id,
-            name: _faceEnrollTarget.name,
-            role: _faceEnrollTarget.role,
-            descriptor: Array.from(detection.descriptor),  // 128 維轉陣列存儲
-            enrolledAt: new Date().toISOString()
-        });
-        
-        saveData('faceProfiles', profiles);
-        setStatus('✅ 註冊成功！');
-        
-        setTimeout(function() {
-            closeFaceLogin();
-            // 還原 Modal 狀態
-            document.querySelector('#faceLoginModal h2').textContent = '🤳 人臉辨識登入';
-            document.getElementById('faceLoginScanBtn').textContent = '📸 開始辨識';
-            document.getElementById('faceLoginScanBtn').setAttribute('onclick', 'doFaceLoginScan()');
-            alert('🎉 人臉註冊成功！\n\n下次可在登入畫面點「🤳 人臉辨識快速登入」直接刷臉登入。');
-            if (typeof renderFaceProfileList === 'function') renderFaceProfileList();
-        }, 800);
-        
-        logAction('login', '註冊人臉：' + _faceEnrollTarget.name);
+        doLoginAs({ id: matched.username, name: matched.name, role: matched.role });
+        showNotif('🤳 生物辨識登入成功：' + matched.name);
     }).catch(function(err) {
-        setStatus('❌ 註冊錯誤：' + err.message);
-        btn.disabled = false;
+        var msg = err && err.message ? err.message : err;
+        if (err && err.name === 'NotAllowedError') msg = '已取消或逾時';
+        alert('❌ 登入失敗：' + msg + '\n\n請重試或改用帳號密碼。');
     });
 }
 
@@ -5042,24 +4972,56 @@ function renderWorkList() {
     if (!tbody) return;
     
     var isAdmin = currentUser && currentUser.role === 'admin';
+    var isManager = currentUser && (currentUser.role === 'manager' || currentUser.role === 'deputy');
+    var myId = currentUser ? currentUser.id : '';
+    var mySid = getUserStoreId();
+    
+    // 🆕 過濾：員工只看「指派給自己」或「全部人員」的工作
+    var visibleWorks = works.filter(function(w) {
+        if (isAdmin) return true;  // 管理員看全部
+        // 指派給特定人
+        if (w.assignee) {
+            // 自己被指派 → 看得到
+            if (w.assignee === myId) return true;
+            // 店長可看自家門市員工的指派工作
+            if (isManager && w.assigneeStore && w.assigneeStore === mySid) return true;
+            return false;
+        }
+        // 全部人員（公告）→ 大家都看得到
+        return true;
+    });
+    
     var statusMap = {
         'pending': '<span class="status-tag status-pending">⏳ 未完成</span>',
         'review':  '<span class="status-tag status-review">🔄 進行中</span>',
         'done':    '<span class="status-tag status-done">✓ 已完成</span>'
     };
     
-    if (works.length === 0) {
+    if (visibleWorks.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#9ca3af;">📭 暫無工作項目</td></tr>';
     } else {
         var html = '';
-        for (var i = 0; i < works.length; i++) {
-            var w = works[i];
+        for (var i = 0; i < visibleWorks.length; i++) {
+            var w = visibleWorks[i];
             var linkAct = w.link && w.link !== 'none' ? 'onclick="goToWorkLink(\'' + w.link + '\')"' : '';
-            var btns = isAdmin
+            // 可編輯刪除：管理員，或店長對自己指派的工作
+            var canManage = isAdmin || (isManager && w.assignedBy === myId);
+            var btns = canManage
                 ? '<button class="btn-edit" onclick="editWork(' + w.id + ')">✏️ 編輯</button> <button class="btn-danger" onclick="deleteWork(' + w.id + ')">🗑️</button>'
                 : '<button class="btn-secondary" style="padding:5px 12px;font-size:12px;" ' + linkAct + '>查看</button>';
             
-            html += '<tr><td><span class="work-link" ' + linkAct + '>' + (w.icon||'📄') + ' ' + w.title + '</span></td>';
+            // 🆕 指派標記
+            var assignTag = '';
+            if (w.assignee) {
+                if (w.assignee === myId) {
+                    assignTag = '<span class="status-tag" style="background:#fef3c7;color:#92400e;margin-left:4px;">📌 指派給我</span>';
+                } else if (w.assigneeName) {
+                    assignTag = '<span class="status-tag" style="background:#dbeafe;color:#1e40af;margin-left:4px;">👤 ' + w.assigneeName + '</span>';
+                }
+            }
+            var descLine = w.desc ? '<br><span style="font-size:11px; color:#6b7280;">' + w.desc + '</span>' : '';
+            
+            html += '<tr><td><span class="work-link" ' + linkAct + '>' + (w.icon||'📄') + ' ' + w.title + '</span>' + assignTag + descLine + '</td>';
             html += '<td>' + w.category + '</td><td>' + w.date + '</td>';
             html += '<td>' + (statusMap[w.status]||w.status) + '</td><td>' + btns + '</td></tr>';
         }
@@ -5067,7 +5029,29 @@ function renderWorkList() {
     }
     
     var adminBtns = document.getElementById('adminBtns');
-    if (adminBtns) adminBtns.style.display = isAdmin ? 'block' : 'none';
+    if (adminBtns) adminBtns.style.display = (isAdmin || isManager) ? 'block' : 'none';
+}
+
+// 🆕 填充指派員工下拉（管理員看全部，店長看自家門市）
+function fillWorkAssigneeOptions(selectedId) {
+    var sel = document.getElementById('wAssignee');
+    if (!sel) return;
+    var accounts = loadData('accounts', defaultAccounts);
+    var isAdmin = canViewAllStores();
+    var mySid = getUserStoreId();
+    
+    var html = '<option value="">📢 全部人員（公告）</option>';
+    for (var i = 0; i < accounts.length; i++) {
+        var a = accounts[i];
+        if (a.status === 'disabled') continue;
+        // 店長只能指派自家門市員工
+        if (!isAdmin && a.storeId && mySid && a.storeId !== mySid) continue;
+        // 不列出管理員自己當被指派對象（除非 admin 指派）
+        var sel2 = (a.username === selectedId) ? 'selected' : '';
+        var roleLabel = { 'admin':'管理員','manager':'店長','deputy':'副店長','staff':'店職員','user':'時薪' }[a.role] || a.role;
+        html += '<option value="' + a.username + '" ' + sel2 + '>👤 ' + a.name + '（' + roleLabel + '）</option>';
+    }
+    sel.innerHTML = html;
 }
 
 function goToWorkLink(link) {
@@ -5083,6 +5067,8 @@ function openAddWorkModal() {
     document.getElementById('wDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('wStatus').value = 'pending';
     document.getElementById('wLink').value = 'schedule';
+    if (document.getElementById('wDesc')) document.getElementById('wDesc').value = '';
+    fillWorkAssigneeOptions('');
     document.getElementById('workModal').classList.remove('hidden');
 }
 
@@ -5099,6 +5085,8 @@ function editWork(id) {
     if (p.length === 3) document.getElementById('wDate').value = p[0] + '-' + p[1].padStart(2,'0') + '-' + p[2].padStart(2,'0');
     document.getElementById('wStatus').value = w.status;
     document.getElementById('wLink').value = w.link || 'none';
+    if (document.getElementById('wDesc')) document.getElementById('wDesc').value = w.desc || '';
+    fillWorkAssigneeOptions(w.assignee || '');
     document.getElementById('workModal').classList.remove('hidden');
 }
 
@@ -5124,10 +5112,29 @@ function saveWork() {
     var c = document.getElementById('wCategory').value;
     var d = document.getElementById('wDate').value;
     var df = d ? d.replace(/-/g,'/').replace(/\/0/g,'/') : '';
+    var assignee = document.getElementById('wAssignee') ? document.getElementById('wAssignee').value : '';
+    var desc = document.getElementById('wDesc') ? document.getElementById('wDesc').value.trim() : '';
+    
+    // 取得指派對象姓名 + 門市
+    var assigneeName = '';
+    var assigneeStore = '';
+    if (assignee) {
+        var accs = loadData('accounts', defaultAccounts);
+        var acc = accs.find(function(a){ return a.username === assignee; });
+        if (acc) { assigneeName = acc.name; assigneeStore = acc.storeId || ''; }
+    }
+    
     var data = {
         title: t, category: cm[c], date: df,
         status: document.getElementById('wStatus').value,
-        link: document.getElementById('wLink').value, icon: im[c]
+        link: document.getElementById('wLink').value, icon: im[c],
+        assignee: assignee,            // 被指派帳號（空=全部）
+        assigneeName: assigneeName,
+        assigneeStore: assigneeStore,
+        desc: desc,
+        assignedBy: currentUser ? currentUser.id : '',
+        assignedByName: currentUser ? currentUser.name : '',
+        createdAt: new Date().toISOString()
     };
     var works = loadData('works', defaultWorks);
     if (editingWorkId) {
@@ -5137,11 +5144,32 @@ function saveWork() {
     } else {
         var newId = works.length > 0 ? Math.max.apply(null, works.map(function(x) { return x.id; })) + 1 : 1;
         works.push(Object.assign({ id: newId }, data));
-        showNotif('✅ 已新增');
+        // 🆕 指派給特定員工 → 建立推播通知
+        if (assignee) {
+            pushTaskNotification(assignee, assigneeName, t, desc, currentUser ? currentUser.name : '');
+            showNotif('✅ 已新增並推播給 ' + assigneeName);
+        } else {
+            showNotif('✅ 已新增（全部人員可見）');
+        }
     }
     saveData('works', works);
     closeModal('workModal');
     renderWorkList();
+}
+
+// 🆕 推播工作通知給指定員工
+function pushTaskNotification(username, name, title, desc, fromName) {
+    var notifs = loadData('taskNotifications', {});
+    if (!notifs[username]) notifs[username] = [];
+    notifs[username].push({
+        id: 'tn_' + Date.now(),
+        title: title,
+        desc: desc,
+        fromName: fromName,
+        createdAt: new Date().toISOString(),
+        read: false
+    });
+    saveData('taskNotifications', notifs);
 }
 
 function closeModal(id) {
@@ -6975,7 +7003,10 @@ function saveRcCampaign() {
     campaigns[c.id] = c;
     saveData('returnCampaigns', campaigns);
     
-    showNotif('💾 已儲存檔期：' + c.title);
+    // 🆕 商品同步寫入條碼商品庫
+    var synced = syncItemsToProductLibrary(c.items || []);
+    
+    showNotif('💾 已儲存檔期：' + c.title + (synced ? '（' + synced + ' 項已入商品庫）' : ''));
     logAction('returnCampaign', '儲存檔期退貨：' + c.title);
     closeRcDetail();
 }
@@ -7226,11 +7257,78 @@ function viewRcSubmissions(id) {
 }
 
 function printRcCampaign() {
-    window.print();
+    printOverlayContent('rcDetailContent', 'rcDetailOverlay');
+}
+
+// 🆕 共用：將商品寫入條碼商品庫（雙週刊各功能共用）
+function syncItemToProductLibrary(code, name, retailPrice, barcode, costPrice) {
+    if (!code && !barcode) return;  // 無品號也無條碼則略過
+    // 沒品號時用條碼前6碼
+    var key = code || (barcode ? barcode.substring(0, 6) : '');
+    if (!key) return;
+    
+    var productCodes = loadData('productCodes', {});
+    var existing = productCodes[key] || {};
+    productCodes[key] = {
+        productName: name || existing.productName || '',
+        costPrice: (costPrice !== undefined && costPrice !== '') ? costPrice : (existing.costPrice || 0),
+        retailPrice: (retailPrice !== undefined && retailPrice !== '') ? retailPrice : (existing.retailPrice || 0),
+        lastBarcode: barcode || existing.lastBarcode || '',
+        lastUsed: new Date().toISOString()
+    };
+    saveData('productCodes', productCodes);
+    return key;
+}
+
+// 批次寫入商品庫，回傳寫入筆數
+function syncItemsToProductLibrary(items) {
+    var count = 0;
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var name = it.name || '';
+        var code = it.code || '';
+        var barcode = it.barcode || '';
+        // 零售價：依各功能欄位優先序
+        var retail = (it.retailBox !== undefined ? it.retailBox : 
+                     (it.retailPrice !== undefined ? it.retailPrice : 
+                     (it.salePrice !== undefined ? it.salePrice : '')));
+        if (!name && !code && !barcode) continue;
+        if (syncItemToProductLibrary(code, name, retail, barcode)) count++;
+    }
+    return count;
 }
 
 function printGeneric() {
-    window.print();
+    // 判斷目前開啟的是哪個 overlay
+    var mf = document.getElementById('mfDetailOverlay');
+    var np = document.getElementById('npDetailOverlay');
+    if (mf && mf.style.display === 'block') {
+        printOverlayContent('mfDetailContent', 'mfDetailOverlay');
+    } else if (np && np.style.display === 'block') {
+        printOverlayContent('npDetailContent', 'npDetailOverlay');
+    } else {
+        window.print();
+    }
+}
+
+// 🆕 列印 overlay 內容（解除 fixed 限制）
+function printOverlayContent(contentId, overlayId) {
+    var content = document.getElementById(contentId);
+    var overlay = document.getElementById(overlayId);
+    if (!content || !overlay) { window.print(); return; }
+    
+    content.classList.add('print-area');
+    overlay.classList.add('printing-overlay-active');
+    
+    // 給瀏覽器一點時間套用樣式（含條碼/照片渲染）
+    setTimeout(function() {
+        window.print();
+        // 列印後還原
+        setTimeout(function() {
+            content.classList.remove('print-area');
+            overlay.classList.remove('printing-overlay-active');
+        }, 300);
+    }, 200);
 }
 
 // ============= 📢 營銷聚焦商品 =============
@@ -7458,7 +7556,14 @@ function saveMfCampaign() {
     var camps = loadData('marketingCampaigns', {});
     camps[c.id] = c;
     saveData('marketingCampaigns', camps);
-    showNotif('💾 已儲存營銷檔期');
+    
+    // 🆕 三區塊商品都寫入條碼商品庫
+    var synced = 0;
+    synced += syncItemsToProductLibrary(c.focusItems || []);
+    synced += syncItemsToProductLibrary(c.addonItems || []);
+    synced += syncItemsToProductLibrary(c.weekendItems || []);
+    
+    showNotif('💾 已儲存營銷檔期' + (synced ? '（' + synced + ' 項已入商品庫）' : ''));
     logAction('marketing', '儲存營銷聚焦：'+(c.title||''));
     closeMfDetail();
 }
@@ -7667,7 +7772,11 @@ function saveNpCampaign() {
     var camps = loadData('newProductCampaigns', {});
     camps[c.id] = c;
     saveData('newProductCampaigns', camps);
-    showNotif('💾 已儲存上市新品檔期');
+    
+    // 🆕 新品商品都寫入條碼商品庫（含條碼）
+    var synced = syncItemsToProductLibrary(c.items || []);
+    
+    showNotif('💾 已儲存上市新品檔期' + (synced ? '（' + synced + ' 項已入商品庫）' : ''));
     logAction('newProducts', '儲存週五上市新品：'+(c.title||''));
     closeNpDetail();
 }
@@ -14991,11 +15100,13 @@ var BACKUP_KEYS = [
     'transferOrders',
     'productCodes',
     'faceProfiles',
+    'bioCredentials',
     'vendors',
     'returnCampaigns',
     'returnSubmissions',
     'marketingCampaigns',
     'newProductCampaigns',
+    'taskNotifications',
     'inventoryReports',
     'logs',
     'systemSettings',
