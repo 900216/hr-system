@@ -3274,6 +3274,35 @@ body.view-desktop { min-width: auto; }
                     💡 <strong>線上同步</strong>讓多台設備（手機、平板、電腦）共享同一份資料：店長手機改班表，店員平板立即看到；門市間調撥單即時同步。
                 </div>
                 
+                <!-- 🔥 Firebase 模式（最推薦：免Token、不撤銷）-->
+                <div style="background:linear-gradient(135deg,#fef3c7,#fde68a); padding:16px; border-radius:10px; margin-bottom:16px; border:3px solid #f59e0b;">
+                    <h3 style="margin:0 0 10px 0; color:#92400e; display:flex; align-items:center; gap:6px;">
+                        🔥 Firebase 模式 <span style="background:#10b981; color:white; font-size:11px; padding:2px 8px; border-radius:10px;">最推薦</span>
+                    </h3>
+                    <div style="background:white; padding:10px 12px; border-radius:6px; font-size:13px; margin-bottom:10px; line-height:1.7;">
+                        ✅ <strong>讀寫都免 Token</strong>，永不被撤銷<br>
+                        ✅ <strong>iPhone Safari 完全相容</strong><br>
+                        ✅ <strong>員工開 App 自動同步</strong>，零步驟<br>
+                        ✅ Google 免費服務，穩定快速
+                    </div>
+                    <div style="background:#fffbeb; padding:10px; border-radius:6px; font-size:12px; margin-bottom:10px; color:#78350f;">
+                        <strong>📝 一次性設定（約 3 分鐘）：</strong><br>
+                        1️⃣ 到 <strong>firebase.google.com</strong> 用 Google 帳號登入 → 建立專案<br>
+                        2️⃣ 左側選「Realtime Database」→ 建立資料庫 → 選「以測試模式啟動」<br>
+                        3️⃣ 複製資料庫網址（形如 https://xxx-default-rtdb.firebaseio.com）<br>
+                        4️⃣ 貼到下方欄位 → 點「連接」
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <input type="text" id="fb_url" placeholder="貼上 Firebase 資料庫網址" style="flex:1; min-width:260px; padding:10px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:13px;">
+                        <button class="btn-confirm" style="padding:10px 20px; font-weight:bold;" onclick="fbConnect()">🔗 連接</button>
+                    </div>
+                    <div id="fbStatus" style="margin-top:8px; font-size:13px;"></div>
+                    <button onclick="window.open('https://console.firebase.google.com/','_blank')" style="margin-top:8px; padding:8px 14px; background:#f59e0b; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔥 開啟 Firebase 主控台</button>
+                </div>
+                
+                <details style="margin-bottom:16px;">
+                <summary style="cursor:pointer; font-weight:bold; color:#6b7280; padding:8px;">▸ 進階：GitHub Gist 模式（舊）</summary>
+                
                 <!-- 🚀 簡易模式（推薦）-->
                 <div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe); padding:16px; border-radius:10px; margin-bottom:16px; border:3px solid #3b82f6;">
                     <h3 style="margin:0 0 10px 0; color:#1e3a8a; display:flex; align-items:center; gap:6px;">
@@ -3370,6 +3399,7 @@ body.view-desktop { min-width: auto; }
                         <div id="cs_syncKey" style="font-size:11px; margin-top:4px; font-family:monospace; word-break:break-all;">未設定</div>
                     </div>
                 </div>
+                </details>
                 
                 <!-- 進階模式（Pantry）-->
                 <details style="background:#f9fafb; padding:14px; border-radius:8px; margin-bottom:16px;">
@@ -4200,9 +4230,11 @@ function triggerLoginSync() {
     // 顯示同步中提示
     showNotif('🔄 登入同步中...');
     
-    // 先拉取雲端最新資料
-    if (typeof manualPullFromCloud === 'function') {
-        manualPullFromCloud(true);
+    // 🆕 統一雲端讀取（Firebase 優先）
+    if (typeof cloudPull === 'function') {
+        cloudPull(true).then(function() {
+            if (typeof refreshCurrentPage === 'function') refreshCurrentPage();
+        }).catch(function(){});
     }
     
     // 確保自動同步持續運作
@@ -4285,29 +4317,36 @@ function checkPendingTransfers() {
 // 🆕 登入畫面手動同步（換新裝置首次抓帳號/人臉用）
 function loginPageSync() {
     var statusEl = document.getElementById('loginSyncStatus');
-    var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
+    var setStatus = function(msg, color) {
+        if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#6b7280'; }
+    };
     
-    // 🆕 內建同步設定，一定有 endpoint，直接啟用並同步
     localStorage.setItem('_cs_enabled', '1');
     if (typeof _syncEnabled !== 'undefined') _syncEnabled = true;
     
-    var endpoint = (typeof getActiveSyncEndpoint === 'function') ? getActiveSyncEndpoint() : null;
-    if (!endpoint) {
-        setStatus('⚠️ 同步設定異常，請聯絡管理員');
-        return;
-    }
+    setStatus('🔄 連線中...', '#2563eb');
     
-    setStatus('🔄 同步中，取得最新帳號資料...');
-    
-    if (typeof manualPullFromCloud === 'function') {
-        manualPullFromCloud(true);
-    }
-    
-    setTimeout(function() {
+    // 🆕 統一雲端讀取（Firebase 優先，免金鑰）
+    cloudPull(true).then(function(applied) {
         var accounts = loadData('accounts', defaultAccounts);
-        setStatus('✅ 同步完成！共 ' + accounts.length + ' 個帳號，現在可用員工編號登入');
+        setStatus('✅ 同步完成！共 ' + accounts.length + ' 個帳號，請用員工編號登入', '#059669');
         showNotif('☁️ 同步完成！請輸入您的員工編號登入');
-    }, 2200);
+    }).catch(function(err) {
+        var msg = err.message || String(err);
+        if (msg === 'GIST_NOT_FOUND') {
+            setStatus('❌ 找不到雲端空間，請聯絡管理員', '#dc2626');
+        } else if (msg === 'RATE_LIMIT') {
+            setStatus('⏳ 同步太頻繁，請稍候 1 分鐘再試', '#b45309');
+        } else if (msg === 'NO_DATA') {
+            setStatus('⚠️ 雲端尚無資料，請管理員先儲存一次', '#b45309');
+        } else if (msg === 'NO_SYNC' || msg === 'NO_FIREBASE') {
+            setStatus('⚠️ 尚未設定雲端，請聯絡管理員', '#b45309');
+        } else if (msg.indexOf('逾時') >= 0) {
+            setStatus('❌ 連線逾時，請檢查網路後重試', '#dc2626');
+        } else {
+            setStatus('❌ 同步失敗，請確認網路（需 HTTPS、非內建瀏覽器）', '#dc2626');
+        }
+    });
 }
 
 // ============= 🤳 手機內建生物辨識登入（Face ID / Touch ID / 指紋）=============
@@ -15216,6 +15255,145 @@ var PANTRY_BASKET_NAME = 'hr_system_data';
 // 🚀 簡易模式：GitHub Gist（CORS 100% 友善、可靠穩定）
 var GH_API_BASE = 'https://api.github.com';
 var GH_SYNC_FILENAME = 'hr-system-data.json';
+
+// ============= 🔥 Firebase 即時資料庫同步（推薦：免Token、不撤銷、iOS相容）=============
+// 設定你的 Firebase Realtime Database 網址（例如 https://xxx-default-rtdb.firebaseio.com）
+var DEFAULT_FIREBASE_URL = '';  // ← 建立 Firebase 後填這裡，或在同步頁貼上
+
+function fbGetUrl() {
+    var u = localStorage.getItem('_fb_url') || DEFAULT_FIREBASE_URL || '';
+    return u.replace(/\/$/, '');  // 去除結尾斜線
+}
+function fbSetUrl(u) {
+    if (u) {
+        localStorage.setItem('_fb_url', u.replace(/\/$/, ''));
+        localStorage.setItem('_cs_enabled', '1');
+    } else {
+        localStorage.removeItem('_fb_url');
+    }
+}
+function fbEnabled() { return !!fbGetUrl(); }
+
+// 從 Firebase 讀取（免任何金鑰）
+function pullFromFirebase(silent) {
+    var url = fbGetUrl();
+    if (!url) return Promise.reject(new Error('NO_FIREBASE'));
+    return ezFetch(url + '/hrdata.json', { method: 'GET' }, 12000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.json();
+    }).then(function(data) {
+        if (!data || typeof data !== 'object') throw new Error('NO_DATA');
+        var applied = 0;
+        for (var k in data) {
+            if (BACKUP_KEYS.indexOf(k) >= 0) {
+                try { localStorage.setItem(k, JSON.stringify(data[k])); applied++; } catch(e) {}
+            }
+        }
+        localStorage.setItem('_cs_lastPull', Date.now().toString());
+        if (!silent) showNotif('☁️ 已同步雲端資料（' + applied + ' 項）');
+        return applied;
+    });
+}
+
+// 推送到 Firebase（免任何金鑰）
+function pushToFirebase(silent) {
+    var url = fbGetUrl();
+    if (!url) return Promise.reject(new Error('NO_FIREBASE'));
+    var data = {};
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var k = BACKUP_KEYS[i];
+        var v = localStorage.getItem(k);
+        if (v !== null) {
+            try { data[k] = JSON.parse(v); } catch(e) { data[k] = v; }
+        }
+    }
+    return ezFetch(url + '/hrdata.json', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }, 15000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        localStorage.setItem('_cs_lastPush', Date.now().toString());
+        if (!silent) showNotif('☁️ 已上傳至雲端');
+        return true;
+    });
+}
+
+// 🔑 統一雲端讀取：優先 Firebase，其次 Gist（免Token）
+function cloudPull(silent) {
+    if (fbEnabled()) return pullFromFirebase(silent);
+    if (typeof pullFromGistNoAuth === 'function') return pullFromGistNoAuth(silent);
+    return Promise.reject(new Error('NO_SYNC'));
+}
+// 統一雲端推送：優先 Firebase（免Token），其次 Gist（需Token）
+function cloudPush(silent) {
+    if (fbEnabled()) return pushToFirebase(silent);
+    if (typeof manualPushToCloud === 'function') { manualPushToCloud(silent); return Promise.resolve(); }
+    return Promise.reject(new Error('NO_SYNC'));
+}
+
+// 🔥 連接 Firebase
+function fbConnect() {
+    var url = (document.getElementById('fb_url').value || '').trim();
+    var statusEl = document.getElementById('fbStatus');
+    var setS = function(m, c) { if (statusEl) { statusEl.textContent = m; statusEl.style.color = c || '#374151'; } };
+    
+    if (!url) { setS('⚠️ 請貼上 Firebase 資料庫網址', '#dc2626'); return; }
+    if (url.indexOf('firebaseio.com') < 0 && url.indexOf('firebasedatabase.app') < 0) {
+        if (!confirm('⚠️ 網址看起來不像 Firebase 資料庫網址，仍要繼續嗎？')) return;
+    }
+    
+    setS('🔄 測試連線中...', '#2563eb');
+    fbSetUrl(url);
+    
+    // 測試：先寫一筆測試，再讀回
+    pushToFirebase(true).then(function() {
+        return pullFromFirebase(true);
+    }).then(function(n) {
+        setS('✅ 連接成功！已可跨裝置同步（雲端 ' + n + ' 項資料）', '#059669');
+        showNotif('🔥 Firebase 連接成功！');
+        if (typeof updateSyncUI === 'function') updateSyncUI();
+        alert('🎉 Firebase 連接成功！\n\n接下來：\n1. 此裝置的資料已上傳雲端\n2. 其他員工只要開 App 就會自動同步\n3. 完全免 Token、不會失效\n\n💡 若要讓所有員工免設定，請把這個網址告訴開發者寫入系統，或各裝置都貼一次此網址。');
+    }).catch(function(err) {
+        var msg = err.message || String(err);
+        setS('❌ 連線失敗：' + msg + '（請確認網址正確、資料庫規則設為測試模式）', '#dc2626');
+        alert('❌ 連線失敗\n\n請確認：\n1. 網址正確（結尾為 firebaseio.com 或 firebasedatabase.app）\n2. Realtime Database 規則設為「測試模式」\n   （Rules 中 .read 和 .write 都是 true）\n3. 使用 HTTPS 連線');
+    });
+}
+
+
+
+// 🆕 免 Token 公開讀取 Gist（員工開 App 自動同步用）
+// Gist 只要知道 ID 就能讀，不需任何金鑰
+function pullFromGistNoAuth(silent) {
+    var gistId = ghGetGistId();
+    if (!gistId) return Promise.reject(new Error('NO_GIST'));
+    
+    // 直接讀 Gist API（未授權也可讀，每小時 60 次/IP，足夠）
+    return ezFetch(GH_API_BASE + '/gists/' + gistId, {
+        headers: { 'Accept': 'application/vnd.github+json' }
+    }, 12000).then(function(r) {
+        if (r.status === 404) throw new Error('GIST_NOT_FOUND');
+        if (r.status === 403) throw new Error('RATE_LIMIT');
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.json();
+    }).then(function(gist) {
+        var file = gist.files && gist.files[GH_SYNC_FILENAME];
+        if (!file || !file.content) throw new Error('NO_DATA');
+        var data = JSON.parse(file.content);
+        var applied = 0;
+        for (var k in data) {
+            if (BACKUP_KEYS.indexOf(k) >= 0) {
+                try { localStorage.setItem(k, JSON.stringify(data[k])); applied++; } catch(e) {}
+            }
+        }
+        localStorage.setItem('_cs_lastPull', Date.now().toString());
+        if (!silent) showNotif('☁️ 已自動同步雲端資料（' + applied + ' 項）');
+        return applied;
+    });
+}
+
+
 var EZ_QR_API = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=';
 
 // fetch 加上 timeout
@@ -15890,6 +16068,14 @@ function initCloudSyncPage() {
     if (_syncLogs.length > 0) {
         var listEl = document.getElementById('cs_logList');
         if (listEl) listEl.innerHTML = _syncLogs.slice(0, 10).join('<br>');
+    }
+    
+    // 🔥 顯示 Firebase 狀態
+    var fbUrlEl = document.getElementById('fb_url');
+    var fbStatusEl = document.getElementById('fbStatus');
+    if (fbUrlEl && fbGetUrl()) {
+        fbUrlEl.value = fbGetUrl();
+        if (fbStatusEl) { fbStatusEl.textContent = '✅ 已連接 Firebase，跨裝置同步運作中'; fbStatusEl.style.color = '#059669'; }
     }
     
     // 更新 Token 狀態
@@ -18200,6 +18386,24 @@ window.addEventListener('load', function() {
     }
     if (typeof _syncEnabled !== 'undefined') {
         _syncEnabled = (localStorage.getItem('_cs_enabled') === '1');
+    }
+    
+    // 🆕 開 App 自動背景同步（免 Token 讀取，員工零步驟）
+    if (localStorage.getItem('_cs_enabled') !== '0' && typeof cloudPull === 'function') {
+        var loginStatusEl = document.getElementById('loginSyncStatus');
+        if (loginStatusEl) { loginStatusEl.textContent = '🔄 自動同步帳號中...'; loginStatusEl.style.color = '#2563eb'; }
+        cloudPull(true).then(function(n) {
+            if (loginStatusEl) {
+                var accounts = loadData('accounts', defaultAccounts);
+                loginStatusEl.textContent = '✅ 已自動同步！共 ' + accounts.length + ' 個帳號，可直接登入';
+                loginStatusEl.style.color = '#059669';
+            }
+        }).catch(function(err) {
+            if (loginStatusEl) {
+                loginStatusEl.textContent = '💡 點下方「一鍵同步」載入最新帳號';
+                loginStatusEl.style.color = '#6b7280';
+            }
+        });
     }
     
     // 📱 手機友善：點擊展開選單（不只靠 hover）
