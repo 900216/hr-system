@@ -1128,6 +1128,24 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
     .printing-overlay-active div[style*="border-radius"] {
         box-shadow: none !important;
     }
+    /* 🆕 表格符合頁寬、文字自動換行（避免品名被切掉、避免撐成多頁）*/
+    .printing-overlay-active table {
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+    .printing-overlay-active td,
+    .printing-overlay-active th {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow: visible !important;
+        font-size: 11px !important;
+    }
+    /* 照片縮小、條碼適中 */
+    .printing-overlay-active img { max-width: 44px !important; max-height: 44px !important; }
+    .printing-overlay-active svg.rc-barcode { max-width: 130px !important; height: auto !important; }
+    /* 隱藏拍照上傳按鈕（label）*/
+    .printing-overlay-active label.no-print { display: none !important; }
 }
 
 .print-area {
@@ -6939,7 +6957,7 @@ function renderRcDetail() {
                 if (it.photo) {
                     html += '<img src="' + it.photo + '" style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;" onclick="viewRcPhoto(' + i + ')"><br>';
                 }
-                html += '<label style="display:inline-block; padding:3px 8px; background:#3b82f6; color:white; border-radius:4px; cursor:pointer; font-size:10px; margin-top:2px;">📷 ' + (it.photo ? '更換' : '拍照') + '<input type="file" accept="image/*" capture="environment" onchange="uploadRcPhoto(' + i + ',this)" style="display:none;"></label>';
+                html += '<label class="no-print" style="display:inline-block; padding:3px 8px; background:#3b82f6; color:white; border-radius:4px; cursor:pointer; font-size:10px; margin-top:2px;">📷 ' + (it.photo ? '更換' : '拍照') + '<input type="file" accept="image/*" capture="environment" onchange="uploadRcPhoto(' + i + ',this)" style="display:none;"></label>';
                 html += '</td>';
                 // 條碼
                 html += '<td style="padding:4px; border:1px solid #ccc; text-align:center;">';
@@ -7868,7 +7886,7 @@ function renderNpItemCard(it, i, isEdit) {
         // 照片
         html += '<div style="grid-column:1/3; text-align:center;">';
         if (it.photo) html += '<img src="'+it.photo+'" style="max-width:120px; max-height:120px; object-fit:contain; border-radius:6px;"><br>';
-        html += '<label style="display:inline-block; padding:4px 10px; background:#3b82f6; color:white; border-radius:4px; cursor:pointer; font-size:12px; margin-top:4px;">📷 '+(it.photo?'更換照片':'拍照/上傳')+'<input type="file" accept="image/*" capture="environment" onchange="uploadNpPhoto('+i+',this)" style="display:none;"></label></div>';
+        html += '<label class="no-print" style="display:inline-block; padding:4px 10px; background:#3b82f6; color:white; border-radius:4px; cursor:pointer; font-size:12px; margin-top:4px;">📷 '+(it.photo?'更換照片':'拍照/上傳')+'<input type="file" accept="image/*" capture="environment" onchange="uploadNpPhoto('+i+',this)" style="display:none;"></label></div>';
         html += npField('商品名稱', it, 'name', i, 'text', '1/3');
         html += npField('品號', it, 'code', i, 'text');
         html += npField('單品條碼', it, 'barcode', i, 'text');
@@ -16436,17 +16454,54 @@ function autoPushDebounced() {
 }
 
 // 自動拉取（定時）
+// 🆕 偵測使用者是否正在輸入（避免同步刷掉未存資料）
+var _lastUserInputTime = 0;
+function isUserActivelyEditing() {
+    // 1. 目前焦點在輸入元素
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) {
+        return true;
+    }
+    // 2. 最近 90 秒內有輸入動作
+    if (Date.now() - _lastUserInputTime < 90000) {
+        return true;
+    }
+    // 3. 有開啟中的編輯視窗 / 全螢幕編輯（檔期、調撥、現金日報等）
+    var editingOverlays = ['rcDetailOverlay', 'mfDetailOverlay', 'npDetailOverlay'];
+    for (var i = 0; i < editingOverlays.length; i++) {
+        var ov = document.getElementById(editingOverlays[i]);
+        if (ov && ov.style.display === 'block') return true;
+    }
+    // 4. 有開啟中的 Modal（modal-overlay 未隱藏）
+    var modals = document.querySelectorAll('.modal-overlay');
+    for (var m = 0; m < modals.length; m++) {
+        if (!modals[m].classList.contains('hidden')) return true;
+    }
+    return false;
+}
+
+// 全域監聽輸入活動
+document.addEventListener('input', function() { _lastUserInputTime = Date.now(); }, true);
+document.addEventListener('change', function() { _lastUserInputTime = Date.now(); }, true);
+
 function startAutoPull() {
     if (_syncPullInterval) clearInterval(_syncPullInterval);
     if (localStorage.getItem('_cs_autoPull') === '0') return;
     
     _syncPullInterval = setInterval(function() {
+        // 🔑 正在輸入/編輯時，跳過這次同步，避免刷掉未存資料
+        if (isUserActivelyEditing()) {
+            return;
+        }
         if (typeof cloudPull === 'function') {
             cloudPull(true).then(function() {
-                if (typeof refreshCurrentPage === 'function') refreshCurrentPage();
+                // 拉取完成後再次確認沒在編輯才刷新
+                if (!isUserActivelyEditing() && typeof refreshCurrentPage === 'function') {
+                    refreshCurrentPage();
+                }
             }).catch(function(){});
         } else if (_syncEnabled) {
-            manualPullFromCloud(true);
+            if (!isUserActivelyEditing()) manualPullFromCloud(true);
         }
     }, 30000);  // 每 30 秒
 }
@@ -16510,6 +16565,10 @@ function generatePantryGuide() {
 
 // 重新整理當前頁面
 function refreshCurrentPage() {
+    // 🔑 正在輸入/編輯時，絕不重新整理（避免刷掉未存資料）
+    if (typeof isUserActivelyEditing === 'function' && isUserActivelyEditing()) {
+        return;
+    }
     var current = document.querySelector('.page-content:not(.hidden)');
     if (!current) return;
     var pageId = (current.id || '').replace('page-', '');
