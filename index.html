@@ -1095,6 +1095,39 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
+    /* 🆕 雙週刊列印清爽化：減少框線、留白乾淨 */
+    .printing-overlay-active table { border-collapse: collapse !important; width: 100% !important; }
+    .printing-overlay-active table td,
+    .printing-overlay-active table th {
+        border: none !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        background: none !important;
+        padding: 10px 8px !important;
+    }
+    .printing-overlay-active thead th {
+        color: #000 !important;
+        border-bottom: 2px solid #555 !important;
+        font-weight: bold !important;
+    }
+    /* 輸入框/下拉在列印時去框去底，只顯示文字 */
+    .printing-overlay-active input,
+    .printing-overlay-active select,
+    .printing-overlay-active textarea {
+        border: none !important;
+        background: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    /* 隱藏所有按鈕與工具列 */
+    .printing-overlay-active button { display: none !important; }
+    /* 填寫欄保留空白方格供手寫 */
+    .printing-overlay-active .rc-fill-cell { background: none !important; }
+    /* 卡片區塊去除多餘陰影邊框 */
+    .printing-overlay-active div[style*="border-radius"] {
+        box-shadow: none !important;
+    }
 }
 
 .print-area {
@@ -1174,17 +1207,30 @@ body.view-mobile .main-content { padding: 8px; }
 body.view-mobile .panel-body { padding: 8px; }
 body.view-mobile .panel-header { flex-direction: column; align-items: stretch !important; gap: 6px; }
 body.view-mobile .panel-header h3 { font-size: 16px; }
-/* 表格可橫向捲動 */
+/* 資料表格可橫向捲動（只針對寬資料表，不含表單）*/
 body.view-mobile table { font-size: 12px; }
-body.view-mobile .work-table, body.view-mobile .form-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+body.view-mobile .work-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
 body.view-mobile .work-list-panel { overflow-x: hidden; }
+/* 🔑 表單表格（label+input）保持正常排版，不可橫向捲動 */
+body.view-mobile .form-table { display: table; width: 100%; white-space: normal; }
+body.view-mobile .form-table td { white-space: normal; word-break: break-word; }
+body.view-mobile .form-table .label-col { width: 80px; font-size: 13px; vertical-align: middle; }
+body.view-mobile .form-table input[type="text"],
+body.view-mobile .form-table input[type="password"],
+body.view-mobile .form-table input[type="number"],
+body.view-mobile .form-table input[type="date"],
+body.view-mobile .form-table select,
+body.view-mobile .form-table textarea { width: 100%; box-sizing: border-box; }
+/* radio / checkbox 標籤不換行擠壓 */
+body.view-mobile .form-table label { display: inline-flex; align-items: center; gap: 4px; margin: 2px 8px 2px 0; white-space: nowrap; }
 /* 按鈕加大易點 */
 body.view-mobile button { min-height: 38px; }
 body.view-mobile .btn-confirm, body.view-mobile .btn-primary, body.view-mobile .btn-secondary, body.view-mobile .btn-danger { padding: 8px 12px; font-size: 13px; }
 /* Modal 全寬 */
-body.view-mobile .modal-content, body.view-mobile .modal-box { width: 96% !important; max-width: 96% !important; max-height: 90vh; overflow-y: auto; }
+body.view-mobile .modal-content, body.view-mobile .modal-box { width: 96% !important; max-width: 96% !important; max-height: 90vh; overflow-y: auto; padding: 16px !important; box-sizing: border-box; }
+body.view-mobile .modal-title { font-size: 18px; }
 body.view-mobile .form-input { font-size: 16px; } /* 避免 iOS 自動放大 */
-body.view-mobile input, body.view-mobile select, body.view-mobile textarea { font-size: 16px; }
+body.view-mobile input, body.view-mobile select, body.view-mobile textarea { font-size: 16px; max-width: 100%; box-sizing: border-box; }
 /* 排班表格手機友善 */
 body.view-mobile .schedule-container { flex-direction: column; }
 body.view-mobile .left-panel { width: 100% !important; }
@@ -4192,14 +4238,26 @@ function doLoginAs(user) {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('mainPage').classList.remove('hidden');
     
-    var roleLabels = {
-        'admin':   '系統管理員 | 管理者',
-        'manager': '店長 | ' + currentUser.id,
-        'staff':   '店職員 | ' + currentUser.id,
-        'user':    '時薪人員 | ' + currentUser.id
-    };
+    // 🆕 取得員工姓名（優先用帳號姓名，其次查員工資料）
+    var dispName = currentUser.name || '';
+    if (!dispName || dispName === '員工') {
+        var employees = loadData('employees', defaultEmployees);
+        var emp = employees.find(function(e){ return e.num === currentUser.id || e.id === currentUser.id; });
+        if (emp && emp.name) dispName = emp.name;
+    }
+    
+    var roleNames = { 'admin':'系統管理員', 'manager':'店長', 'deputy':'副店長', 'staff':'店職員', 'user':'時薪人員' };
+    var roleName = roleNames[currentUser.role] || '使用者';
+    
     var roleElem = document.getElementById('userRole');
-    if (roleElem) roleElem.textContent = roleLabels[currentUser.role] || currentUser.id;
+    if (roleElem) {
+        // 格式：角色 | 姓名 | 編號
+        if (currentUser.role === 'admin') {
+            roleElem.textContent = roleName + ' | 管理者';
+        } else {
+            roleElem.textContent = roleName + ' | ' + (dispName ? dispName + ' | ' : '') + currentUser.id;
+        }
+    }
     
     updateDate();
     updateHeaderStore();
@@ -6837,7 +6895,7 @@ function renderRcDetail() {
     
     html += '<div style="background:white; padding:12px; border-radius:10px; overflow-x:auto;">';
     if (isEdit) {
-        html += '<div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">';
+        html += '<div class="no-print" style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">';
         html += '<button onclick="addRcInlineRow()" style="padding:8px 16px; background:#10b981; color:white; border:0; border-radius:6px; cursor:pointer; font-weight:bold;">➕ 新增一列商品</button>';
         html += '<button onclick="rcQuickScanAdd()" style="padding:8px 16px; background:linear-gradient(to bottom,#8b5cf6,#7c3aed); color:white; border:0; border-radius:6px; cursor:pointer; font-weight:bold;">📷 連續掃碼新增</button>';
         html += '<span style="font-size:12px; color:#6b7280; align-self:center;">💡 直接在表格內編輯，免開關視窗</span>';
@@ -6892,9 +6950,9 @@ function renderRcDetail() {
                         '<input type="number" value="' + (it.retailBox||0) + '" onchange="updateRcItemField(' + i + ',\'retailBox\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; text-align:right; margin-bottom:2px;">' +
                         '<input type="number" value="' + (it.retailGift||0) + '" onchange="updateRcItemField(' + i + ',\'retailGift\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:3px; text-align:right;"></td>';
                 // 退貨數量（admin 預覽不填）
-                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center; background:#f9fafb; color:#9ca3af; font-size:11px;">門市填寫</td>';
+                html += '<td class="rc-fill-cell" style="padding:4px; border:1px solid #ccc; text-align:center; background:#f9fafb; color:#9ca3af; font-size:11px;"><span class="no-print">門市填寫</span></td>';
                 // 門市既有庫存（admin 預覽不填）
-                html += '<td style="padding:4px; border:1px solid #ccc; text-align:center; background:#f9fafb; color:#9ca3af; font-size:11px;">門市填寫</td>';
+                html += '<td class="rc-fill-cell" style="padding:4px; border:1px solid #ccc; text-align:center; background:#f9fafb; color:#9ca3af; font-size:11px;"><span class="no-print">門市填寫</span></td>';
                 // 操作
                 html += '<td style="padding:4px; border:1px solid #ccc; text-align:center;"><button onclick="deleteRcItem(' + i + ')" style="padding:3px 8px; background:#ef4444; color:white; border:0; border-radius:4px; cursor:pointer; font-size:11px;">🗑️</button></td>';
             } else {
