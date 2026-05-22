@@ -1159,6 +1159,48 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
     padding-top: 10px;
     min-height: 40px;
 }
+
+/* ============= 📱 手機版響應式（body.view-mobile）============= */
+body.view-mobile { font-size: 15px; }
+body.view-mobile .header-bar { padding: 6px 10px; gap: 6px; }
+body.view-mobile .header-bar .info-item { font-size: 12px; padding: 3px 6px; }
+body.view-mobile .header-buttons { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; }
+body.view-mobile .header-buttons .header-btn { flex: 1; min-width: 0; font-size: 12px; padding: 8px 6px; text-align: center; }
+/* 選單列改可橫向捲動 */
+body.view-mobile .menu-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; flex-wrap: nowrap; }
+body.view-mobile .menu-item { font-size: 13px; padding: 8px 10px; white-space: nowrap; }
+body.view-mobile .submenu { font-size: 13px; }
+body.view-mobile .main-content { padding: 8px; }
+body.view-mobile .panel-body { padding: 8px; }
+body.view-mobile .panel-header { flex-direction: column; align-items: stretch !important; gap: 6px; }
+body.view-mobile .panel-header h3 { font-size: 16px; }
+/* 表格可橫向捲動 */
+body.view-mobile table { font-size: 12px; }
+body.view-mobile .work-table, body.view-mobile .form-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+body.view-mobile .work-list-panel { overflow-x: hidden; }
+/* 按鈕加大易點 */
+body.view-mobile button { min-height: 38px; }
+body.view-mobile .btn-confirm, body.view-mobile .btn-primary, body.view-mobile .btn-secondary, body.view-mobile .btn-danger { padding: 8px 12px; font-size: 13px; }
+/* Modal 全寬 */
+body.view-mobile .modal-content, body.view-mobile .modal-box { width: 96% !important; max-width: 96% !important; max-height: 90vh; overflow-y: auto; }
+body.view-mobile .form-input { font-size: 16px; } /* 避免 iOS 自動放大 */
+body.view-mobile input, body.view-mobile select, body.view-mobile textarea { font-size: 16px; }
+/* 排班表格手機友善 */
+body.view-mobile .schedule-container { flex-direction: column; }
+body.view-mobile .left-panel { width: 100% !important; }
+body.view-mobile .schedule-table { font-size: 11px; }
+/* 工作清單卡片化間距 */
+body.view-mobile .login-box { width: 94%; max-width: 420px; }
+
+/* ============= 💻 電腦版（body.view-desktop）強制較寬版面 ============= */
+body.view-desktop .main-content { max-width: 1400px; margin: 0 auto; }
+body.view-desktop { min-width: auto; }
+
+/* 自動響應（無論選哪版，極小螢幕都至少可捲動）*/
+@media (max-width: 600px) {
+    .header-buttons { width: 100%; }
+    .modal-content, .modal-box { width: 96% !important; }
+}
 </style>
 </head>
 <body>
@@ -1179,6 +1221,11 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
             <div class="announcement-content">• 系統升級維護時間：每週日 02:00-04:00</div>
         </div>
         <div class="login-form">
+            <!-- 🆕 版本選擇 -->
+            <div style="display:flex; gap:8px; margin-bottom:12px; background:#f3f4f6; padding:6px; border-radius:10px;">
+                <button id="viewModeDesktop" onclick="setViewMode('desktop')" style="flex:1; padding:10px; border:0; border-radius:8px; cursor:pointer; font-size:14px; font-weight:bold; background:#e5e7eb; color:#6b7280;">💻 電腦版</button>
+                <button id="viewModeMobile" onclick="setViewMode('mobile')" style="flex:1; padding:10px; border:0; border-radius:8px; cursor:pointer; font-size:14px; font-weight:bold; background:#e5e7eb; color:#6b7280;">📱 手機版</button>
+            </div>
             <div class="form-row">
                 <span class="form-label">👤 帳號</span>
                 <input type="text" id="username" class="form-input" placeholder="員工編號" maxlength="20">
@@ -1193,8 +1240,14 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
                 <button class="btn-action btn-login" onclick="handleLogin()">🔓 登入</button>
             </div>
             <button class="btn-action" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; font-weight:bold; padding:14px; border:0; border-radius:8px; cursor:pointer; font-size:16px;" onclick="openFaceLogin()">🤳 快速登入（Face ID / 指紋）</button>
-            <button class="btn-action" style="width:100%; margin-top:8px; background:linear-gradient(135deg,#10b981,#059669); color:white; font-weight:bold; padding:10px; border:0; border-radius:8px; cursor:pointer; font-size:14px;" onclick="loginPageSync()">☁️ 同步雲端帳號（換裝置必按）</button>
+            <button class="btn-action" style="width:100%; margin-top:8px; background:linear-gradient(135deg,#10b981,#059669); color:white; font-weight:bold; padding:12px; border:0; border-radius:8px; cursor:pointer; font-size:15px;" onclick="loginPageSync()">☁️ 一鍵同步帳號（新員工首次必按）</button>
             <div id="loginSyncStatus" style="margin-top:6px; font-size:12px; color:#6b7280; text-align:center;"></div>
+            <div style="margin-top:8px; padding:8px; background:#ecfdf5; border:1px solid #10b981; border-radius:6px; font-size:12px; color:#065f46;">
+                💡 <strong>新員工使用步驟：</strong><br>
+                1️⃣ 點上方綠色「☁️ 一鍵同步帳號」<br>
+                2️⃣ 輸入您的<strong>員工編號</strong>與密碼登入<br>
+                （系統已內建雲端連線，免任何設定）
+            </div>
             <div style="margin-top:15px; padding:10px; background:#fef3c7; border-radius:4px; font-size:12px;">
                 💡 <strong>演示帳號（密碼皆為 123456）：</strong><br>
                 🔴 <code>admin</code> 系統管理員（全功能）<br>
@@ -4026,6 +4079,47 @@ function handleSignOut() {
     alert('📤 簽退成功！\n👤 ' + u + '\n⏰ ' + new Date().toLocaleTimeString('zh-TW'));
 }
 
+// ============= 📱💻 版本切換（電腦版 / 手機版）=============
+function setViewMode(mode) {
+    localStorage.setItem('_viewMode', mode);
+    applyViewMode();
+    showNotif(mode === 'mobile' ? '📱 已切換手機版' : '💻 已切換電腦版');
+}
+
+function applyViewMode() {
+    var mode = localStorage.getItem('_viewMode');
+    // 首次未設定：自動偵測（螢幕寬 < 820 預設手機版）
+    if (!mode) {
+        mode = (window.innerWidth < 820) ? 'mobile' : 'desktop';
+    }
+    document.body.classList.remove('view-mobile', 'view-desktop');
+    document.body.classList.add(mode === 'mobile' ? 'view-mobile' : 'view-desktop');
+    
+    // 更新登入畫面按鈕高亮
+    var dBtn = document.getElementById('viewModeDesktop');
+    var mBtn = document.getElementById('viewModeMobile');
+    if (dBtn && mBtn) {
+        if (mode === 'mobile') {
+            mBtn.style.background = 'linear-gradient(135deg,#8b5cf6,#6d28d9)';
+            mBtn.style.color = 'white';
+            dBtn.style.background = '#e5e7eb';
+            dBtn.style.color = '#6b7280';
+        } else {
+            dBtn.style.background = 'linear-gradient(135deg,#3b82f6,#2563eb)';
+            dBtn.style.color = 'white';
+            mBtn.style.background = '#e5e7eb';
+            mBtn.style.color = '#6b7280';
+        }
+    }
+    // 同步 viewport（手機版確保正確縮放）
+    var vp = document.querySelector('meta[name="viewport"]');
+    if (vp) {
+        vp.setAttribute('content', mode === 'mobile'
+            ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+            : 'width=device-width, initial-scale=1.0');
+    }
+}
+
 function handleLogin() {
     var u = document.getElementById('username').value.trim();
     var p = document.getElementById('password').value;
@@ -4193,16 +4287,17 @@ function loginPageSync() {
     var statusEl = document.getElementById('loginSyncStatus');
     var setStatus = function(msg) { if (statusEl) statusEl.textContent = msg; };
     
-    var enabled = localStorage.getItem('_cs_enabled') === '1';
-    var endpoint = (typeof getActiveSyncEndpoint === 'function') ? getActiveSyncEndpoint() : null;
+    // 🆕 內建同步設定，一定有 endpoint，直接啟用並同步
+    localStorage.setItem('_cs_enabled', '1');
+    if (typeof _syncEnabled !== 'undefined') _syncEnabled = true;
     
-    if (!enabled || !endpoint) {
-        setStatus('⚠️ 尚未設定同步');
-        alert('⚠️ 此裝置尚未設定線上同步\n\n換新裝置的步驟：\n1. 先用 admin 帳密登入\n2. 進「🌐 線上同步」\n3. 點「📷 掃描設定 QR」對準主裝置的 QR 碼\n\n（或在主裝置「📲 產生跨裝置設定 QR 碼」）');
+    var endpoint = (typeof getActiveSyncEndpoint === 'function') ? getActiveSyncEndpoint() : null;
+    if (!endpoint) {
+        setStatus('⚠️ 同步設定異常，請聯絡管理員');
         return;
     }
     
-    setStatus('🔄 同步中...');
+    setStatus('🔄 同步中，取得最新帳號資料...');
     
     if (typeof manualPullFromCloud === 'function') {
         manualPullFromCloud(true);
@@ -4210,10 +4305,9 @@ function loginPageSync() {
     
     setTimeout(function() {
         var accounts = loadData('accounts', defaultAccounts);
-        var faces = loadData('faceProfiles', []);
-        setStatus('✅ 已同步：' + accounts.length + ' 帳號、' + faces.length + ' 組人臉');
-        showNotif('☁️ 同步完成！可登入或刷臉了');
-    }, 2000);
+        setStatus('✅ 同步完成！共 ' + accounts.length + ' 個帳號，現在可用員工編號登入');
+        showNotif('☁️ 同步完成！請輸入您的員工編號登入');
+    }, 2200);
 }
 
 // ============= 🤳 手機內建生物辨識登入（Face ID / Touch ID / 指紋）=============
@@ -15147,12 +15241,16 @@ function ezFetch(url, options, timeoutMs) {
 }
 
 // Token / Gist ID 管理
-function ghGetToken() { return localStorage.getItem('_gh_token') || ''; }
+// 🆕 系統內建預設值（新裝置一鍵同步即可用）
+var DEFAULT_GH_TOKEN = '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';
+var DEFAULT_GH_GIST_ID = 'b1235512cbff862d6e8307d99b3a2730';
+
+function ghGetToken() { return localStorage.getItem('_gh_token') || DEFAULT_GH_TOKEN; }
 function ghSetToken(t) {
     if (t) localStorage.setItem('_gh_token', t);
     else localStorage.removeItem('_gh_token');
 }
-function ghGetGistId() { return localStorage.getItem('_gh_gistId') || ''; }
+function ghGetGistId() { return localStorage.getItem('_gh_gistId') || DEFAULT_GH_GIST_ID; }
 function ghSetGistId(id) {
     if (id) {
         localStorage.setItem('_gh_gistId', id);
@@ -18092,6 +18190,17 @@ document.addEventListener('keydown', function(e) {
 window.addEventListener('load', function() {
     var u = document.getElementById('username');
     if (u) u.focus();
+    
+    // 🆕 套用上次選擇的版本（電腦/手機）
+    applyViewMode();
+    
+    // 🆕 內建雲端同步：未曾明確關閉則自動啟用（新裝置免設定）
+    if (localStorage.getItem('_cs_enabled') === null) {
+        localStorage.setItem('_cs_enabled', '1');
+    }
+    if (typeof _syncEnabled !== 'undefined') {
+        _syncEnabled = (localStorage.getItem('_cs_enabled') === '1');
+    }
     
     // 📱 手機友善：點擊展開選單（不只靠 hover）
     var menuItems = document.querySelectorAll('.menu-item');
