@@ -15288,22 +15288,29 @@ function submitLeave() {
         return (x.type === t && (x.status === 'approved' || x.status === 'pending')) ? sum + (x.days || 0) : sum;
     }, 0);
     
-    // 代休假：動態計算總額（從超時時數，本來就是小時）
-    var totalAllowed;
+    // 🆕 工讀生（時薪）取消請假額度限制，可請多天（時薪不支薪、僅記錄）
+    var isPartTime = myEmp && myEmp.empType === 'parttime';
+    var totalAllowed = 0;
+    
     if (t === 'comp') {
+        // 代休假仍需有實際累積時數
         var compHours = getCurrentUserCompLeave();
         totalAllowed = compHours + parseFloat(myAdj[t] || 0);
         
         if (totalAllowed === 0) {
             return alert('⚠️ 您目前沒有代休假！\n\n💡 代休假來自於：\n排班時超過 8 小時的工時會自動轉為代休假。\n請先到「排班作業」設定超過 8 小時的班別。');
         }
-    } else {
+        if (used + days > totalAllowed) {
+            return alert('⚠️ ' + lt.name + '餘額不足！\n剩餘：' + (totalAllowed - used).toFixed(1) + ' 小時\n申請：' + days.toFixed(1) + ' 小時');
+        }
+    } else if (!isPartTime) {
+        // 正職：檢查額度
         totalAllowed = lt.total + parseFloat(myAdj[t] || 0);
+        if (used + days > totalAllowed) {
+            return alert('⚠️ ' + lt.name + '餘額不足！\n剩餘：' + (totalAllowed - used).toFixed(1) + ' 小時\n申請：' + days.toFixed(1) + ' 小時');
+        }
     }
-    
-    if (used + days > totalAllowed) {
-        return alert('⚠️ ' + lt.name + '餘額不足！\n剩餘：' + (totalAllowed - used).toFixed(1) + ' 小時\n申請：' + days.toFixed(1) + ' 小時');
-    }
+    // 工讀生（非代休）：不檢查額度，可請多天
     
     list.unshift({
         id: genId(), applyDate: nowDateStr(), type: t, typeName: lt.name,
@@ -15353,9 +15360,57 @@ function approveLeave(id) {
     if (idx === -1) return;
     list[idx].status = 'approved';
     saveData('leaveList', list);
+    
+    // 🆕 核准後自動帶入班表
+    var added = applyApprovedLeaveToSchedule(list[idx]);
+    
     renderLeaveHistory();
     renderLeaveBalance();
-    showNotif('✅ 已核准');
+    showNotif('✅ 已核准' + (added > 0 ? '，已帶入班表 ' + added + ' 天' : ''));
+}
+
+// 🆕 將已核准的請假自動填入班表（請假 slot）
+function applyApprovedLeaveToSchedule(leaveItem) {
+    if (!leaveItem || !leaveItem.empId) return 0;
+    var startStr = (leaveItem.start || '').replace(/\//g, '-');  // "2026-05-26 09:00"
+    var endStr = (leaveItem.end || '').replace(/\//g, '-');
+    var startDate = new Date(startStr.replace(' ', 'T'));
+    var endDate = new Date(endStr.replace(' ', 'T'));
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+    
+    var shifts = loadData('shifts', {});
+    var employees = loadData('employees', defaultEmployees);
+    var emp = employees.find(function(e) { return e.id === leaveItem.empId; });
+    var homeStore = emp ? emp.homeStoreId : null;
+    
+    // 逐日填入（含起訖日）
+    var added = 0;
+    var cur = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    var last = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    var guard = 0;
+    while (cur <= last && guard < 366) {
+        guard++;
+        var dateKey = formatDate(cur);
+        if (!shifts[dateKey]) shifts[dateKey] = {};
+        var existing = shifts[dateKey][leaveItem.empId];
+        var slots = (existing && typeof getDaySlots === 'function') ? getDaySlots(existing) : [emptySlot(), emptySlot()];
+        // 將第一個 slot 設為請假（保留第二個原樣）
+        slots[0] = {
+            type: 'leave',
+            start: null, end: null,
+            isHolidayCategory: false,
+            workStoreId: homeStore,
+            leaveType: leaveItem.typeName || '請假',
+            leaveHours: (leaveItem.days || 0)
+        };
+        shifts[dateKey][leaveItem.empId] = { slots: slots, workStoreId: homeStore };
+        added++;
+        cur.setDate(cur.getDate() + 1);
+    }
+    
+    saveData('shifts', shifts);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    return added;
 }
 
 // ============= 員工基本資料維護 =============
@@ -18868,7 +18923,9 @@ function initClockIn() {
         if (!store) {
             infoEl.innerHTML = '⚠️ 找不到您的所屬門市，請聯絡管理員設定。';
         } else if (!store.lat || !store.lng) {
-            infoEl.innerHTML = '🏪 所屬門市：<strong>' + store.name + '</strong><br>⚠️ 此門市尚未設定打卡定位座標，請管理員至「門市管理」設定。';
+            infoEl.innerHTML = '🏪 ' + (store._isDispatch ? '今日派駐：' : '所屬門市：') + '<strong>' + store.name + '</strong><br>⚠️ 此門市尚未設定打卡定位座標，請管理員至「門市管理」設定。';
+        } else if (store._isDispatch) {
+            infoEl.innerHTML = '🚐 <strong style="color:#c2410c;">今日支援門市：' + store.name + '</strong><br>📍 已自動切換至此門市定位<br>📏 允許範圍：周邊 <strong>' + (store.radius || 200) + ' 公尺</strong>內';
         } else {
             infoEl.innerHTML = '🏪 所屬門市：<strong>' + store.name + '</strong><br>📍 允許打卡範圍：門市周邊 <strong>' + (store.radius || 200) + ' 公尺</strong>內<br>請在門市附近打卡。';
         }
@@ -18893,9 +18950,32 @@ function updateClockDisplay() {
 function getMyClockStore() {
     var stores = loadData('stores', defaultStores);
     if (!currentUser) return null;
-    // 先用員工資料的 homeStoreId
+    // 先找出本人員工資料
     var emps = loadData('employees', defaultEmployees);
     var myEmp = emps.find(function(e) { return e.num === currentUser.id || e.id === currentUser.id || e.name === currentUser.name; });
+    
+    // 🆕 優先：檢查「今天班表」是否派駐到其他門市（支援）
+    if (myEmp && typeof formatDate === 'function') {
+        var shifts = loadData('shifts', {});
+        var todayKey = formatDate(new Date());
+        var todayShift = shifts[todayKey] && shifts[todayKey][myEmp.id];
+        if (todayShift) {
+            var slots = (typeof getDaySlots === 'function') ? getDaySlots(todayShift) : (todayShift.slots || []);
+            for (var i = 0; i < slots.length; i++) {
+                var slot = slots[i];
+                // 只看上班類型且有指定工作門市
+                if (slot && ['work','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
+                    var workStore = stores.find(function(s) { return s.id === slot.workStoreId; });
+                    if (workStore) {
+                        workStore._isDispatch = (slot.workStoreId !== myEmp.homeStoreId);
+                        return workStore;
+                    }
+                }
+            }
+        }
+    }
+    
+    // 一般：用員工的 homeStoreId
     var sid = (myEmp && myEmp.homeStoreId) || currentUser.storeId || (typeof getUserStoreId === 'function' ? getUserStoreId() : null);
     var store = stores.find(function(s) { return s.id === sid; });
     // 找不到就用目前選定門市
@@ -18970,7 +19050,8 @@ function doClock(type) {
             lat: myLat, lng: myLng,
             distance: dist,
             accuracy: accuracy,
-            withinRange: true
+            withinRange: true,
+            isDispatch: !!store._isDispatch
         });
         saveData('clockRecords', records);
         
@@ -19057,7 +19138,7 @@ function renderClockRecords() {
                 '<td>' + (r.empName || r.empId) + '</td>' +
                 '<td>' + (r.type === 'in' ? '🟢 上班' : '🔴 下班') + '</td>' +
                 '<td>' + timeStr + '</td>' +
-                '<td>' + (r.storeName || '-') + '</td>' +
+                '<td>' + (r.storeName || '-') + (r.isDispatch ? ' <span style="font-size:10px; color:#c2410c; font-weight:bold;">🚐支援</span>' : '') + '</td>' +
                 '<td>' + (r.distance != null ? r.distance + ' m' : '-') + '</td>' +
                 '<td>' + rangeTag + '</td>' +
                 '<td>' + mapLink + '</td>' +
