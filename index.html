@@ -1333,31 +1333,104 @@ body {
 
 /* ── 選單列 ── */
 .system-menu {
-    background: linear-gradient(135deg, #4b5563, #374151) !important;
+    background: linear-gradient(135deg, #3f4654, #2b313c) !important;
     border-bottom: 3px solid var(--brand) !important;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12) !important;
+    padding: 6px 8px !important;
+    gap: 4px;
+    align-items: center;
 }
 .menu-item {
-    transition: background .15s ease, color .15s ease;
-    border-right: 1px solid rgba(255,255,255,0.08) !important;
+    transition: all .18s cubic-bezier(0.4,0,0.2,1) !important;
+    border-right: 0 !important;
+    border-radius: 10px !important;
+    padding: 9px 15px !important;
+    margin: 2px !important;
+    color: #e5e7eb !important;
+    position: relative;
+    letter-spacing: 0.3px;
 }
-.menu-item:hover, .menu-item.active, .menu-item.open {
-    background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+.menu-item:hover {
+    background: rgba(255,255,255,0.1) !important;
+    color: #fff !important;
+    transform: translateY(-1px);
 }
+.menu-item.active, .menu-item.open {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+    color: #4a2e08 !important;
+    box-shadow: 0 4px 12px rgba(245,158,11,0.4) !important;
+    transform: translateY(-1px);
+}
+/* 作用中選單底部小圓點指示 */
+.menu-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -7px; left: 50%; transform: translateX(-50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--brand);
+}
+/* 下拉選單：浮卡 + 滑入動畫 */
 .submenu {
     border: 0 !important;
-    border-radius: 12px !important;
-    box-shadow: var(--shadow-lg) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.04) !important;
     overflow: hidden;
-    padding: 6px !important;
-    margin-top: 2px;
+    padding: 8px !important;
+    margin-top: 8px !important;
+    min-width: 220px !important;
+    background: #fff !important;
+    transform-origin: top left;
+    z-index: 9999 !important;  /* 🔑 蓋過下方內容，避免被遮住 */
+}
+/* 確保選單列與選單項在內容之上 */
+.system-menu { position: relative; z-index: 500 !important; }
+.menu-item.open { z-index: 9998 !important; }
+.menu-item:hover .submenu,
+.menu-item.open .submenu {
+    animation: menuDropIn 0.22s cubic-bezier(0.18,0.89,0.32,1.15);
+}
+@keyframes menuDropIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* 下拉選單上方小箭頭 */
+.submenu::before {
+    content: '';
+    position: absolute;
+    top: -6px; left: 22px;
+    width: 12px; height: 12px;
+    background: #fff;
+    transform: rotate(45deg);
+    box-shadow: -2px -2px 4px rgba(0,0,0,0.04);
 }
 .submenu-item {
     border-bottom: 0 !important;
-    border-radius: 8px !important;
-    transition: background .12s ease;
+    border-radius: 9px !important;
+    padding: 11px 14px !important;
+    color: #374151 !important;
+    font-weight: 600 !important;
+    transition: all .14s ease !important;
+    display: flex; align-items: center;
+    position: relative;
 }
-.submenu-item:hover, .submenu-item:active { background: #fdf0d8 !important; color: var(--brand-dark) !important; }
+.submenu-item:hover, .submenu-item:active {
+    background: linear-gradient(135deg, #fff7e6, #fde8c4) !important;
+    color: var(--brand-dark) !important;
+    padding-left: 18px !important;
+}
+/* hover 時左側出現色條 */
+.submenu-item:hover::before {
+    content: '';
+    position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 60%; border-radius: 2px;
+    background: var(--brand);
+}
+
+/* 手機版選單：橫向滑動 + 膠囊感 */
+body.view-mobile .system-menu { padding: 6px !important; gap: 2px; }
+body.view-mobile .menu-item { padding: 8px 12px !important; font-size: 13px !important; margin: 1px !important; }
+body.view-mobile .submenu { min-width: 200px !important; }
 
 /* ── 卡片 / 面板 ── */
 .work-list-panel, .sched-section {
@@ -1565,6 +1638,210 @@ body.view-mobile .panel-body { padding: 12px !important; }
     50% { transform: rotate(-8deg); }
     75% { transform: rotate(14deg); }
 }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  📅 班表系統現代化                            ║
+   ╚══════════════════════════════════════════════╝ */
+.sched-section {
+    margin: 12px 10px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--card-radius) !important;
+    box-shadow: var(--shadow-md) !important;
+    overflow: hidden;
+}
+.sched-section-title {
+    background: linear-gradient(135deg, #fffdf8, #fdf0d8) !important;
+    border-bottom: 1px solid #f3e4c4 !important;
+    color: var(--brand-dark) !important;
+    font-size: 15px !important;
+    padding: 12px 16px !important;
+    border-radius: 0 !important;
+}
+/* 篩選/工具列 */
+.sched-filters {
+    background: #fff !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--card-radius) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: 10px !important;
+    padding: 12px 14px !important;
+}
+.week-display {
+    background: linear-gradient(135deg, #fffdf8, #fdf0d8) !important;
+    border: 1px solid #ead9bd !important;
+    border-radius: 999px !important;
+    color: var(--brand-dark) !important;
+    padding: 6px 14px !important;
+    box-shadow: var(--shadow-sm);
+}
+.filter-select {
+    border: 1px solid #ddd5c8 !important;
+    border-radius: 8px !important;
+    padding: 7px 10px !important;
+}
+/* 工具列按鈕現代化 */
+.btn-toolbar {
+    border: 0 !important;
+    border-radius: 8px !important;
+    padding: 7px 14px !important;
+    background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.btn-toolbar:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-toolbar:active { transform: translateY(0); }
+.btn-toolbar.green { background: linear-gradient(135deg, #34d399, #10b981) !important; }
+.btn-toolbar.red { background: linear-gradient(135deg, #fb7185, #ef4444) !important; }
+/* 表頭 */
+.sched-h-table th {
+    background: linear-gradient(135deg, #b8966c, #9c7d52) !important;
+    border: 1px solid #8b6f47 !important;
+    border-radius: 0 !important;
+    letter-spacing: 0.5px;
+}
+.sched-h-table th.emp-col { background: linear-gradient(135deg, #4b5563, #374151) !important; }
+.sched-h-table th.weekend { background: linear-gradient(135deg, #fb7185, #f43f5e) !important; color: #fff !important; }
+.sched-h-table th.today { background: linear-gradient(135deg, #fbbf24, #f59e0b) !important; color: #4a2e08 !important; box-shadow: inset 0 -3px 0 #c2410c; }
+.sched-h-table td.emp-info {
+    background: linear-gradient(135deg, #4b5563, #374151) !important;
+    border-radius: 0 !important;
+}
+/* 排班格子 hover 提示更柔和 */
+.sch-cell { transition: background .15s ease, box-shadow .15s ease !important; border-radius: 6px; }
+.sch-cell:hover { background: #fffaf0 !important; }
+.sch-cell.drag-over { outline: 2px dashed var(--brand) !important; background: #fff7e6 !important; }
+.sch-cell[draggable="true"]:hover::after {
+    content: "✋ 拖拉複製" !important;
+    border-radius: 6px !important;
+    background: rgba(224,140,44,0.9) !important;
+    color: #fff !important;
+}
+/* 班次小卡現代化 */
+.slot-mini {
+    border-radius: 8px !important;
+    border-width: 1px !important;
+    border-left-width: 4px !important;
+    box-shadow: var(--shadow-sm);
+    transition: transform .1s ease, box-shadow .1s ease;
+}
+.slot-mini:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+/* 空格子的「＋」提示 */
+.sch-cell:empty::before,
+.sch-cell .add-hint {
+    color: #cbb89a;
+}
+.sch-cell-empty {
+    border-radius: 8px !important;
+    border: 2px dashed #e2d8c5 !important;
+    transition: all .15s ease !important;
+}
+.sch-cell-empty:hover {
+    color: var(--brand-dark) !important;
+    border-color: var(--brand) !important;
+    background: #fff7e6 !important;
+    transform: scale(1.02);
+}
+.btn-edit-slot { border-radius: 6px !important; }
+.btn-clear-slot { border-radius: 6px !important; }
+
+/* 手機版班表：更易操作 */
+body.view-mobile .sched-filters { margin: 8px !important; padding: 10px !important; }
+body.view-mobile .filter-row { gap: 6px !important; }
+body.view-mobile .btn-toolbar { padding: 8px 12px !important; font-size: 13px !important; }
+body.view-mobile .sched-h-table { min-width: 760px !important; }
+body.view-mobile .sched-h-table th { min-width: 110px !important; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🔐 登入畫面 + 其他介面現代化                  ║
+   ╚══════════════════════════════════════════════╝ */
+.login-container {
+    background: linear-gradient(135deg, #fff7e6 0%, #fde3b8 45%, #fbcd8e 100%) !important;
+}
+.system-title {
+    border-bottom: 2px dashed #e9b873 !important;
+}
+.system-title h1 { color: var(--brand-dark) !important; letter-spacing: 0.5px; }
+.announcement {
+    border-radius: 12px !important;
+    border-left-width: 4px !important;
+    box-shadow: var(--shadow-sm);
+    background: #fffdf8 !important;
+}
+.form-label { color: var(--ink) !important; }
+.form-input {
+    border: 1px solid #ddd5c8 !important;
+    border-radius: 10px !important;
+    padding: 11px 12px !important;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-input:focus {
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 3px rgba(224,140,44,0.15) !important;
+    outline: none;
+}
+.btn-action {
+    border: 0 !important;
+    border-radius: 10px !important;
+    padding: 11px 24px !important;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.btn-action:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-action:active { transform: translateY(0); }
+.btn-signin { background: linear-gradient(135deg, #fbbf24, #f59e0b) !important; color: #5c3a09 !important; }
+.btn-signout { background: linear-gradient(135deg, #fb7185, #ef4444) !important; color: #fff !important; }
+.btn-login { background: linear-gradient(135deg, #34d399, #10b981) !important; color: #fff !important; }
+
+/* ── 篩選/分頁列 ── */
+.sched-filters .filter-label, .filter-label { color: var(--ink-soft) !important; font-weight: 600; }
+.tab-btn, .filter-tab {
+    border-radius: 999px !important;
+    transition: all .12s ease;
+}
+
+/* ── 統計/摘要小卡 ── */
+.stat-box, .summary-card, .info-stat {
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* ── 公告/提示色塊統一圓角 ── */
+div[style*="border-radius:4px"], div[style*="border-radius: 4px"] { border-radius: 10px !important; }
+
+/* ── 區段標題 ── */
+.section-title, .sub-section-title {
+    color: var(--brand-dark) !important;
+    font-weight: 800 !important;
+}
+
+/* ── 員工卡 / 列表項目 hover ── */
+.employee-card, .list-item, .data-row {
+    border-radius: 10px !important;
+    transition: box-shadow .12s ease, transform .12s ease;
+}
+.employee-card:hover, .list-item:hover { box-shadow: var(--shadow-md); }
+
+/* ── 數字輸入、日期、下拉統一圓角 ── */
+input[type="text"], input[type="number"], input[type="date"], input[type="time"],
+input[type="password"], input[type="email"], input[type="tel"], select, textarea {
+    border-radius: 9px !important;
+}
+
+/* ── 表單區塊卡片 ── */
+.form-section, .input-section {
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── 分隔線柔化 ── */
+hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
+
+/* ── 空狀態提示 ── */
+.empty-state, .no-data {
+    color: #b8ab98 !important;
+    padding: 30px !important;
+    text-align: center;
+}
 </style>
 </head>
 <body>
@@ -1646,6 +1923,8 @@ body.view-mobile .panel-body { padding: 12px !important; }
         <div class="menu-item active" id="menu-work" onclick="showWorkList()">📋 工作清單</div>
         <div class="menu-item" id="menu-attendance">⏰ 出勤管理 ▼
             <div class="submenu">
+                <div class="submenu-item" onclick="goToPage('clockIn','menu-attendance')">📍 GPS 打卡</div>
+                <div class="submenu-item" onclick="goToPage('clockRecords','menu-attendance')">🗂️ 打卡記錄</div>
                 <div class="submenu-item" onclick="goToPage('attendanceAbnormal','menu-attendance')">⚠️ 出勤異常</div>
                 <div class="submenu-item" onclick="goToPage('overtimeApply','menu-attendance')">⏱️ 加班申請</div>
                 <div class="submenu-item" onclick="goToPage('businessTrip','menu-attendance')">🚄 出差申請</div>
@@ -1780,6 +2059,61 @@ body.view-mobile .panel-body { padding: 12px !important; }
     <div id="printArea" class="print-area"></div>
     
     <!-- 簡化頁面 -->
+    <!-- 📍 GPS 打卡 -->
+    <div id="page-clockIn" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⏰ 出勤管理 &gt; <strong>📍 GPS 打卡</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header"><h3>📍 GPS 定位打卡</h3></div>
+                <div class="panel-body">
+                    <div id="clockClock" style="text-align:center; font-size:38px; font-weight:900; color:#c2410c; letter-spacing:2px; margin:8px 0;">--:--:--</div>
+                    <div id="clockDate" style="text-align:center; font-size:14px; color:#6b7280; margin-bottom:14px;"></div>
+                    
+                    <div id="clockStoreInfo" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px; margin-bottom:14px; font-size:13px; color:#1e40af;"></div>
+                    
+                    <div style="display:flex; gap:12px; margin-bottom:14px;">
+                        <button onclick="doClock('in')" style="flex:1; padding:22px; background:linear-gradient(135deg,#34d399,#10b981); color:white; border:0; border-radius:14px; font-size:20px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🟢 上班打卡</button>
+                        <button onclick="doClock('out')" style="flex:1; padding:22px; background:linear-gradient(135deg,#fb923c,#ea580c); color:white; border:0; border-radius:14px; font-size:20px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(234,88,12,0.3);">🔴 下班打卡</button>
+                    </div>
+                    
+                    <div id="clockResult" style="text-align:center; font-size:14px; min-height:50px; padding:10px; border-radius:10px;"></div>
+                    
+                    <div style="margin-top:16px;">
+                        <h4 style="color:#374151; margin:0 0 8px 0;">📋 我今日的打卡</h4>
+                        <div id="clockTodayList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🗂️ 打卡記錄（後台）-->
+    <div id="page-clockRecords" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⏰ 出勤管理 &gt; <strong>🗂️ 打卡記錄</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <h3>🗂️ 打卡記錄查詢</h3>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <input type="date" id="crFilterDate" onchange="renderClockRecords()" style="padding:6px; border:1px solid #ccc; border-radius:6px;">
+                        <button class="btn-secondary" style="padding:6px 12px; font-size:13px;" onclick="document.getElementById('crFilterDate').value='';renderClockRecords();">全部</button>
+                        <button class="btn-confirm" style="padding:6px 12px; font-size:13px;" onclick="exportClockRecordsCSV()">📥 匯出CSV</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="alert-box info" style="margin-bottom:12px;">💡 顯示員工打卡的<strong>時間、地點、距離門市多遠</strong>。點地點可開啟地圖。</div>
+                    <div id="clockRecordsSummary" style="margin-bottom:10px; font-size:13px; color:#374151;"></div>
+                    <div style="overflow-x:auto;">
+                        <table class="work-table" style="width:100%; min-width:680px;">
+                            <thead><tr><th>員工</th><th>類型</th><th>時間</th><th>門市</th><th>距離</th><th>範圍內</th><th>地點</th></tr></thead>
+                            <tbody id="clockRecordsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div id="page-attendanceAbnormal" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⏰ 出勤管理 &gt; <strong>⚠️ 出勤異常</strong></div>
         <div class="main-content"><div class="work-list-panel"><div class="panel-header">
@@ -3638,11 +3972,39 @@ body.view-mobile .panel-body { padding: 12px !important; }
                     💡 <strong>線上同步</strong>讓多台設備（手機、平板、電腦）共享同一份資料：店長手機改班表，店員平板立即看到；門市間調撥單即時同步。
                 </div>
                 
-                <!-- 🔥 Firebase 模式（最推薦：免Token、不撤銷）-->
-                <div style="background:linear-gradient(135deg,#fef3c7,#fde68a); padding:16px; border-radius:10px; margin-bottom:16px; border:3px solid #f59e0b;">
-                    <h3 style="margin:0 0 10px 0; color:#92400e; display:flex; align-items:center; gap:6px;">
-                        🔥 Firebase 模式 <span style="background:#10b981; color:white; font-size:11px; padding:2px 8px; border-radius:10px;">最推薦</span>
+                <!-- 🥫 Pantry 模式（最簡單：免Token、免規則、免建專案）-->
+                <div style="background:linear-gradient(135deg,#dcfce7,#bbf7d0); padding:16px; border-radius:10px; margin-bottom:16px; border:3px solid #10b981;">
+                    <h3 style="margin:0 0 10px 0; color:#065f46; display:flex; align-items:center; gap:6px;">
+                        🥫 Pantry 模式 <span style="background:#059669; color:white; font-size:11px; padding:2px 8px; border-radius:10px;">最簡單</span>
                     </h3>
+                    <div style="background:white; padding:10px 12px; border-radius:6px; font-size:13px; margin-bottom:10px; line-height:1.7;">
+                        ✅ <strong>只要一組 ID，免 Token、免規則、免建專案</strong><br>
+                        ✅ <strong>iPhone Safari 完全相容</strong><br>
+                        ✅ <strong>員工開 App 自動同步</strong>，零步驟<br>
+                        ✅ 永久免費、永不失效
+                    </div>
+                    <div style="background:#f0fdf4; padding:10px; border-radius:6px; font-size:12px; margin-bottom:10px; color:#065f46;">
+                        <strong>📝 一次性設定（約 1 分鐘）：</strong><br>
+                        1️⃣ 開新分頁到 <strong>getpantry.cloud</strong><br>
+                        2️⃣ 輸入任一 email → 點「Create Pantry」<br>
+                        3️⃣ 收信點驗證 → 網頁顯示一串 <strong>Pantry ID</strong>（UUID 格式）<br>
+                        4️⃣ 複製貼到下方欄位 → 點「連接」
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <input type="text" id="pantry_id" placeholder="貼上 Pantry ID（abc12345-...-...）" style="flex:1; min-width:260px; padding:10px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:13px;">
+                        <button class="btn-confirm" style="padding:10px 20px; font-weight:bold;" onclick="pantryConnect()">🔗 連接</button>
+                    </div>
+                    <div id="pantryStatus" style="margin-top:8px; font-size:13px;"></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                        <button onclick="window.open('https://getpantry.cloud','_blank')" style="padding:8px 14px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🥫 開啟 getpantry.cloud</button>
+                        <button onclick="cloudPush(false)" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬆️ 強制上傳</button>
+                        <button onclick="cloudPull(false).then(function(){setTimeout(function(){location.reload();},1500);})" style="padding:8px 14px; background:#0ea5e9; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬇️ 強制下載</button>
+                    </div>
+                </div>
+                
+                <details style="margin-bottom:16px;">
+                <summary style="cursor:pointer; font-weight:bold; color:#6b7280; padding:8px;">▸ 其他方式：🔥 Firebase 模式</summary>
+                
                     <div style="background:white; padding:10px 12px; border-radius:6px; font-size:13px; margin-bottom:10px; line-height:1.7;">
                         ✅ <strong>讀寫都免 Token</strong>，永不被撤銷<br>
                         ✅ <strong>iPhone Safari 完全相容</strong><br>
@@ -3669,6 +4031,7 @@ body.view-mobile .panel-body { padding: 12px !important; }
                     <div id="fbDiagResult" style="margin-top:8px; font-size:12px; white-space:pre-wrap; font-family:monospace; background:#f8fafc; padding:8px; border-radius:6px; display:none;"></div>
                     <button onclick="window.open('https://console.firebase.google.com/','_blank')" style="margin-top:8px; padding:8px 14px; background:#f59e0b; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔥 開啟 Firebase 主控台</button>
                 </div>
+                </details>
                 
                 <details style="margin-bottom:16px;">
                 <summary style="cursor:pointer; font-weight:bold; color:#6b7280; padding:8px;">▸ 進階：GitHub Gist 模式（舊）</summary>
@@ -4321,6 +4684,18 @@ body.view-mobile .panel-body { padding: 12px !important; }
                     <option value="renovation">裝修中</option>
                     <option value="closed">已停業</option>
                 </select>
+            </td></tr>
+            <tr><td class="label-col" style="background:#eff6ff;">📍 打卡定位：</td><td style="background:#eff6ff;">
+                <div style="font-size:12px; color:#1e40af; margin-bottom:6px;">員工需在此座標範圍內才能打卡</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
+                    <input type="text" id="storeLat" placeholder="緯度 25.0330" style="flex:1; min-width:120px;">
+                    <input type="text" id="storeLng" placeholder="經度 121.5654" style="flex:1; min-width:120px;">
+                </div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                    <label style="font-size:13px; white-space:nowrap;">允許範圍：<input type="number" id="storeRadius" placeholder="200" value="200" style="width:80px;"> 公尺</label>
+                    <button type="button" onclick="fillStoreLocation()" style="padding:6px 12px; background:#3b82f6; color:white; border:0; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold;">📍 取得目前位置</button>
+                </div>
+                <div id="storeLocStatus" style="font-size:12px; color:#6b7280; margin-top:4px;"></div>
             </td></tr>
         </table>
         <div style="text-align:center; margin-top:15px;">
@@ -5012,7 +5387,7 @@ function hasAccess(pageName) {
     if (!currentUser) return false;
     
     // 🆕 新功能自動開放（避免舊自訂權限擋住新頁面）：檔期退貨所有人都可用
-    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts'];
+    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords'];
     if (ALWAYS_ALLOW.indexOf(pageName) !== -1) {
         return true;
     }
@@ -5550,6 +5925,8 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'storeManagement') renderStoreList();
     else if (pageName === 'vendorManagement') initVendorManagement();
     else if (pageName === 'returnCampaign') initReturnCampaign();
+    else if (pageName === 'clockIn') initClockIn();
+    else if (pageName === 'clockRecords') initClockRecords();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -5980,10 +6357,13 @@ function renderScheduleTable() {
     
     // 表頭（兩個 table 共用）
     var headerHtml = '<th class="emp-col">員工</th>';
+    var todayStr = new Date().toDateString();
     for (var d = 0; d < dates.length; d++) {
         var dt = dates[d];
         var isWE = (dt.getDay() === 0 || dt.getDay() === 6);
-        headerHtml += '<th' + (isWE ? ' class="weekend"' : '') + '>' + formatDate(dt) + '<br>星期' + getDayName(dt) + '</th>';
+        var isToday = (dt.toDateString() === todayStr);
+        var cls = isToday ? 'today' : (isWE ? 'weekend' : '');
+        headerHtml += '<th' + (cls ? ' class="' + cls + '"' : '') + '>' + formatDate(dt) + '<br>星期' + getDayName(dt) + (isToday ? '<br><span style="font-size:9px;">📍今天</span>' : '') + '</th>';
     }
     document.getElementById('schHHeader').innerHTML = headerHtml;
     document.getElementById('schSupportHeader').innerHTML = headerHtml;
@@ -15891,6 +16271,7 @@ var BACKUP_KEYS = [
     'systemSettings',
     'customRolePermissions',
     'customAccountPermissions',
+    'clockRecords',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
@@ -15966,16 +16347,93 @@ function pushToFirebase(silent) {
 }
 
 // 🔑 統一雲端讀取：優先 Firebase，其次 Gist（免Token）
+// 🥫 Pantry 同步（最簡單：只需 Pantry ID，免 Token、免規則）
+var DEFAULT_PANTRY_ID = '';  // ← 取得 Pantry ID 後填這裡，或在同步頁貼上
+
+function pantryGetId() { return localStorage.getItem('_cs_pantryId') || DEFAULT_PANTRY_ID || ''; }
+function pantryEnabled() { return !!pantryGetId(); }
+function pantryUrl() { return PANTRY_BASE_URL + '/' + pantryGetId() + '/basket/' + PANTRY_BASKET_NAME; }
+
+function pullFromPantry(silent) {
+    var id = pantryGetId();
+    if (!id) return Promise.reject(new Error('NO_PANTRY'));
+    return ezFetch(pantryUrl(), { method: 'GET' }, 12000).then(function(r) {
+        if (r.status === 400 || r.status === 404) throw new Error('PANTRY_NOT_FOUND');
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.json();
+    }).then(function(data) {
+        if (!data || typeof data !== 'object') throw new Error('NO_DATA');
+        var applied = 0;
+        for (var k in data) {
+            if (BACKUP_KEYS.indexOf(k) >= 0) {
+                try { localStorage.setItem(k, JSON.stringify(data[k])); applied++; } catch(e) {}
+            }
+        }
+        localStorage.setItem('_cs_lastPull', Date.now().toString());
+        if (!silent) showNotif('☁️ 已同步雲端資料（' + applied + ' 項）');
+        return applied;
+    });
+}
+
+function pushToPantry(silent) {
+    var id = pantryGetId();
+    if (!id) return Promise.reject(new Error('NO_PANTRY'));
+    var data = {};
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var k = BACKUP_KEYS[i];
+        var v = localStorage.getItem(k);
+        if (v !== null) { try { data[k] = JSON.parse(v); } catch(e) { data[k] = v; } }
+    }
+    // POST 會建立或完整覆蓋 basket 內容
+    return ezFetch(pantryUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }, 15000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        localStorage.setItem('_cs_lastPush', Date.now().toString());
+        if (!silent) showNotif('☁️ 已上傳至雲端');
+        return true;
+    });
+}
+
 function cloudPull(silent) {
+    if (pantryEnabled()) return pullFromPantry(silent);
     if (fbEnabled()) return pullFromFirebase(silent);
     if (typeof pullFromGistNoAuth === 'function') return pullFromGistNoAuth(silent);
     return Promise.reject(new Error('NO_SYNC'));
 }
-// 統一雲端推送：優先 Firebase（免Token），其次 Gist（需Token）
+// 統一雲端推送：Pantry > Firebase > Gist
 function cloudPush(silent) {
+    if (pantryEnabled()) return pushToPantry(silent);
     if (fbEnabled()) return pushToFirebase(silent);
     if (typeof manualPushToCloud === 'function') { manualPushToCloud(silent); return Promise.resolve(); }
     return Promise.reject(new Error('NO_SYNC'));
+}
+
+// 🥫 連接 Pantry
+function pantryConnect() {
+    var id = (document.getElementById('pantry_id') ? document.getElementById('pantry_id').value : '').trim();
+    var statusEl = document.getElementById('pantryStatus');
+    var setS = function(m, c) { if (statusEl) { statusEl.textContent = m; statusEl.style.color = c || '#374151'; } };
+    if (!id) { setS('⚠️ 請貼上 Pantry ID', '#dc2626'); return; }
+    
+    setS('🔄 測試連線中...', '#2563eb');
+    localStorage.setItem('_cs_pantryId', id);
+    localStorage.setItem('_cs_enabled', '1');
+    if (typeof _syncEnabled !== 'undefined') _syncEnabled = true;
+    
+    pushToPantry(true).then(function() {
+        return pullFromPantry(true);
+    }).then(function(n) {
+        setS('✅ 連接成功！已可跨裝置同步（雲端 ' + n + ' 項資料）', '#059669');
+        showNotif('🥫 Pantry 連接成功！');
+        alert('🎉 Pantry 連接成功！\n\n接下來：\n1. 此裝置資料已上傳雲端\n2. 把這組 Pantry ID 告訴開發者寫入系統\n   → 所有員工開 App 自動同步、免設定\n3. 永久有效、免 Token、免規則設定');
+    }).catch(function(err) {
+        var msg = err.message || String(err);
+        if (msg === 'PANTRY_NOT_FOUND') setS('❌ 找不到此 Pantry ID，請確認貼上正確', '#dc2626');
+        else setS('❌ 連線失敗：' + msg + '（請確認 ID 正確、網路正常）', '#dc2626');
+    });
 }
 
 // 🔥 連接 Firebase
@@ -16816,6 +17274,14 @@ function initCloudSyncPage() {
     if (fbUrlEl && fbGetUrl()) {
         fbUrlEl.value = fbGetUrl();
         if (fbStatusEl) { fbStatusEl.textContent = '✅ 已連接 Firebase，跨裝置同步運作中'; fbStatusEl.style.color = '#059669'; }
+    }
+    
+    // 🥫 顯示 Pantry 狀態
+    var pantryEl = document.getElementById('pantry_id');
+    var pantryStatusEl = document.getElementById('pantryStatus');
+    if (pantryEl && pantryGetId()) {
+        pantryEl.value = pantryGetId();
+        if (pantryStatusEl) { pantryStatusEl.textContent = '✅ 已連接 Pantry，跨裝置同步運作中'; pantryStatusEl.style.color = '#059669'; }
     }
     
     // 更新 Token 狀態
@@ -18355,6 +18821,11 @@ function openStoreModal() {
     document.getElementById('storePhone').value = '';
     document.getElementById('storeManager').value = '';
     document.getElementById('storeStatus').value = 'active';
+    document.getElementById('storeLat').value = '';
+    document.getElementById('storeLng').value = '';
+    document.getElementById('storeRadius').value = 200;
+    var ls0 = document.getElementById('storeLocStatus');
+    if (ls0) ls0.textContent = '';
     document.getElementById('storeModal').classList.remove('hidden');
 }
 
@@ -18372,7 +18843,283 @@ function openEditStoreModal(id) {
     document.getElementById('storePhone').value = s.phone || '';
     document.getElementById('storeManager').value = s.manager || '';
     document.getElementById('storeStatus').value = s.status || 'active';
+    document.getElementById('storeLat').value = s.lat || '';
+    document.getElementById('storeLng').value = s.lng || '';
+    document.getElementById('storeRadius').value = s.radius || 200;
+    var ls = document.getElementById('storeLocStatus');
+    if (ls) ls.textContent = (s.lat && s.lng) ? '✅ 已設定定位' : '⚠️ 尚未設定定位（員工將無法打卡）';
     document.getElementById('storeModal').classList.remove('hidden');
+}
+
+// ============================================================
+// 📍 GPS 定位打卡
+// ============================================================
+var _clockTimer = null;
+
+function initClockIn() {
+    updateClockDisplay();
+    if (_clockTimer) clearInterval(_clockTimer);
+    _clockTimer = setInterval(updateClockDisplay, 1000);
+    
+    // 顯示所屬門市與定位設定
+    var store = getMyClockStore();
+    var infoEl = document.getElementById('clockStoreInfo');
+    if (infoEl) {
+        if (!store) {
+            infoEl.innerHTML = '⚠️ 找不到您的所屬門市，請聯絡管理員設定。';
+        } else if (!store.lat || !store.lng) {
+            infoEl.innerHTML = '🏪 所屬門市：<strong>' + store.name + '</strong><br>⚠️ 此門市尚未設定打卡定位座標，請管理員至「門市管理」設定。';
+        } else {
+            infoEl.innerHTML = '🏪 所屬門市：<strong>' + store.name + '</strong><br>📍 允許打卡範圍：門市周邊 <strong>' + (store.radius || 200) + ' 公尺</strong>內<br>請在門市附近打卡。';
+        }
+    }
+    document.getElementById('clockResult').innerHTML = '';
+    renderClockToday();
+}
+
+function updateClockDisplay() {
+    var now = new Date();
+    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var cl = document.getElementById('clockClock');
+    var cd = document.getElementById('clockDate');
+    if (cl) cl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    if (cd) {
+        var wk = ['日','一','二','三','四','五','六'][now.getDay()];
+        cd.textContent = now.getFullYear() + '/' + pad(now.getMonth()+1) + '/' + pad(now.getDate()) + ' 星期' + wk;
+    }
+}
+
+// 取得目前使用者所屬門市
+function getMyClockStore() {
+    var stores = loadData('stores', defaultStores);
+    if (!currentUser) return null;
+    // 先用員工資料的 homeStoreId
+    var emps = loadData('employees', defaultEmployees);
+    var myEmp = emps.find(function(e) { return e.num === currentUser.id || e.id === currentUser.id || e.name === currentUser.name; });
+    var sid = (myEmp && myEmp.homeStoreId) || currentUser.storeId || (typeof getUserStoreId === 'function' ? getUserStoreId() : null);
+    var store = stores.find(function(s) { return s.id === sid; });
+    // 找不到就用目前選定門市
+    if (!store) {
+        var cur = localStorage.getItem('currentStoreId');
+        store = stores.find(function(s) { return s.id === cur; });
+    }
+    // 仍找不到（如 admin 無門市）→ 用第一間
+    if (!store && stores.length > 0) store = stores[0];
+    return store || null;
+}
+
+// Haversine 公式計算兩點距離（公尺）
+function calcDistance(lat1, lng1, lat2, lng2) {
+    var R = 6371000; // 地球半徑（公尺）
+    var toRad = function(d) { return d * Math.PI / 180; };
+    var dLat = toRad(lat2 - lat1);
+    var dLng = toRad(lng2 - lng1);
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function getMyClockName() {
+    if (!currentUser) return '';
+    var name = currentUser.name || '';
+    if (!name || name === '員工') {
+        var emps = loadData('employees', defaultEmployees);
+        var e = emps.find(function(x){ return x.num === currentUser.id || x.id === currentUser.id; });
+        if (e && e.name) name = e.name;
+    }
+    return name || currentUser.id;
+}
+
+function doClock(type) {
+    var resultEl = document.getElementById('clockResult');
+    var setR = function(html, bg) { if (resultEl) { resultEl.innerHTML = html; resultEl.style.background = bg || 'transparent'; } };
+    
+    var store = getMyClockStore();
+    if (!store) { setR('❌ 找不到所屬門市，無法打卡', '#fee2e2'); return; }
+    if (!store.lat || !store.lng) { setR('⚠️ 門市尚未設定定位座標，請管理員設定後再打卡', '#fef3c7'); return; }
+    if (!navigator.geolocation) { setR('❌ 此裝置不支援定位', '#fee2e2'); return; }
+    
+    setR('🔄 定位中...請允許位置權限', '#eff6ff');
+    
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var myLat = pos.coords.latitude;
+        var myLng = pos.coords.longitude;
+        var accuracy = Math.round(pos.coords.accuracy);
+        var dist = calcDistance(myLat, myLng, store.lat, store.lng);
+        var radius = store.radius || 200;
+        // 允許誤差：定位精準度納入考量
+        var withinRange = dist <= (radius + accuracy);
+        
+        if (!withinRange) {
+            setR('❌ 打卡失敗！<br>您距離門市 <strong>' + dist + ' 公尺</strong>（限 ' + radius + ' 公尺內）<br>請到門市附近再打卡。', '#fee2e2');
+            return;
+        }
+        
+        // 記錄打卡
+        var records = loadData('clockRecords', []);
+        var now = new Date();
+        records.unshift({
+            id: 'clk_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
+            empId: currentUser.id,
+            empName: getMyClockName(),
+            storeId: store.id,
+            storeName: store.name,
+            type: type,
+            time: now.toISOString(),
+            lat: myLat, lng: myLng,
+            distance: dist,
+            accuracy: accuracy,
+            withinRange: true
+        });
+        saveData('clockRecords', records);
+        
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        var timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+        setR('✅ ' + (type === 'in' ? '上班' : '下班') + '打卡成功！<br>⏰ ' + timeStr + '　📍 距門市 ' + dist + ' 公尺', '#dcfce7');
+        showNotif('✅ ' + (type === 'in' ? '上班' : '下班') + '打卡成功');
+        renderClockToday();
+        
+        // 立即上傳雲端
+        if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    }, function(err) {
+        setR('❌ 定位失敗：' + (err.code === 1 ? '請允許位置權限（設定→Safari→位置）' : '請確認 GPS 已開啟'), '#fee2e2');
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+}
+
+function renderClockToday() {
+    var el = document.getElementById('clockTodayList');
+    if (!el) return;
+    var records = loadData('clockRecords', []);
+    var todayStr = new Date().toDateString();
+    var mine = records.filter(function(r) {
+        return r.empId === currentUser.id && new Date(r.time).toDateString() === todayStr;
+    });
+    if (mine.length === 0) { el.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:8px;">今日尚無打卡記錄</div>'; return; }
+    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var html = '';
+    for (var i = 0; i < mine.length; i++) {
+        var r = mine[i];
+        var t = new Date(r.time);
+        html += '<div style="display:flex; justify-content:space-between; padding:8px 10px; border-bottom:1px solid #f1efe9; font-size:14px;">' +
+                '<span>' + (r.type === 'in' ? '🟢 上班' : '🔴 下班') + '</span>' +
+                '<span style="font-weight:bold;">' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + '</span>' +
+                '<span style="color:#6b7280; font-size:12px;">📍' + r.distance + 'm</span></div>';
+    }
+    el.innerHTML = html;
+}
+
+// ============= 🗂️ 打卡記錄（後台）=============
+function initClockRecords() {
+    renderClockRecords();
+}
+
+function renderClockRecords() {
+    var tbody = document.getElementById('clockRecordsBody');
+    var summaryEl = document.getElementById('clockRecordsSummary');
+    if (!tbody) return;
+    
+    var records = loadData('clockRecords', []);
+    
+    // 門市隔離：非管理員只看自己門市
+    if (currentUser && currentUser.role !== 'admin') {
+        var myStore = getUserStoreId();
+        if (myStore) records = records.filter(function(r) { return r.storeId === myStore; });
+    }
+    
+    // 日期篩選
+    var filterDate = document.getElementById('crFilterDate') ? document.getElementById('crFilterDate').value : '';
+    if (filterDate) {
+        var fd = new Date(filterDate).toDateString();
+        records = records.filter(function(r) { return new Date(r.time).toDateString() === fd; });
+    }
+    
+    if (summaryEl) summaryEl.innerHTML = '共 <strong>' + records.length + '</strong> 筆打卡記錄' + (filterDate ? '（' + filterDate + '）' : '');
+    
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#9ca3af;">📭 尚無打卡記錄</td></tr>';
+        return;
+    }
+    
+    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var html = '';
+    for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        var t = new Date(r.time);
+        var timeStr = t.getFullYear() + '/' + pad(t.getMonth()+1) + '/' + pad(t.getDate()) + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+        var rangeTag = r.withinRange
+            ? '<span style="color:#059669; font-weight:bold;">✓ 範圍內</span>'
+            : '<span style="color:#dc2626; font-weight:bold;">✗ 範圍外</span>';
+        var mapLink = (r.lat && r.lng)
+            ? '<a href="https://www.google.com/maps?q=' + r.lat + ',' + r.lng + '" target="_blank" style="color:#2563eb;">🗺️ 查看地圖</a>'
+            : '-';
+        html += '<tr>' +
+                '<td>' + (r.empName || r.empId) + '</td>' +
+                '<td>' + (r.type === 'in' ? '🟢 上班' : '🔴 下班') + '</td>' +
+                '<td>' + timeStr + '</td>' +
+                '<td>' + (r.storeName || '-') + '</td>' +
+                '<td>' + (r.distance != null ? r.distance + ' m' : '-') + '</td>' +
+                '<td>' + rangeTag + '</td>' +
+                '<td>' + mapLink + '</td>' +
+                '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function exportClockRecordsCSV() {
+    var records = loadData('clockRecords', []);
+    if (currentUser && currentUser.role !== 'admin') {
+        var myStore = getUserStoreId();
+        if (myStore) records = records.filter(function(r) { return r.storeId === myStore; });
+    }
+    var filterDate = document.getElementById('crFilterDate') ? document.getElementById('crFilterDate').value : '';
+    if (filterDate) {
+        var fd = new Date(filterDate).toDateString();
+        records = records.filter(function(r) { return new Date(r.time).toDateString() === fd; });
+    }
+    if (records.length === 0) { alert('⚠️ 沒有可匯出的記錄'); return; }
+    
+    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var rows = [['員工','類型','打卡時間','門市','距離(公尺)','範圍內','緯度','經度','定位誤差(公尺)']];
+    for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        var t = new Date(r.time);
+        var timeStr = t.getFullYear() + '/' + pad(t.getMonth()+1) + '/' + pad(t.getDate()) + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+        rows.push([
+            r.empName || r.empId,
+            r.type === 'in' ? '上班' : '下班',
+            timeStr,
+            r.storeName || '',
+            r.distance != null ? r.distance : '',
+            r.withinRange ? '是' : '否',
+            r.lat || '', r.lng || '', r.accuracy || ''
+        ]);
+    }
+    var csv = '\ufeff' + rows.map(function(row) {
+        return row.map(function(c) { return '"' + String(c).replace(/"/g,'""') + '"'; }).join(',');
+    }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '打卡記錄_' + (filterDate || '全部') + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotif('📥 已匯出 CSV');
+}
+
+// 📍 取得目前位置填入門市座標
+function fillStoreLocation() {
+    var ls = document.getElementById('storeLocStatus');
+    if (!navigator.geolocation) { if (ls) ls.textContent = '❌ 此裝置不支援定位'; return; }
+    if (ls) { ls.textContent = '🔄 定位中...請允許位置權限'; ls.style.color = '#2563eb'; }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        document.getElementById('storeLat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('storeLng').value = pos.coords.longitude.toFixed(6);
+        if (ls) { ls.textContent = '✅ 已取得目前位置（精準度 ±' + Math.round(pos.coords.accuracy) + ' 公尺）'; ls.style.color = '#059669'; }
+    }, function(err) {
+        if (ls) { ls.textContent = '❌ 定位失敗：' + (err.code === 1 ? '請允許位置權限' : '請確認 GPS 開啟'); ls.style.color = '#dc2626'; }
+    }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 function saveStore() {
@@ -18395,7 +19142,10 @@ function saveStore() {
         address: document.getElementById('storeAddress').value.trim(),
         phone: document.getElementById('storePhone').value.trim(),
         manager: document.getElementById('storeManager').value.trim(),
-        status: document.getElementById('storeStatus').value
+        status: document.getElementById('storeStatus').value,
+        lat: parseFloat(document.getElementById('storeLat').value) || null,
+        lng: parseFloat(document.getElementById('storeLng').value) || null,
+        radius: parseInt(document.getElementById('storeRadius').value) || 200
     };
     
     if (id) {
