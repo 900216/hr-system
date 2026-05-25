@@ -1248,7 +1248,21 @@ body.view-mobile .btn-confirm, body.view-mobile .btn-primary, body.view-mobile .
 body.view-mobile .modal-content, body.view-mobile .modal-box { width: 96% !important; max-width: 96% !important; max-height: 90vh; overflow-y: auto; padding: 16px !important; box-sizing: border-box; }
 body.view-mobile .modal-title { font-size: 18px; }
 body.view-mobile .form-input { font-size: 16px; } /* 避免 iOS 自動放大 */
-body.view-mobile input, body.view-mobile select, body.view-mobile textarea { font-size: 16px; max-width: 100%; box-sizing: border-box; }
+/* 文字類輸入框：放大字體防 iOS 縮放、限制寬度 */
+body.view-mobile input:not([type="radio"]):not([type="checkbox"]),
+body.view-mobile select,
+body.view-mobile textarea { font-size: 16px; max-width: 100%; box-sizing: border-box; }
+/* 🔑 radio / checkbox 維持固定小尺寸，不被拉大變形 */
+body.view-mobile input[type="radio"],
+body.view-mobile input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-height: 0 !important;
+    max-width: 18px !important;
+    margin: 0 4px 0 0 !important;
+    vertical-align: middle;
+    flex: none !important;
+}
 /* 排班表格手機友善 */
 body.view-mobile .schedule-container { flex-direction: column; }
 body.view-mobile .left-panel { width: 100% !important; }
@@ -1264,6 +1278,292 @@ body.view-desktop { min-width: auto; }
 @media (max-width: 600px) {
     .header-buttons { width: 100%; }
     .modal-content, .modal-box { width: 96% !important; }
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🎨 現代化 UI 主題（Modern UI Refresh）        ║
+   ╚══════════════════════════════════════════════╝ */
+:root {
+    --brand: #e08c2c;          /* 主品牌橘金 */
+    --brand-dark: #c2410c;
+    --brand-light: #fef6e8;
+    --ink: #2d2a26;            /* 主文字 */
+    --ink-soft: #6b6259;
+    --line: #ece7df;           /* 細線 */
+    --card-radius: 16px;
+    --btn-radius: 10px;
+    --shadow-sm: 0 1px 3px rgba(45,42,38,0.06), 0 1px 2px rgba(45,42,38,0.04);
+    --shadow-md: 0 4px 16px rgba(45,42,38,0.08), 0 2px 4px rgba(45,42,38,0.04);
+    --shadow-lg: 0 12px 32px rgba(45,42,38,0.12);
+}
+body {
+    background: #f6f4f0 !important;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── 頂部列 ── */
+.header-bar {
+    background: linear-gradient(135deg, #fffdf8, #fdf0d8) !important;
+    border-bottom: 1px solid #f0d9a8 !important;
+    box-shadow: var(--shadow-sm);
+    padding: 12px 18px !important;
+}
+.logo-area h2 { color: var(--brand-dark) !important; letter-spacing: 0.3px; }
+.user-info-bar .info-item {
+    border: 1px solid #ead9bd !important;
+    border-radius: 999px !important;
+    background: #fffefb !important;
+    padding: 4px 12px !important;
+    box-shadow: var(--shadow-sm);
+    color: var(--ink) !important;
+}
+.header-btn {
+    border-radius: var(--btn-radius) !important;
+    border: 0 !important;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+    color: #5c3a09 !important;
+    box-shadow: var(--shadow-sm);
+    padding: 8px 14px !important;
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.header-btn:hover { filter: brightness(1.04); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.header-btn:active { transform: translateY(0); }
+.header-btn.logout { background: linear-gradient(135deg, #fb7185, #ef4444) !important; color: #fff !important; }
+
+/* ── 選單列 ── */
+.system-menu {
+    background: linear-gradient(135deg, #4b5563, #374151) !important;
+    border-bottom: 3px solid var(--brand) !important;
+    box-shadow: var(--shadow-sm);
+}
+.menu-item {
+    transition: background .15s ease, color .15s ease;
+    border-right: 1px solid rgba(255,255,255,0.08) !important;
+}
+.menu-item:hover, .menu-item.active, .menu-item.open {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+}
+.submenu {
+    border: 0 !important;
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-lg) !important;
+    overflow: hidden;
+    padding: 6px !important;
+    margin-top: 2px;
+}
+.submenu-item {
+    border-bottom: 0 !important;
+    border-radius: 8px !important;
+    transition: background .12s ease;
+}
+.submenu-item:hover, .submenu-item:active { background: #fdf0d8 !important; color: var(--brand-dark) !important; }
+
+/* ── 卡片 / 面板 ── */
+.work-list-panel, .sched-section {
+    background: #fff !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--card-radius) !important;
+    box-shadow: var(--shadow-md) !important;
+    overflow: hidden;
+}
+.panel-header {
+    background: linear-gradient(135deg, #fffdf8, #fdf0d8) !important;
+    border-bottom: 1px solid #f3e4c4 !important;
+    padding: 12px 16px !important;
+}
+.panel-header h3 { color: var(--brand-dark) !important; font-size: 15px !important; }
+.panel-body { padding: 16px !important; }
+
+/* ── 麵包屑 ── */
+.breadcrumb {
+    background: transparent !important;
+    border-bottom: 0 !important;
+    padding: 12px 16px 4px !important;
+    color: var(--ink-soft) !important;
+    font-size: 13px;
+}
+.breadcrumb a { color: var(--brand-dark) !important; text-decoration: none !important; font-weight: 600; }
+.breadcrumb a:hover { text-decoration: underline !important; }
+
+/* ── 按鈕（統一現代化）── */
+.btn-primary, .btn-secondary, .btn-confirm, .btn-danger, .btn-edit, .add-employee-btn, .btn-action {
+    border: 0 !important;
+    border-radius: var(--btn-radius) !important;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+    font-weight: 700 !important;
+}
+.btn-primary:hover, .btn-secondary:hover, .btn-confirm:hover, .btn-danger:hover, .btn-edit:hover, .add-employee-btn:hover, .btn-action:hover {
+    filter: brightness(1.05); transform: translateY(-1px); box-shadow: var(--shadow-md);
+}
+.btn-primary:active, .btn-secondary:active, .btn-confirm:active, .btn-danger:active, .btn-edit:active, .btn-action:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.btn-primary { background: linear-gradient(135deg, #fbbf24, #f59e0b) !important; color: #5c3a09 !important; }
+.btn-confirm { background: linear-gradient(135deg, #34d399, #10b981) !important; color: #fff !important; }
+.btn-secondary { background: linear-gradient(135deg, #e5e7eb, #d1d5db) !important; color: #374151 !important; }
+.btn-danger { background: linear-gradient(135deg, #fb7185, #ef4444) !important; color: #fff !important; }
+.btn-edit { background: linear-gradient(135deg, #60a5fa, #3b82f6) !important; color: #fff !important; }
+
+/* ── 表格 ── */
+.work-table { border-collapse: separate !important; border-spacing: 0; border-radius: 12px; overflow: hidden; }
+.work-table thead { background: linear-gradient(135deg, #f9fafb, #f1f0ec) !important; }
+.work-table th { border: 0 !important; border-bottom: 2px solid #e7e2d8 !important; color: var(--ink) !important; padding: 11px 12px !important; }
+.work-table td { border: 0 !important; border-bottom: 1px solid #f1efe9 !important; padding: 11px 12px !important; }
+.work-table tr:hover td { background: #fffaf0 !important; }
+.work-link { color: var(--brand-dark) !important; text-decoration: none !important; font-weight: 600; }
+.work-link:hover { text-decoration: underline !important; }
+
+/* ── 狀態標籤 ── */
+.status-tag { border-radius: 999px !important; padding: 3px 10px !important; font-weight: 700; }
+
+/* ── 表單 ── */
+.form-table .label-col { background: #faf8f4 !important; color: var(--ink) !important; border: 1px solid var(--line) !important; }
+.form-table td { border: 1px solid var(--line) !important; }
+.form-table input, .form-table select, .form-table textarea {
+    border: 1px solid #ddd5c8 !important;
+    border-radius: 8px !important;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-table input:focus, .form-table select:focus, .form-table textarea:focus {
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 3px rgba(224,140,44,0.15) !important;
+    outline: none;
+}
+
+/* ── 提示框 ── */
+.alert-box { border-radius: 12px !important; border-width: 1px !important; box-shadow: var(--shadow-sm); }
+
+/* ── 彈出視窗 ── */
+.modal-box, .modal-content {
+    border-radius: 18px !important;
+    box-shadow: var(--shadow-lg) !important;
+    border: 0 !important;
+}
+.modal-overlay { background: rgba(45,42,38,0.45) !important; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.modal-title { color: var(--brand-dark) !important; }
+
+/* ── 登入框 ── */
+.login-box {
+    border: 0 !important;
+    border-radius: 20px !important;
+    box-shadow: var(--shadow-lg) !important;
+    background: rgba(255,255,255,0.98) !important;
+}
+
+/* ── 通知 ── */
+.notification { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; background: linear-gradient(135deg, #34d399, #10b981) !important; }
+
+/* ── 捲動條（桌面）── */
+@media (hover: hover) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: #d8d0c2; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+}
+
+/* 手機版微調：卡片貼邊更省空間 */
+body.view-mobile .work-list-panel { border-radius: 12px !important; }
+body.view-mobile .panel-body { padding: 12px !important; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🎉 登入歡迎動畫                              ║
+   ╚══════════════════════════════════════════════╝ */
+#welcomeOverlay {
+    position: fixed; inset: 0; z-index: 200000;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #fff7e6 0%, #fde3b8 50%, #fcd29a 100%);
+    animation: welcomeFadeIn 0.4s ease;
+}
+#welcomeOverlay.welcome-out { animation: welcomeFadeOut 0.6s ease forwards; }
+.welcome-card {
+    text-align: center;
+    animation: welcomePop 0.7s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    padding: 30px;
+}
+.welcome-tulip {
+    font-size: 72px;
+    animation: welcomeBounce 1.2s ease infinite;
+    filter: drop-shadow(0 6px 12px rgba(194,65,12,0.25));
+}
+.welcome-greet {
+    font-size: 24px; font-weight: 800; color: #c2410c;
+    margin-top: 10px; letter-spacing: 1px;
+    animation: welcomeSlideUp 0.6s ease 0.15s both;
+}
+.welcome-name {
+    font-size: 32px; font-weight: 900; color: #2d2a26;
+    margin-top: 6px;
+    animation: welcomeSlideUp 0.6s ease 0.3s both;
+}
+.welcome-role {
+    display: inline-block; margin-top: 10px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #5c3a09; font-weight: 700; font-size: 14px;
+    padding: 5px 18px; border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+    animation: welcomeSlideUp 0.6s ease 0.45s both;
+}
+.welcome-sub {
+    font-size: 13px; color: #92837a; margin-top: 16px;
+    animation: welcomeSlideUp 0.6s ease 0.6s both;
+}
+.welcome-bar {
+    width: 180px; height: 5px; background: rgba(194,65,12,0.15);
+    border-radius: 999px; margin: 18px auto 0; overflow: hidden;
+    animation: welcomeSlideUp 0.6s ease 0.7s both;
+}
+.welcome-bar-fill {
+    height: 100%; width: 0; border-radius: 999px;
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    animation: welcomeBarFill 1.5s ease forwards;
+}
+@keyframes welcomeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes welcomeFadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+@keyframes welcomePop { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes welcomeBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes welcomeSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes welcomeBarFill { from { width: 0; } to { width: 100%; } }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  👋 登出動畫                                  ║
+   ╚══════════════════════════════════════════════╝ */
+#logoutOverlay {
+    position: fixed; inset: 0; z-index: 200000;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #4b5563 0%, #374151 60%, #1f2937 100%);
+    animation: welcomeFadeIn 0.4s ease;
+}
+#logoutOverlay.logout-out { animation: welcomeFadeOut 0.6s ease forwards; }
+.logout-card { text-align: center; padding: 30px; animation: welcomePop 0.6s cubic-bezier(0.18,0.89,0.32,1.28); }
+.logout-wave {
+    font-size: 68px;
+    animation: logoutWave 0.9s ease infinite;
+    transform-origin: 70% 70%;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+}
+.logout-bye {
+    font-size: 30px; font-weight: 900; color: #fff;
+    margin-top: 12px; letter-spacing: 1px;
+    animation: welcomeSlideUp 0.6s ease 0.15s both;
+}
+.logout-sub {
+    font-size: 14px; color: #d1d5db; margin-top: 12px;
+    animation: welcomeSlideUp 0.6s ease 0.3s both;
+}
+.logout-bar {
+    width: 180px; height: 5px; background: rgba(255,255,255,0.15);
+    border-radius: 999px; margin: 18px auto 0; overflow: hidden;
+    animation: welcomeSlideUp 0.6s ease 0.4s both;
+}
+.logout-bar-fill {
+    height: 100%; width: 0; border-radius: 999px;
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    animation: welcomeBarFill 1.2s ease forwards;
+}
+@keyframes logoutWave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(18deg); }
+    50% { transform: rotate(-8deg); }
+    75% { transform: rotate(14deg); }
 }
 </style>
 </head>
@@ -3361,6 +3661,12 @@ body.view-desktop { min-width: auto; }
                         <button class="btn-confirm" style="padding:10px 20px; font-weight:bold;" onclick="fbConnect()">🔗 連接</button>
                     </div>
                     <div id="fbStatus" style="margin-top:8px; font-size:13px;"></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                        <button onclick="fbDiagnostic()" style="padding:8px 14px; background:#0ea5e9; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔍 測試同步連線</button>
+                        <button onclick="fbForcePush()" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬆️ 強制上傳本機資料</button>
+                        <button onclick="fbForcePull()" style="padding:8px 14px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬇️ 強制下載雲端資料</button>
+                    </div>
+                    <div id="fbDiagResult" style="margin-top:8px; font-size:12px; white-space:pre-wrap; font-family:monospace; background:#f8fafc; padding:8px; border-radius:6px; display:none;"></div>
                     <button onclick="window.open('https://console.firebase.google.com/','_blank')" style="margin-top:8px; padding:8px 14px; background:#f59e0b; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔥 開啟 Firebase 主控台</button>
                 </div>
                 
@@ -3667,8 +3973,8 @@ body.view-desktop { min-width: auto; }
                 <div style="font-size:11px;color:#6b7280;margin-top:3px;">📌 員工主要工作的門市（可派駐其他門市支援）</div>
             </td></tr>
             <tr><td class="label-col">員工類型：</td><td>
-                <label style="margin-right:12px;"><input type="radio" name="empfType" value="fulltime" checked onchange="toggleSalaryFields('fulltime')"> 正職（月薪）</label>
-                <label><input type="radio" name="empfType" value="parttime" onchange="toggleSalaryFields('parttime')"> 工讀（時薪）</label>
+                <label style="display:inline-flex; align-items:center; margin-right:18px; white-space:nowrap;"><input type="radio" name="empfType" value="fulltime" checked onchange="toggleSalaryFields('fulltime')"> 正職（月薪）</label>
+                <label style="display:inline-flex; align-items:center; white-space:nowrap;"><input type="radio" name="empfType" value="parttime" onchange="toggleSalaryFields('parttime')"> 工讀（時薪）</label>
             </td></tr>
             <tr id="empfMonthlyRow"><td class="label-col">月薪：</td><td>NT$ <input type="number" id="empfMonthlySalary" value="28000" style="width:130px;"></td></tr>
             <tr id="empfHourlyRow" class="hidden"><td class="label-col">時薪：</td><td>NT$ <input type="number" id="empfHourlyRate" value="183" style="width:130px;"></td></tr>
@@ -3691,6 +3997,23 @@ body.view-desktop { min-width: auto; }
                 </select>
             </td></tr>
         </table>
+        <!-- 🆕 個別權限設定（整合）-->
+        <details id="empfPermSection" style="margin-top:14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px;">
+            <summary style="cursor:pointer; font-weight:bold; color:#1e40af; font-size:14px;">🔧 個別功能權限（點開設定，可選）</summary>
+            <div style="margin-top:10px;">
+                <div style="font-size:12px; color:#1e3a8a; background:#dbeafe; padding:8px; border-radius:6px; margin-bottom:8px;">
+                    💡 不設定 = 跟隨「職位角色」預設權限。<br>
+                    勾選後 = 此員工專屬權限（覆蓋角色預設）。
+                </div>
+                <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+                    <button type="button" onclick="empfPermPreset('role')" style="padding:5px 10px; background:#6b7280; color:white; border:0; border-radius:4px; cursor:pointer; font-size:12px;">📋 套用職位預設</button>
+                    <button type="button" onclick="empfPermSetAll(true)" style="padding:5px 10px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:12px;">☑️ 全選</button>
+                    <button type="button" onclick="empfPermSetAll(false)" style="padding:5px 10px; background:#ef4444; color:white; border:0; border-radius:4px; cursor:pointer; font-size:12px;">⬜ 全不選</button>
+                    <button type="button" onclick="empfPermClear()" style="padding:5px 10px; background:#f59e0b; color:white; border:0; border-radius:4px; cursor:pointer; font-size:12px;">🔄 清除自訂(跟隨角色)</button>
+                </div>
+                <div id="empfPermFeatures" style="max-height:280px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:6px; background:white;"></div>
+            </div>
+        </details>
         <div style="text-align:center; margin-top:15px;">
             <button class="btn-confirm" onclick="saveEmployeeFull()">✅ 儲存</button>
             <button class="btn-secondary" style="margin-left:8px;" onclick="closeModal('empFullModal')">取消</button>
@@ -4240,13 +4563,32 @@ function handleLogin() {
             role: account.role
         });
     } else {
-        // 無此帳號（fallback：時薪人員以 user12345 之外形式登入）
-        if (u.length >= 5 && p === '123456') {
+        // 無此帳號：查員工資料，依「職位」判定正確角色
+        var allEmps = loadData('employees', defaultEmployees);
+        var matchEmp = allEmps.find(function(e) { return e.num === u || e.id === u; });
+        if (matchEmp && p === '123456') {
+            var fullInfo = loadData('employeesFullInfo', {});
+            var empInfo = fullInfo[matchEmp.id] || {};
+            var empRole = getRoleFromEmployee(matchEmp, empInfo);
+            doLoginAs({ id: matchEmp.num, name: matchEmp.name, role: empRole, storeId: matchEmp.homeStoreId });
+        } else if (u.length >= 5 && p === '123456') {
             doLoginAs({ id: u, name: '員工', role: 'user' });
         } else {
             return alert('❌ 帳號或密碼錯誤' + demoMsg);
         }
     }
+}
+
+// 🆕 依員工職位/類型判定系統角色
+function getRoleFromEmployee(emp, info) {
+    var pos = (info && info.position) || '';
+    if (pos.indexOf('副店長') >= 0) return 'deputy';
+    if (pos.indexOf('店長') >= 0) return 'manager';
+    if (pos.indexOf('區域') >= 0 || pos.indexOf('經理') >= 0) return 'manager';
+    if (pos.indexOf('店職員') >= 0 || pos.indexOf('店員') >= 0 || pos.indexOf('正職') >= 0) return 'staff';
+    if (pos.indexOf('時薪') >= 0 || pos.indexOf('工讀') >= 0) return 'user';
+    // 無職位資訊時，依員工類型：正職→店職員，工讀→時薪
+    return (emp && emp.empType === 'fulltime') ? 'staff' : 'user';
 }
 
 // 🔑 共用登入邏輯（帳密 / 人臉 共用）
@@ -4284,8 +4626,39 @@ function doLoginAs(user) {
     
     logAction('login', '使用者登入：' + currentUser.name + '（' + currentUser.role + '）');
     
+    // 🎉 歡迎動畫
+    showWelcomeAnimation(dispName || roleName, roleName);
+    
     // 🆕 登入即同步：立刻從雲端拉取最新資料
     triggerLoginSync();
+}
+
+// 🎉 登入歡迎動畫
+function showWelcomeAnimation(name, roleName) {
+    // 移除舊的
+    var old = document.getElementById('welcomeOverlay');
+    if (old) old.remove();
+    
+    var hour = new Date().getHours();
+    var greet = hour < 5 ? '夜深了' : hour < 11 ? '早安' : hour < 14 ? '午安' : hour < 18 ? '午安' : '晚安';
+    var greetEmoji = hour < 5 ? '🌙' : hour < 11 ? '🌅' : hour < 18 ? '☀️' : '🌆';
+    
+    var ov = document.createElement('div');
+    ov.id = 'welcomeOverlay';
+    ov.innerHTML =
+        '<div class="welcome-card">' +
+            '<div class="welcome-tulip">🌷</div>' +
+            '<div class="welcome-greet">' + greetEmoji + ' ' + greet + '</div>' +
+            '<div class="welcome-name">' + name + '</div>' +
+            '<div class="welcome-role">' + roleName + '</div>' +
+            '<div class="welcome-sub">歡迎使用考勤管理系統</div>' +
+            '<div class="welcome-bar"><div class="welcome-bar-fill"></div></div>' +
+        '</div>';
+    document.body.appendChild(ov);
+    
+    // 自動淡出
+    setTimeout(function() { ov.classList.add('welcome-out'); }, 1600);
+    setTimeout(function() { if (ov && ov.parentNode) ov.remove(); }, 2200);
 }
 
 // 🆕 登入時自動同步
@@ -4564,12 +4937,45 @@ function openFaceLogin() {
 
 function logout() {
     if (confirm('確定要登出嗎？')) {
-        currentUser = null;
-        document.getElementById('mainPage').classList.add('hidden');
-        document.getElementById('loginPage').classList.remove('hidden');
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
+        var byeName = '';
+        if (currentUser) {
+            byeName = currentUser.name || '';
+            if (!byeName || byeName === '員工') {
+                var emps = loadData('employees', defaultEmployees);
+                var e = emps.find(function(x){ return x.num === currentUser.id || x.id === currentUser.id; });
+                if (e && e.name) byeName = e.name;
+            }
+        }
+        showLogoutAnimation(byeName, function() {
+            currentUser = null;
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
     }
+}
+
+// 👋 登出動畫
+function showLogoutAnimation(name, onDone) {
+    var old = document.getElementById('logoutOverlay');
+    if (old) old.remove();
+    
+    var ov = document.createElement('div');
+    ov.id = 'logoutOverlay';
+    ov.innerHTML =
+        '<div class="logout-card">' +
+            '<div class="logout-wave">👋</div>' +
+            '<div class="logout-bye">再見' + (name ? '，' + name : '') + '</div>' +
+            '<div class="logout-sub">感謝您的辛勞，期待再相見 🌷</div>' +
+            '<div class="logout-bar"><div class="logout-bar-fill"></div></div>' +
+        '</div>';
+    document.body.appendChild(ov);
+    
+    // 中途切換畫面（趁淡出時把主畫面換成登入頁）
+    setTimeout(function() { if (typeof onDone === 'function') onDone(); }, 1100);
+    setTimeout(function() { ov.classList.add('logout-out'); }, 1400);
+    setTimeout(function() { if (ov && ov.parentNode) ov.remove(); }, 2000);
 }
 
 // ============= 頁面切換 =============
@@ -5371,7 +5777,7 @@ function pushTaskNotification(username, name, title, desc, fromName) {
     var notifs = loadData('taskNotifications', {});
     if (!notifs[username]) notifs[username] = [];
     notifs[username].push({
-        id: 'tn_' + Date.now(),
+        id: 'tn_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
         title: title,
         desc: desc,
         fromName: fromName,
@@ -5379,6 +5785,50 @@ function pushTaskNotification(username, name, title, desc, fromName) {
         read: false
     });
     saveData('taskNotifications', notifs);
+}
+
+// 🆕 員工提交申請 → 立即推播給管理員與店長
+function notifyManagersOfApplication(typeLabel, detail) {
+    if (!currentUser) return;
+    // 申請人姓名
+    var applicantName = currentUser.name || '';
+    if (!applicantName || applicantName === '員工') {
+        var emps = loadData('employees', defaultEmployees);
+        var e = emps.find(function(x){ return x.num === currentUser.id || x.id === currentUser.id; });
+        if (e && e.name) applicantName = e.name;
+    }
+    if (!applicantName) applicantName = currentUser.id;
+    
+    // 申請人所屬門市
+    var myStore = (typeof getUserStoreId === 'function') ? getUserStoreId() : null;
+    
+    // 收件人：所有管理員 + 同門市店長/副店長（排除自己）
+    var accounts = loadData('accounts', defaultAccounts);
+    var recipients = [];
+    for (var i = 0; i < accounts.length; i++) {
+        var a = accounts[i];
+        if (a.username === currentUser.id) continue;       // 不通知自己
+        if (a.status === 'disabled') continue;
+        var isAdmin = (a.role === 'admin');
+        var isStoreMgr = (a.role === 'manager' || a.role === 'deputy');
+        if (isAdmin) {
+            recipients.push(a.username);
+        } else if (isStoreMgr) {
+            // 同門市才通知（admin 帳號無 storeId，店長有）
+            if (!myStore || !a.storeId || a.storeId === myStore) recipients.push(a.username);
+        }
+    }
+    
+    var title = '📋 ' + applicantName + ' 提交「' + typeLabel + '」';
+    var desc = (detail || '') + '（請至對應頁面審核）';
+    for (var r = 0; r < recipients.length; r++) {
+        pushTaskNotification(recipients[r], '', title, desc, applicantName);
+    }
+    
+    // 立即推送到雲端，讓管理員裝置盡快收到
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    
+    showNotif('📨 已通知 ' + recipients.length + ' 位管理者');
 }
 
 function closeModal(id) {
@@ -6511,6 +6961,7 @@ function submitOvertime() {
     
     renderOvertimeHistory();
     showNotif('✅ 加班申請已送出');
+    notifyManagersOfApplication('加班申請', d.replace(/-/g,'/') + '　' + s + '-' + e + '（' + hrs.toFixed(1) + 'H）');
 }
 
 function renderOvertimeHistory() {
@@ -6557,6 +7008,7 @@ function submitBusinessTrip() {
     document.getElementById('btReason').value = '';
     renderBusinessTripHistory();
     showNotif('✅ 出差申請已送出');
+    notifyManagersOfApplication('出差申請', t + '　' + l + '（' + s.replace('T',' ') + '～' + e.replace('T',' ') + '）');
 }
 
 function renderBusinessTripHistory() {
@@ -6608,6 +7060,7 @@ function submitCardSupp() {
     document.getElementById('csReason').value = '';
     renderCardSuppHistory();
     showNotif('✅ 補卡申請已送出（剩 ' + (1 - monthCount) + ' 次）');
+    notifyManagersOfApplication('補卡申請', d.replace(/-/g,'/') + '　' + t + ' ' + tm + '　原因：' + r);
 }
 
 function renderCardSuppHistory() {
@@ -9981,14 +10434,39 @@ function recalcInventoryReport() {
     var prevCumulative = (savedReports[prevDate] && savedReports[prevDate]['19']) ? parseFloat(savedReports[prevDate]['19'].retail) || 0 : 0;
     data['19'].retail = prevCumulative + num('18');
     
+    // 🆕 期初存貨：自動帶入「前一個有資料日期」的期末庫存（零售/成本/稅金）
     if (!data['01']._manualSet) {
-        var prevEnding = (savedReports[prevDate] && savedReports[prevDate]['27']) ? parseFloat(savedReports[prevDate]['27'].retail) || 0 : num('01');
-        if (prevEnding) data['01'].retail = prevEnding;
+        var prevReport = getMostRecentPriorReport(dateVal);
+        if (prevReport && prevReport['27']) {
+            data['01'].retail = parseFloat(prevReport['27'].retail) || 0;
+            data['01'].cost = parseFloat(prevReport['27'].cost) || 0;
+            data['01'].tax = parseFloat(prevReport['27'].tax) || 0;
+            data['01']._carriedFrom = prevReport._date || '';
+        }
     }
     
+    // 期末庫存（27）：零售 + 成本 + 稅金 各自計算
     data['27'].retail = num('01') + num('18') + num('20') + num('21') + num('22') + num('23') + num('24') + num('25') + num('26');
+    var numC = function(no) { return parseFloat(data[no].cost) || 0; };
+    var numT = function(no) { return parseFloat(data[no].tax) || 0; };
+    data['27'].cost = numC('01') + numC('18') + numC('20') + numC('21') + numC('22') + numC('23') + numC('24') + numC('25') + numC('26');
+    data['27'].tax = numT('01') + numT('18') + numT('20') + numT('21') + numT('22') + numT('23') + numT('24') + numT('25') + numT('26');
     
     renderInventoryTable();
+}
+
+// 🆕 找出指定日期之前「最近一筆有資料」的庫存報表
+function getMostRecentPriorReport(dateVal) {
+    var savedReports = loadData('inventoryReports', {});
+    var dates = Object.keys(savedReports).filter(function(d) {
+        return d < dateVal && savedReports[d] && savedReports[d]['27'];
+    });
+    if (dates.length === 0) return null;
+    dates.sort();  // 由舊到新
+    var latest = dates[dates.length - 1];
+    var rep = savedReports[latest];
+    rep._date = latest;
+    return rep;
 }
 
 function getInvPrevDate(dateVal) {
@@ -10016,7 +10494,8 @@ function renderInventoryTable() {
         html += '<tr style="background:' + bgColor + ';">';
         html += '<td style="text-align:center; font-weight:bold;">' + row.no + '</td>';
         html += '<td style="font-weight:' + (isCalc ? 'bold' : 'normal') + ';">' + row.name + 
-                (row.kind !== 'manual' && row.kind !== 'calc' ? ' <span style="font-size:9px; color:#059669;">[自動]</span>' : '') + '</td>';
+                (row.kind !== 'manual' && row.kind !== 'calc' ? ' <span style="font-size:9px; color:#059669;">[自動]</span>' : '') +
+                (row.no === '01' && d._carriedFrom ? ' <span style="font-size:9px; color:#0ea5e9;">[帶入 ' + d._carriedFrom + ' 期末]</span>' : '') + '</td>';
         html += '<td></td><td></td><td></td><td></td>';
         // 零售價欄
         if (isManual) {
@@ -14461,6 +14940,7 @@ function submitLeave() {
     var msg = '✅ 請假申請已送出（' + days.toFixed(1) + ' 天）';
     if (t === 'comp') msg += '\n\n💼 將扣減代休假時數：' + (days * DAILY_NORMAL_HOURS).toFixed(1) + ' 小時';
     showNotif('✅ 請假申請已送出');
+    notifyManagersOfApplication('請假申請', lt.name + '　' + s.replace('T',' ') + '～' + e.replace('T',' ') + '（' + days.toFixed(1) + 'H）　事由：' + r);
     if (t === 'comp') alert(msg);
 }
 
@@ -14573,6 +15053,7 @@ function openEmployeeFullModal() {
     document.getElementById('empfMonthlySalary').value = 28000;
     document.getElementById('empfHourlyRate').value = 183;
     toggleSalaryFields('fulltime');
+    renderEmpfPermissions('', '時薪人員', 'fulltime');  // 🆕 新員工權限（依預設職位）
     document.getElementById('empFullModal').classList.remove('hidden');
 }
 
@@ -14626,7 +15107,73 @@ function openEditEmployeeModal(id) {
     document.getElementById('empfMonthlySalary').value = emp.monthlySalary || 28000;
     document.getElementById('empfHourlyRate').value = emp.hourlyRate || 183;
     toggleSalaryFields(empType);
+    renderEmpfPermissions(emp.num, info.position || '時薪人員', empType);  // 🆕 載入此員工權限
     document.getElementById('empFullModal').classList.remove('hidden');
+}
+
+// 🆕 渲染員工個別權限勾選
+function renderEmpfPermissions(empNum, position, empType) {
+    var container = document.getElementById('empfPermFeatures');
+    if (!container || typeof PERMISSION_FEATURES === 'undefined') return;
+    
+    // 重置清除旗標
+    var sec = document.getElementById('empfPermSection');
+    if (sec) sec.removeAttribute('data-cleared');
+    
+    // 取得此員工目前自訂權限（以員工編號為 key）
+    var customAcc = loadData('customAccountPermissions', {});
+    var current = empNum ? customAcc[empNum] : null;
+    
+    // 沒自訂 → 用職位對應角色的預設權限預先勾選
+    if (!current) {
+        var role = getRoleFromEmployee({ empType: empType }, { position: position });
+        var rolePerm = getEffectivePermissions(role);
+        current = (rolePerm && rolePerm.allowed) || [];
+    }
+    
+    var html = '';
+    for (var g = 0; g < PERMISSION_FEATURES.length; g++) {
+        var grp = PERMISSION_FEATURES[g];
+        html += '<div style="background:#fef3c7; padding:6px 10px; font-weight:bold; color:#78350f; font-size:12px;">' + grp.group + '</div>';
+        for (var i = 0; i < grp.items.length; i++) {
+            var feat = grp.items[i];
+            var checked = current.indexOf(feat.id) !== -1;
+            html += '<label style="display:flex; align-items:center; padding:5px 10px; cursor:pointer; border-bottom:1px solid #f3f4f6;">' +
+                    '<input type="checkbox" class="empf-perm-check" data-feature="' + feat.id + '" ' + (checked ? 'checked' : '') + ' style="width:18px; height:18px; margin-right:10px; cursor:pointer;">' +
+                    '<span style="font-size:13px;">' + feat.name + '</span></label>';
+        }
+    }
+    container.innerHTML = html;
+}
+
+function empfPermSetAll(checked) {
+    var cbs = document.querySelectorAll('.empf-perm-check');
+    for (var i = 0; i < cbs.length; i++) cbs[i].checked = checked;
+}
+
+function empfPermPreset(mode) {
+    // 依目前選的職位套用角色預設
+    var position = document.getElementById('empfPosition').value;
+    var empType = 'fulltime';
+    var radios = document.getElementsByName('empfType');
+    for (var i = 0; i < radios.length; i++) { if (radios[i].checked) { empType = radios[i].value; break; } }
+    var role = getRoleFromEmployee({ empType: empType }, { position: position });
+    var rolePerm = getEffectivePermissions(role);
+    var allowed = (rolePerm && rolePerm.allowed) || [];
+    var cbs = document.querySelectorAll('.empf-perm-check');
+    for (var j = 0; j < cbs.length; j++) {
+        var fid = cbs[j].getAttribute('data-feature');
+        cbs[j].checked = allowed.indexOf(fid) !== -1;
+    }
+    showNotif('📋 已套用「' + position + '」職位預設權限');
+}
+
+function empfPermClear() {
+    // 標記為清除（儲存時移除自訂）
+    document.getElementById('empfPermSection').setAttribute('data-cleared', '1');
+    var cbs = document.querySelectorAll('.empf-perm-check');
+    for (var i = 0; i < cbs.length; i++) cbs[i].checked = false;
+    showNotif('🔄 已標記為「跟隨職位角色」，儲存後生效');
 }
 
 function saveEmployeeFull() {
@@ -14693,6 +15240,25 @@ function saveEmployeeFull() {
     
     saveData('employees', employees);
     saveData('employeesFullInfo', fullInfo);
+    
+    // 🆕 一併儲存個別權限（以員工編號為 key）
+    var customAcc = loadData('customAccountPermissions', {});
+    var sec = document.getElementById('empfPermSection');
+    if (sec && sec.getAttribute('data-cleared') === '1') {
+        // 使用者選擇清除自訂 → 跟隨角色
+        delete customAcc[num];
+        saveData('customAccountPermissions', customAcc);
+    } else {
+        var permCbs = document.querySelectorAll('.empf-perm-check:checked');
+        // 只有當勾選與角色預設不同時才存自訂；但為簡單起見，只要展開過就存
+        if (permCbs.length > 0) {
+            var allowed = [];
+            for (var pc = 0; pc < permCbs.length; pc++) allowed.push(permCbs[pc].getAttribute('data-feature'));
+            customAcc[num] = allowed;
+            saveData('customAccountPermissions', customAcc);
+        }
+    }
+    
     recalculateCompLeave();
     closeModal('empFullModal');
     renderEmployeeBasicList();
@@ -15010,6 +15576,10 @@ function saveAbnormal() {
     closeModal('abnormalModal');
     renderAbnormalList();
     showNotif('✅ 異常記錄已新增');
+    // 員工自行回報時通知管理員（管理員自己新增則不重複通知自己）
+    if (currentUser && currentUser.role !== 'admin') {
+        notifyManagersOfApplication('出勤異常', d.replace(/-/g,'/') + '　' + t + (n ? '　' + n : ''));
+    }
 }
 
 function resolveAbnormal(id) {
@@ -15434,6 +16004,100 @@ function fbConnect() {
         var msg = err.message || String(err);
         setS('❌ 連線失敗：' + msg + '（請確認網址正確、資料庫規則設為測試模式）', '#dc2626');
         alert('❌ 連線失敗\n\n請確認：\n1. 網址正確（結尾為 firebaseio.com 或 firebasedatabase.app）\n2. Realtime Database 規則設為「測試模式」\n   （Rules 中 .read 和 .write 都是 true）\n3. 使用 HTTPS 連線');
+    });
+}
+
+// 🔍 完整診斷：逐步測試並回報
+function fbDiagnostic() {
+    var resultEl = document.getElementById('fbDiagResult');
+    var log = function(m) { if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent += m + '\n'; } };
+    if (resultEl) resultEl.textContent = '';
+    
+    log('🔍 開始診斷...');
+    var url = fbGetUrl();
+    log('1️⃣ Firebase 網址：' + (url || '（未設定）'));
+    if (!url) { log('❌ 沒有網址，請先貼上並連接'); return; }
+    
+    log('2️⃣ 連線環境：' + location.protocol + (location.protocol === 'https:' ? ' ✅' : ' ❌ 需 HTTPS'));
+    log('3️⃣ 測試寫入雲端...');
+    
+    var testKey = url + '/_difftest.json';
+    var testVal = { t: Date.now(), device: navigator.userAgent.substring(0, 30) };
+    
+    ezFetch(testKey, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testVal)
+    }, 12000).then(function(r) {
+        if (r.status === 401 || r.status === 403) {
+            log('❌ 寫入被拒（' + r.status + '）→ 資料庫規則沒開放！');
+            log('   解法：Firebase → Realtime Database → 規則');
+            log('   把 .read 和 .write 都改成 true 並發布');
+            throw new Error('RULES');
+        }
+        if (!r.ok) { log('❌ 寫入失敗 HTTP ' + r.status); throw new Error('WRITE_FAIL'); }
+        log('   ✅ 寫入成功');
+        log('4️⃣ 測試讀取雲端...');
+        return ezFetch(testKey, { method: 'GET' }, 12000);
+    }).then(function(r) {
+        if (!r.ok) { log('❌ 讀取失敗 HTTP ' + r.status); throw new Error('READ_FAIL'); }
+        return r.json();
+    }).then(function(data) {
+        log('   ✅ 讀取成功');
+        log('5️⃣ 檢查主資料...');
+        return ezFetch(url + '/hrdata.json', { method: 'GET' }, 12000);
+    }).then(function(r) {
+        return r.json();
+    }).then(function(data) {
+        if (!data) {
+            log('   ⚠️ 雲端尚無主資料（hrdata）');
+            log('   解法：點「⬆️ 強制上傳本機資料」');
+        } else {
+            var keys = Object.keys(data);
+            var accCount = data.accounts ? data.accounts.length : 0;
+            log('   ✅ 雲端有資料：' + keys.length + ' 類，帳號 ' + accCount + ' 個');
+        }
+        log('');
+        log('✅ 診斷完成！連線正常。');
+        log('若各裝置資料不一致，請：');
+        log('• 主裝置點「⬆️ 強制上傳」');
+        log('• 其他裝置點「⬇️ 強制下載」');
+    }).catch(function(err) {
+        log('');
+        log('診斷中斷：' + (err.message || err));
+        if ((err.message || '').indexOf('逾時') >= 0) {
+            log('→ 網路連線逾時，請換網路或關閉 VPN');
+        }
+    });
+}
+
+// ⬆️ 強制上傳本機資料到雲端
+function fbForcePush() {
+    var resultEl = document.getElementById('fbDiagResult');
+    var log = function(m) { if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = m; } };
+    if (!fbEnabled()) { log('❌ 尚未連接 Firebase'); return; }
+    log('⬆️ 上傳中...');
+    pushToFirebase(true).then(function() {
+        log('✅ 已將本機資料上傳雲端！其他裝置點「⬇️ 強制下載」即可取得。');
+        showNotif('⬆️ 已上傳雲端');
+    }).catch(function(err) {
+        log('❌ 上傳失敗：' + (err.message || err) + '\n（多半是資料庫規則沒開放，請看「🔍 測試同步連線」）');
+    });
+}
+
+// ⬇️ 強制下載雲端資料到本機
+function fbForcePull() {
+    var resultEl = document.getElementById('fbDiagResult');
+    var log = function(m) { if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = m; } };
+    if (!fbEnabled()) { log('❌ 尚未連接 Firebase'); return; }
+    if (!confirm('⚠️ 將用雲端資料覆蓋本機目前資料，確定？')) return;
+    log('⬇️ 下載中...');
+    pullFromFirebase(false).then(function(n) {
+        log('✅ 已下載雲端資料（' + n + ' 項）！3 秒後重新整理畫面。');
+        showNotif('⬇️ 已下載雲端資料');
+        setTimeout(function() { location.reload(); }, 3000);
+    }).catch(function(err) {
+        log('❌ 下載失敗：' + (err.message || err));
     });
 }
 
