@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>考勤管理系統 Rostering System</title>
+<title>OPEN! 考勤管理系統</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23fff' stroke='%2300a0e9' stroke-width='6'/%3E%3Ctext x='50' y='66' font-size='42' font-weight='900' text-anchor='middle' fill='%23e3007f' font-family='Arial'%3EO%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
@@ -41,6 +42,20 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
 .logo-area { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .logo-area h2 { color: #92400e; font-size: 18px; font-weight: bold; }
 .logo-area span { color: #78350f; font-size: 11px; font-style: italic; }
+/* 🟦 OPEN! 風格彩色字標 */
+.uniopen-mark {
+    display: inline-flex; align-items: center; gap: 1px;
+    background: #fff; border: 2px solid #00a0e9; border-radius: 12px;
+    padding: 3px 9px; font-weight: 900; font-size: 19px; line-height: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); letter-spacing: -0.5px;
+    font-family: "Arial Rounded MT Bold", "Helvetica", sans-serif;
+}
+.uniopen-mark .o { color: #e3007f; }
+.uniopen-mark .p { color: #f39800; }
+.uniopen-mark .e { color: #22ac38; }
+.uniopen-mark .n { color: #00a0e9; }
+.uniopen-mark .x { color: #e60012; margin-left: 1px; }
+.uniopen-mark.big { font-size: 38px; padding: 8px 18px; border-radius: 16px; border-width: 3px; }
 .user-info-bar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #4b5563; flex-wrap: wrap; }
 .user-info-bar .info-item { border: 1px dashed #9ca3af; padding: 3px 8px; border-radius: 3px; background: white; }
 .header-buttons { display: flex; gap: 5px; }
@@ -1842,6 +1857,123 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
     padding: 30px !important;
     text-align: center;
 }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🏠 首頁儀表板                                ║
+   ╚══════════════════════════════════════════════╝ */
+#homeDashboard { margin: 10px 10px 0; }
+.home-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #fffdf8, #fde3b8 90%);
+    border: 1px solid #ead9bd; border-radius: var(--card-radius);
+    box-shadow: var(--shadow-md); padding: 18px 22px; margin-bottom: 12px;
+    position: relative; overflow: hidden;
+}
+.home-greet { font-size: 22px; font-weight: 900; color: var(--brand-dark); letter-spacing: 0.5px; }
+.home-role {
+    display: inline-block; margin-top: 6px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #5c3a09;
+    font-weight: 700; font-size: 12px; padding: 3px 12px; border-radius: 999px;
+}
+.home-date { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
+.home-tulip { font-size: 52px; animation: homeBob 2.5s ease-in-out infinite; }
+@keyframes homeBob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+.home-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.home-stat-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow-sm); padding: 16px 10px; text-align: center;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+.home-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.home-stat-card .hs-num { font-size: 30px; font-weight: 900; line-height: 1; }
+.home-stat-card .hs-label { font-size: 12px; color: var(--ink-soft); margin-top: 6px; font-weight: 600; }
+.home-stat-card.pending { border-top: 3px solid #f59e0b; }
+.home-stat-card.pending .hs-num { color: #d97706; }
+.home-stat-card.review { border-top: 3px solid #3b82f6; }
+.home-stat-card.review .hs-num { color: #2563eb; }
+.home-stat-card.done { border-top: 3px solid #22c55e; }
+.home-stat-card.done .hs-num { color: #16a34a; }
+body.view-mobile .home-greet { font-size: 18px; }
+body.view-mobile .home-tulip { font-size: 40px; }
+body.view-mobile .home-stat-card .hs-num { font-size: 24px; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🔐 登入頁精緻設計                            ║
+   ╚══════════════════════════════════════════════╝ */
+.login-container {
+    min-height: 100vh !important;
+    background: linear-gradient(135deg, #fff7e6 0%, #fde3b8 40%, #fbcd8e 75%, #f5b971 100%) !important;
+    padding: 20px !important;
+    position: relative;
+    overflow: hidden;
+}
+/* 背景裝飾光暈 */
+.login-container::before, .login-container::after {
+    content: ''; position: fixed; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, rgba(255,255,255,0.5), rgba(255,255,255,0));
+}
+.login-container::before { width: 320px; height: 320px; top: -80px; right: -60px; }
+.login-container::after { width: 260px; height: 260px; bottom: -60px; left: -60px; background: radial-gradient(circle, rgba(224,140,44,0.18), rgba(224,140,44,0)); }
+.login-box {
+    max-width: 460px !important;
+    margin: 28px auto !important;
+    background: rgba(255,255,255,0.96) !important;
+    border: 0 !important;
+    border-radius: 24px !important;
+    padding: 28px 26px !important;
+    box-shadow: 0 20px 50px rgba(124,80,30,0.22), 0 4px 12px rgba(0,0,0,0.06) !important;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    position: relative; z-index: 1;
+    animation: loginCardIn 0.5s cubic-bezier(0.18,0.89,0.32,1.1);
+}
+@keyframes loginCardIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.system-title {
+    text-align: center !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 18px !important;
+    border-bottom: 2px dashed #ead0a8 !important;
+}
+.system-title h1 { color: var(--brand-dark) !important; font-size: 26px !important; letter-spacing: 1px; }
+.system-title p { color: #b08043 !important; font-style: italic; letter-spacing: 2px; font-size: 12px; }
+/* 公告 */
+.announcement {
+    border-radius: 12px !important;
+    border-left-width: 4px !important;
+    box-shadow: var(--shadow-sm);
+    background: #fffdf8 !important;
+    padding: 10px 14px !important;
+}
+.announcement.urgent { border-left-color: #ef4444 !important; }
+.announcement.normal { border-left-color: #3b82f6 !important; }
+.announcement-title { font-weight: 800; font-size: 13px; }
+/* 登入表單卡 */
+.login-form {
+    background: #fffdf9 !important;
+    border: 1px solid #f0e3cc !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    margin-top: 16px !important;
+    box-shadow: inset 0 1px 0 #fff;
+}
+.form-row {
+    display: flex !important; align-items: center !important;
+    margin-bottom: 12px !important; gap: 10px !important;
+    background: #fff; border: 1px solid #e7ddca; border-radius: 12px;
+    padding: 4px 12px; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-row:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(224,140,44,0.15); }
+.form-row .form-label { color: var(--ink-soft) !important; font-weight: 700; white-space: nowrap; font-size: 14px; }
+.form-row .form-input {
+    border: 0 !important; background: transparent !important; box-shadow: none !important;
+    flex: 1; padding: 10px 4px !important; font-size: 16px !important;
+}
+.form-row .form-input:focus { box-shadow: none !important; }
+/* 按鈕群組 */
+.button-group { gap: 8px !important; margin-top: 16px !important; }
+.button-group .btn-action { flex: 1; min-width: 90px; font-size: 15px !important; padding: 12px 8px !important; }
+
+body.view-mobile .login-box { padding: 22px 18px !important; }
+body.view-mobile .system-title h1 { font-size: 22px !important; }
 </style>
 </head>
 <body>
@@ -1875,9 +2007,12 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
                 <span class="form-label">🔒 密碼</span>
                 <input type="password" id="password" class="form-input" placeholder="密碼">
             </div>
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:8px; margin-bottom:8px; text-align:center; font-size:12px; color:#1e40af;">
+                📍 輸入員工編號後可<strong>直接打卡</strong>（需在門市範圍內、允許定位）
+            </div>
             <div class="button-group">
-                <button class="btn-action btn-signin" onclick="handleSignIn()">📥 簽到</button>
-                <button class="btn-action btn-signout" onclick="handleSignOut()">📤 簽退</button>
+                <button class="btn-action btn-signin" onclick="handleSignIn()">🟢 上班打卡</button>
+                <button class="btn-action btn-signout" onclick="handleSignOut()">🔴 下班打卡</button>
                 <button class="btn-action btn-login" onclick="handleLogin()">🔓 登入</button>
             </div>
             <button class="btn-action" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; font-weight:bold; padding:14px; border:0; border-radius:8px; cursor:pointer; font-size:16px;" onclick="openFaceLogin()">🤳 快速登入（Face ID / 指紋）</button>
@@ -1956,7 +2091,6 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
         <div class="menu-item" id="menu-daily-inv">📊 日別庫存 ▼
             <div class="submenu">
                 <div class="submenu-item" onclick="goToPage('cashReport','menu-daily-inv')">💵 現金日報</div>
-                <div class="submenu-item" onclick="goToPage('cashHandover','menu-daily-inv')">💴 交接班現金</div>
                 <div class="submenu-item" onclick="goToPage('purchaseReceipt','menu-daily-inv')">📦 進貨驗收</div>
                 <div class="submenu-item" onclick="goToPage('transferOrder','menu-daily-inv')">🔄 51-調撥單</div>
                 <div class="submenu-item" onclick="goToPage('inventoryReport','menu-daily-inv')">📊 日別庫存明細表</div>
@@ -1986,6 +2120,7 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
     <!-- 工作清單 -->
     <div id="page-workList" class="page-content">
         <div class="main-content">
+            <div id="homeDashboard"></div>
             <div class="work-list-panel">
                 <div class="panel-header">
                     <h3>📋 工作清單</h3>
@@ -3259,103 +3394,6 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
     </div>
     
     <!-- 📦 進貨驗收彙總表頁面 -->
-    
-    <!-- 💴 交接班現金管理 -->
-    <div id="page-cashHandover" class="page-content hidden">
-        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 📊 日別庫存 &gt; <strong>💴 交接班現金</strong></div>
-        <div class="main-content">
-            <div class="work-list-panel">
-                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:center;">
-                    <h3>💴 交接班現金管理</h3>
-                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                        <input type="date" id="choDate" style="padding:6px; border:1px solid #ccc; border-radius:6px;">
-                        <select id="choShift" style="padding:6px; border:1px solid #ccc; border-radius:6px;">
-                            <option value="早班">早班</option>
-                            <option value="中班">中班</option>
-                            <option value="夜班">夜班</option>
-                        </select>
-                        <span id="choRegLabel" style="padding:6px 12px; background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#4a2e08; border-radius:8px; font-weight:bold; font-size:14px;">🖥️ 收銀機 1</span>
-                        <input type="hidden" id="choRegister" value="收銀機1">
-                        <button id="choRegBtn" class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="choToggleRegister()">➡️ 下一步：收銀機 2</button>
-                        <button class="btn-secondary" style="padding:6px 12px; font-size:13px;" onclick="loadCashHandover()">📂 載入</button>
-                        <button class="btn-primary" style="padding:6px 12px; font-size:13px;" onclick="printCashHandover()">🖨️ 列印</button>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <div class="alert-box info" style="margin-bottom:12px;">💡 各面額直接輸入<strong>實際金額</strong>（例：1元有100個就輸入 100），系統自動加總與算短溢。按確認鍵可跳下一格。填完點「💾 儲存」。</div>
-                    
-                    <!-- 現金清點 -->
-                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
-                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">💰 現金清點</h4>
-                        <table class="work-table" style="width:100%;">
-                            <thead><tr><th>面額</th><th>實際金額</th><th style="text-align:right;">小計</th></tr></thead>
-                            <tbody id="choCashBody"></tbody>
-                            <tfoot><tr style="background:#fef3c7; font-weight:bold;"><td colspan="2">現金合計</td><td style="text-align:right;" id="choCashTotal">$0</td></tr></tfoot>
-                        </table>
-                    </div>
-                    
-                    <!-- 取用金額計算 -->
-                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
-                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">🧮 取用金額 / 短溢計算</h4>
-                        <table class="form-table" style="width:100%;">
-                            <tr><td class="label-col">借零金庫 (B)</td><td><input type="number" id="choB" oninput="calcCashHandover()" placeholder="0" value="0"></td></tr>
-                            <tr><td class="label-col">店長加零 (4)</td><td><input type="number" id="cho4" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">投零清點 (5)</td><td><input type="number" id="cho5" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">取用金額 A<br><span style="font-size:11px;color:#6b7280;">(現金合計)</span></td><td><span id="choA" style="font-weight:bold;">$0</span></td></tr>
-                            <tr><td class="label-col">投零 (D)</td><td><input type="number" id="choD" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">下一班接班金額 (E)</td><td><input type="number" id="choE" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr style="background:#fef3c7;"><td class="label-col"><strong>短/溢</strong><br><span style="font-size:11px;color:#6b7280;">B+C-A-D-E</span></td><td><span id="choShortage" style="font-weight:bold; font-size:18px;">$0</span></td></tr>
-                        </table>
-                    </div>
-                    
-                    <!-- 銷貨計算 -->
-                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
-                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">📊 銷貨計算</h4>
-                        <table class="form-table" style="width:100%;">
-                            <tr><td class="label-col">發票帳結金額 (a/GS)</td><td><input type="number" id="choGS" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">− 退瓶、折讓 (b)</td><td><input type="number" id="choB2" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">− 門市/廠商折價卷 (c)</td><td><input type="number" id="choC2" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">− 組合促銷折讓-免稅 (d)</td><td><input type="number" id="choD2" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">− 組合促銷折讓-應稅 (e)</td><td><input type="number" id="choE2" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">− 誤打銷退重印-免稅 (f)</td><td><input type="number" id="choF2" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr><td class="label-col">− 誤打銷退重印-應稅 (g)</td><td><input type="number" id="choG2" oninput="calcCashHandover()" placeholder="0"></td></tr>
-                            <tr style="background:#d1fae5;"><td class="label-col"><strong>實際銷貨收入 (h)</strong></td><td><span id="choH" style="font-weight:bold; font-size:16px;">$0</span></td></tr>
-                            <tr><td class="label-col">來客數</td><td><input type="number" id="choCustomers" placeholder="0"></td></tr>
-                        </table>
-                    </div>
-                    
-                    <!-- 其他項目 -->
-                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
-                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">📋 其他項目</h4>
-                        <table class="form-table" style="width:100%;">
-                            <tr><td class="label-col">公共料金合計(代收)</td><td><input type="number" id="choPublic" placeholder="0"></td></tr>
-                            <tr><td class="label-col">IC卡 (i-cash)</td><td><input type="number" id="choIcash" placeholder="0"></td></tr>
-                            <tr><td class="label-col">寶特瓶退處理商</td><td><input type="number" id="choBottle" placeholder="0"></td></tr>
-                            <tr><td class="label-col">寶特瓶佣金收入</td><td><input type="number" id="choBottleFee" placeholder="0"></td></tr>
-                            <tr><td class="label-col">現金進貨、費用支出</td><td><input type="number" id="choExpense" placeholder="0"></td></tr>
-                            <tr><td class="label-col">其他收入</td><td><input type="number" id="choOther" placeholder="0"></td></tr>
-                            <tr><td class="label-col">收銀員簽名</td><td><input type="text" id="choCashier" placeholder="收銀員姓名"></td></tr>
-                        </table>
-                    </div>
-                    
-                    <div style="text-align:center;">
-                        <button class="btn-confirm" style="padding:12px 30px; font-size:16px;" onclick="saveCashHandover()">💾 儲存交接班現金</button>
-                    </div>
-                    
-                    <!-- 記錄 -->
-                    <div style="margin-top:20px;">
-                        <h4 style="color:#374151;">📋 交接班記錄</h4>
-                        <div style="overflow-x:auto;">
-                            <table class="work-table" style="width:100%; min-width:600px;">
-                                <thead><tr><th>日期</th><th>班別</th><th>收銀機</th><th>現金合計</th><th>短/溢</th><th>實際銷貨</th><th>收銀員</th><th>操作</th></tr></thead>
-                                <tbody id="choHistoryBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     
     <div id="page-cashReport" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>💵 現金日報</strong></div>
@@ -4958,15 +4996,94 @@ function updateDate() {
 }
 
 function handleSignIn() {
-    var u = document.getElementById('username').value;
-    if (!u) return alert('⚠️ 請輸入帳號');
-    alert('✅ 簽到成功！\n👤 ' + u + '\n⏰ ' + new Date().toLocaleTimeString('zh-TW'));
+    quickClock('in');
 }
 
 function handleSignOut() {
-    var u = document.getElementById('username').value;
-    if (!u) return alert('⚠️ 請輸入帳號');
-    alert('📤 簽退成功！\n👤 ' + u + '\n⏰ ' + new Date().toLocaleTimeString('zh-TW'));
+    quickClock('out');
+}
+
+// 🆕 登入頁直接 GPS 打卡（用員工編號識別，免登入）
+function quickClock(type) {
+    var u = (document.getElementById('username').value || '').trim();
+    if (!u) return alert('⚠️ 請先輸入員工編號再打卡');
+    
+    // 用編號找員工
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e) { return e.num === u || e.id === u; });
+    if (!emp) return alert('❌ 找不到員工編號「' + u + '」\n請確認編號正確，或先點「☁️ 一鍵同步帳號」');
+    
+    // 找打卡門市（含今日支援派駐）
+    var store = getClockStoreForEmp(emp);
+    if (!store) return alert('❌ 找不到您的所屬門市，請聯絡管理員');
+    if (!store.lat || !store.lng) return alert('⚠️ 門市「' + store.name + '」尚未設定打卡定位\n請管理員到「門市管理」設定 GPS 座標');
+    if (!navigator.geolocation) return alert('❌ 此裝置不支援定位');
+    
+    var typeLabel = type === 'in' ? '上班' : '下班';
+    showNotif('🔄 定位中...請允許位置權限');
+    
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var myLat = pos.coords.latitude, myLng = pos.coords.longitude;
+        var accuracy = Math.round(pos.coords.accuracy);
+        var dist = calcDistance(myLat, myLng, store.lat, store.lng);
+        var radius = store.radius || 200;
+        var withinRange = dist <= (radius + accuracy);
+        
+        if (!withinRange) {
+            return alert('❌ ' + typeLabel + '打卡失敗：超出範圍\n\n您距離「' + store.name + '」約 ' + dist + ' 公尺\n（限 ' + radius + ' 公尺內）\n請靠近門市再打卡');
+        }
+        
+        var records = loadData('clockRecords', []);
+        var now = new Date();
+        records.unshift({
+            id: 'clk_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
+            empId: emp.id,
+            empName: emp.name,
+            storeId: store.id,
+            storeName: store.name,
+            type: type,
+            time: now.toISOString(),
+            lat: myLat, lng: myLng,
+            distance: dist,
+            accuracy: accuracy,
+            withinRange: true,
+            isDispatch: !!store._isDispatch
+        });
+        saveData('clockRecords', records);
+        if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+        
+        var pad = function(n){ return n<10?'0'+n:''+n; };
+        var tStr = pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+        alert('✅ ' + typeLabel + '打卡成功！\n\n👤 ' + emp.name + '\n⏰ ' + tStr + '\n🏪 ' + store.name + (store._isDispatch ? '（支援）' : '') + '\n📍 距門市 ' + dist + ' 公尺');
+    }, function(err) {
+        alert('❌ 定位失敗：' + (err.code === 1 ? '請允許位置權限（設定→Safari→位置）' : '請確認 GPS 已開啟'));
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+// 依員工資料找打卡門市（含今日支援派駐），不需登入
+function getClockStoreForEmp(emp) {
+    var stores = loadData('stores', defaultStores);
+    if (!emp) return null;
+    // 今日班表派駐支援
+    if (typeof formatDate === 'function') {
+        var shifts = loadData('shifts', {});
+        var todayKey = formatDate(new Date());
+        var todayShift = shifts[todayKey] && shifts[todayKey][emp.id];
+        if (todayShift) {
+            var slots = (typeof getDaySlots === 'function') ? getDaySlots(todayShift) : (todayShift.slots || []);
+            for (var i = 0; i < slots.length; i++) {
+                var slot = slots[i];
+                if (slot && ['work','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
+                    var ws = stores.find(function(s) { return s.id === slot.workStoreId; });
+                    if (ws) { ws._isDispatch = (slot.workStoreId !== emp.homeStoreId); return ws; }
+                }
+            }
+        }
+    }
+    // 一般：所屬門市
+    var store = stores.find(function(s) { return s.id === emp.homeStoreId; });
+    if (!store && stores.length > 0) store = stores[0];
+    return store || null;
 }
 
 // ============= 📱💻 版本切換（電腦版 / 手機版）=============
@@ -5440,7 +5557,7 @@ function showLogoutAnimation(name, onDone) {
         '<div class="logout-card">' +
             '<div class="logout-wave">👋</div>' +
             '<div class="logout-bye">再見' + (name ? '，' + name : '') + '</div>' +
-            '<div class="logout-sub">感謝您的辛勞，期待再相見 🌷</div>' +
+            '<div class="logout-sub">感謝您的辛勞，期待再相見 <span class="uniopen-mark" style="font-size:13px; padding:2px 6px;"><span class="o">O</span><span class="p">P</span><span class="e">E</span><span class="n">N</span><span class="x">!</span></span></div>' +
             '<div class="logout-bar"><div class="logout-bar-fill"></div></div>' +
         '</div>';
     document.body.appendChild(ov);
@@ -5461,14 +5578,14 @@ var ROLE_PERMISSIONS = {
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
                   'scheduleQuery', 'shiftSwap', 'reviewMonth', 'employeeBasic',
                   'leaveAllocation', 'insuranceAdd', 'insuranceRemove', 'insuranceQuery',
-                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'cashHandover', 'purchaseReceipt', 'transferOrder', 'productLibrary',
+                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary',
                   'inventoryReport', 'returnCampaign']
     },
     'deputy': {
         // 副店長：協助店長，可使用現金日報、排班、請假、薪資查詢
         allowed: ['workList', 'attendanceAbnormal', 'overtimeApply', 'businessTrip',
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
-                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'cashHandover', 'purchaseReceipt', 'transferOrder', 'productLibrary',
+                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary',
                   'inventoryReport', 'returnCampaign']
     },
     'staff': {
@@ -5485,7 +5602,7 @@ function hasAccess(pageName) {
     if (!currentUser) return false;
     
     // 🆕 新功能自動開放（避免舊自訂權限擋住新頁面）：檔期退貨所有人都可用
-    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'cashHandover'];
+    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords'];
     if (ALWAYS_ALLOW.indexOf(pageName) !== -1) {
         return true;
     }
@@ -6025,7 +6142,6 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'returnCampaign') initReturnCampaign();
     else if (pageName === 'clockIn') initClockIn();
     else if (pageName === 'clockRecords') initClockRecords();
-    else if (pageName === 'cashHandover') initCashHandover();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -6057,6 +6173,56 @@ function goToSchedule() {
 }
 
 // ============= 工作清單 =============
+// 🆕 首頁儀表板：歡迎橫幅 + 待辦統計
+function renderHomeDashboard(works) {
+    var el = document.getElementById('homeDashboard');
+    if (!el) return;
+    
+    var name = '';
+    if (currentUser) {
+        name = currentUser.name || '';
+        if (!name || name === '員工') {
+            var emps = loadData('employees', defaultEmployees);
+            var e = emps.find(function(x){ return x.num === currentUser.id || x.id === currentUser.id; });
+            if (e && e.name) name = e.name;
+        }
+    }
+    if (!name) name = '夥伴';
+    
+    var roleNames = { 'admin':'系統管理員', 'manager':'店長', 'deputy':'副店長', 'staff':'店職員', 'user':'時薪人員' };
+    var roleName = (currentUser && roleNames[currentUser.role]) || '';
+    
+    var hour = new Date().getHours();
+    var greet = hour < 5 ? '夜深了' : hour < 11 ? '早安' : hour < 18 ? '午安' : '晚安';
+    var greetEmoji = hour < 5 ? '🌙' : hour < 11 ? '🌅' : hour < 18 ? '☀️' : '🌆';
+    
+    var now = new Date();
+    var wd = ['日','一','二','三','四','五','六'][now.getDay()];
+    var dateStr = now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() + ' 星期' + wd;
+    
+    var pending = 0, review = 0, done = 0;
+    for (var i = 0; i < works.length; i++) {
+        if (works[i].status === 'pending') pending++;
+        else if (works[i].status === 'review') review++;
+        else if (works[i].status === 'done') done++;
+    }
+    
+    el.innerHTML =
+        '<div class="home-banner">' +
+            '<div class="home-banner-text">' +
+                '<div class="home-greet">' + greetEmoji + ' ' + greet + '，' + name + '</div>' +
+                (roleName ? '<div class="home-role">' + roleName + '</div>' : '') +
+                '<div class="home-date">📅 ' + dateStr + '</div>' +
+            '</div>' +
+            '<div class="home-tulip">🌷</div>' +
+        '</div>' +
+        '<div class="home-stats">' +
+            '<div class="home-stat-card pending"><div class="hs-num">' + pending + '</div><div class="hs-label">⏳ 未完成</div></div>' +
+            '<div class="home-stat-card review"><div class="hs-num">' + review + '</div><div class="hs-label">🔄 進行中</div></div>' +
+            '<div class="home-stat-card done"><div class="hs-num">' + done + '</div><div class="hs-label">✓ 已完成</div></div>' +
+        '</div>';
+}
+
 function renderWorkList() {
     var works = loadData('works', defaultWorks);
     var tbody = document.getElementById('workListBody');
@@ -6087,6 +6253,9 @@ function renderWorkList() {
         'review':  '<span class="status-tag status-review">🔄 進行中</span>',
         'done':    '<span class="status-tag status-done">✓ 已完成</span>'
     };
+    
+    // 🆕 首頁儀表板：歡迎橫幅 + 待辦統計
+    renderHomeDashboard(visibleWorks);
     
     if (visibleWorks.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#9ca3af;">📭 暫無工作項目</td></tr>';
@@ -16427,7 +16596,6 @@ var BACKUP_KEYS = [
     'salarySlips',
     'leaveBalanceAdjustments',
     'dailyCashReports',
-    'cashHandovers',
     'purchaseReceipts',
     'transferOrders',
     'productCodes',
@@ -19023,307 +19191,6 @@ function openEditStoreModal(id) {
     if (ls) ls.textContent = (s.lat && s.lng) ? '✅ 已設定定位' : '⚠️ 尚未設定定位（員工將無法打卡）';
     document.getElementById('storeModal').classList.remove('hidden');
 }
-
-// ============================================================
-// 💴 交接班現金管理
-// ============================================================
-var CHO_DENOMS = [1, 5, 10, 50, 100, 500, 1000];
-
-function initCashHandover() {
-    if (!document.getElementById('choDate').value) {
-        document.getElementById('choDate').value = new Date().toISOString().substring(0, 10);
-    }
-    // 每次進入重置為收銀機1
-    var reg = document.getElementById('choRegister');
-    if (reg) reg.value = '收銀機1';
-    updateChoRegisterUI();
-    renderChoCashRows();
-    calcCashHandover();
-    renderChoHistory();
-}
-
-// 🖥️ 切換收銀機（下一步 / 返回）
-function choToggleRegister() {
-    var regEl = document.getElementById('choRegister');
-    var cur = regEl.value;
-    
-    if (cur === '收銀機1') {
-        // 先自動儲存收銀機1（若有填現金）
-        var hasData = false;
-        var qtys = document.querySelectorAll('.cho-qty');
-        for (var i = 0; i < qtys.length; i++) { if (qtys[i].value) { hasData = true; break; } }
-        if (hasData) {
-            saveCashHandover();
-            showNotif('💾 收銀機 1 已儲存，前往收銀機 2');
-        }
-        // 切到收銀機2
-        regEl.value = '收銀機2';
-        updateChoRegisterUI();
-        loadCashHandover();  // 載入收銀機2 既有資料或清空
-    } else {
-        // 返回收銀機1
-        regEl.value = '收銀機1';
-        updateChoRegisterUI();
-        loadCashHandover();
-    }
-}
-
-function updateChoRegisterUI() {
-    var cur = (document.getElementById('choRegister') || {}).value || '收銀機1';
-    var label = document.getElementById('choRegLabel');
-    var btn = document.getElementById('choRegBtn');
-    if (cur === '收銀機1') {
-        if (label) label.textContent = '🖥️ 收銀機 1';
-        if (btn) btn.textContent = '➡️ 下一步：收銀機 2';
-    } else {
-        if (label) label.textContent = '🖥️ 收銀機 2';
-        if (btn) btn.textContent = '⬅️ 返回：收銀機 1';
-    }
-}
-
-function renderChoCashRows() {
-    var tbody = document.getElementById('choCashBody');
-    if (!tbody) return;
-    var html = '';
-    for (var i = 0; i < CHO_DENOMS.length; i++) {
-        var d = CHO_DENOMS[i];
-        html += '<tr>' +
-            '<td><strong>' + d + ' 元</strong></td>' +
-            '<td><input type="number" inputmode="numeric" class="cho-qty" data-denom="' + d + '" oninput="calcCashHandover()" onkeydown="choEnterNext(event)" placeholder="0" style="width:110px;"></td>' +
-            '<td style="text-align:right;" id="choSub' + d + '">$0</td>' +
-            '</tr>';
-    }
-    tbody.innerHTML = html;
-}
-
-// ⏎ 按確認鍵跳到下一格
-function choEnterNext(e) {
-    if (e.key === 'Enter' || e.keyCode === 13) {
-        e.preventDefault();
-        var page = document.getElementById('page-cashHandover');
-        if (!page) return;
-        var inputs = Array.prototype.slice.call(page.querySelectorAll('input:not([type=hidden]), select, textarea'));
-        var idx = inputs.indexOf(e.target);
-        if (idx >= 0 && idx < inputs.length - 1) {
-            var next = inputs[idx + 1];
-            next.focus();
-            if (next.select) { try { next.select(); } catch(err){} }
-        } else if (e.target.blur) {
-            e.target.blur();
-        }
-    }
-}
-
-function calcCashHandover() {
-    // 現金清點合計（輸入即為該面額的「實際金額」，小計＝直接金額）
-    var cashTotal = 0;
-    var qtys = document.querySelectorAll('.cho-qty');
-    for (var i = 0; i < qtys.length; i++) {
-        var denom = parseInt(qtys[i].getAttribute('data-denom'));
-        var amt = parseFloat(qtys[i].value) || 0;   // 直接輸入金額
-        var sub = amt;
-        cashTotal += sub;
-        var subEl = document.getElementById('choSub' + denom);
-        if (subEl) subEl.textContent = '$' + sub.toLocaleString();
-    }
-    var ct = document.getElementById('choCashTotal');
-    if (ct) ct.textContent = '$' + cashTotal.toLocaleString();
-    
-    // A = 現金合計（取用金額）
-    var A = cashTotal;
-    var aEl = document.getElementById('choA');
-    if (aEl) aEl.textContent = '$' + A.toLocaleString();
-    
-    var num = function(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; };
-    var B = num('choB');     // 借零金庫
-    var C4 = num('cho4');    // 店長加零
-    var D = num('choD');     // 投零
-    var E = num('choE');     // 下一班接班
-    
-    // 短/溢 = B + C - A - D - E（C 用店長加零代表，依表格 B+C-A-D-E）
-    var shortage = B + C4 - A - D - E;
-    var shEl = document.getElementById('choShortage');
-    if (shEl) {
-        shEl.textContent = (shortage > 0 ? '+$' : shortage < 0 ? '-$' : '$') + Math.abs(shortage).toLocaleString();
-        shEl.style.color = shortage < 0 ? '#dc2626' : shortage > 0 ? '#059669' : '#374151';
-    }
-    
-    // 銷貨：h = a - b - c - d - e - f - g
-    var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
-    var hEl = document.getElementById('choH');
-    if (hEl) hEl.textContent = '$' + h.toLocaleString();
-}
-
-function choKey() {
-    return document.getElementById('choDate').value + '_' + document.getElementById('choShift').value + '_' + document.getElementById('choRegister').value;
-}
-
-function saveCashHandover() {
-    var date = document.getElementById('choDate').value;
-    if (!date) return alert('⚠️ 請選擇日期');
-    
-    var num = function(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; };
-    var cashCounts = {};
-    var qtys = document.querySelectorAll('.cho-qty');
-    var cashTotal = 0;
-    for (var i = 0; i < qtys.length; i++) {
-        var denom = parseInt(qtys[i].getAttribute('data-denom'));
-        var amt = parseFloat(qtys[i].value) || 0;   // 直接金額
-        cashCounts[denom] = amt;
-        cashTotal += amt;
-    }
-    var shortage = num('choB') + num('cho4') - cashTotal - num('choD') - num('choE');
-    var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
-    
-    var rec = {
-        key: choKey(),
-        date: date,
-        shift: document.getElementById('choShift').value,
-        register: document.getElementById('choRegister').value,
-        cashCounts: cashCounts, cashTotal: cashTotal,
-        B: num('choB'), c4: num('cho4'), c5: num('cho5'), D: num('choD'), E: num('choE'),
-        shortage: shortage,
-        GS: num('choGS'), b: num('choB2'), c: num('choC2'), d: num('choD2'), e: num('choE2'), f: num('choF2'), g: num('choG2'),
-        h: h, customers: num('choCustomers'),
-        publicFee: num('choPublic'), icash: num('choIcash'), bottle: num('choBottle'), bottleFee: num('choBottleFee'),
-        expense: num('choExpense'), other: num('choOther'),
-        cashier: (document.getElementById('choCashier') || {}).value || '',
-        savedAt: new Date().toISOString()
-    };
-    
-    var all = loadData('cashHandovers', {});
-    all[rec.key] = rec;
-    saveData('cashHandovers', all);
-    showNotif('💾 交接班現金已儲存');
-    renderChoHistory();
-    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
-}
-
-function loadCashHandover() {
-    var all = loadData('cashHandovers', {});
-    var rec = all[choKey()];
-    if (!rec) {
-        // 清空
-        var qtys = document.querySelectorAll('.cho-qty');
-        for (var q = 0; q < qtys.length; q++) qtys[q].value = '';
-        ['cho4','cho5','choD','choE','choGS','choB2','choC2','choD2','choE2','choF2','choG2','choCustomers','choPublic','choIcash','choBottle','choBottleFee','choExpense','choOther','choCashier'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-        document.getElementById('choB').value = '0';
-        calcCashHandover();
-        showNotif('📂 此交接班尚無記錄，可開始填寫');
-        return;
-    }
-    // 帶入
-    var qtys2 = document.querySelectorAll('.cho-qty');
-    for (var i = 0; i < qtys2.length; i++) {
-        var denom = parseInt(qtys2[i].getAttribute('data-denom'));
-        qtys2[i].value = (rec.cashCounts && rec.cashCounts[denom]) || '';
-    }
-    var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v || v === 0) ? v : ''; };
-    set('choB', rec.B); set('cho4', rec.c4); set('cho5', rec.c5); set('choD', rec.D); set('choE', rec.E);
-    set('choGS', rec.GS); set('choB2', rec.b); set('choC2', rec.c); set('choD2', rec.d); set('choE2', rec.e); set('choF2', rec.f); set('choG2', rec.g);
-    set('choCustomers', rec.customers); set('choPublic', rec.publicFee); set('choIcash', rec.icash);
-    set('choBottle', rec.bottle); set('choBottleFee', rec.bottleFee); set('choExpense', rec.expense); set('choOther', rec.other);
-    set('choCashier', rec.cashier);
-    calcCashHandover();
-    showNotif('📂 已載入交接班記錄');
-}
-
-function renderChoHistory() {
-    var tbody = document.getElementById('choHistoryBody');
-    if (!tbody) return;
-    var all = loadData('cashHandovers', {});
-    var recs = Object.keys(all).map(function(k){ return all[k]; });
-    recs.sort(function(a, b){ return (b.savedAt || '').localeCompare(a.savedAt || ''); });
-    if (recs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#9ca3af;">📭 尚無交接班記錄</td></tr>';
-        return;
-    }
-    var html = '';
-    for (var i = 0; i < recs.length && i < 50; i++) {
-        var r = recs[i];
-        var shColor = r.shortage < 0 ? '#dc2626' : r.shortage > 0 ? '#059669' : '#374151';
-        var shTxt = (r.shortage > 0 ? '+$' : r.shortage < 0 ? '-$' : '$') + Math.abs(r.shortage || 0).toLocaleString();
-        html += '<tr>' +
-            '<td>' + r.date + '</td>' +
-            '<td>' + r.shift + '</td>' +
-            '<td>' + r.register + '</td>' +
-            '<td style="text-align:right;">$' + (r.cashTotal || 0).toLocaleString() + '</td>' +
-            '<td style="text-align:right; color:' + shColor + '; font-weight:bold;">' + shTxt + '</td>' +
-            '<td style="text-align:right;">$' + (r.h || 0).toLocaleString() + '</td>' +
-            '<td>' + (r.cashier || '-') + '</td>' +
-            '<td><button class="btn-danger" style="padding:4px 10px; font-size:11px;" onclick="deleteCashHandover(\'' + r.key + '\')">刪除</button></td>' +
-            '</tr>';
-    }
-    tbody.innerHTML = html;
-}
-
-function deleteCashHandover(key) {
-    if (!confirm('確定刪除這筆交接班記錄？')) return;
-    var all = loadData('cashHandovers', {});
-    delete all[key];
-    saveData('cashHandovers', all);
-    renderChoHistory();
-    showNotif('🗑️ 已刪除');
-    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
-}
-
-// 🖨️ 列印交接班現金表
-function printCashHandover() {
-    var num = function(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; };
-    var date = document.getElementById('choDate').value || '';
-    var shift = document.getElementById('choShift').value || '';
-    var register = document.getElementById('choRegister').value || '';
-    var cashier = (document.getElementById('choCashier') || {}).value || '';
-    
-    // 面額明細（實際金額）
-    var rows = '';
-    var cashTotal = 0;
-    var qtys = document.querySelectorAll('.cho-qty');
-    for (var i = 0; i < qtys.length; i++) {
-        var denom = parseInt(qtys[i].getAttribute('data-denom'));
-        var amt = parseFloat(qtys[i].value) || 0;
-        var sub = amt;
-        cashTotal += sub;
-        rows += '<tr><td>' + denom + ' 元</td><td style="text-align:right;">$' + amt.toLocaleString() + '</td><td style="text-align:right;">$' + sub.toLocaleString() + '</td></tr>';
-    }
-    var shortage = num('choB') + num('cho4') - cashTotal - num('choD') - num('choE');
-    var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
-    var shTxt = (shortage > 0 ? '+$' : shortage < 0 ? '-$' : '$') + Math.abs(shortage).toLocaleString();
-    
-    var w = window.open('', '_blank');
-    var html = '<html><head><title>交接班現金表</title><meta charset="utf-8">' +
-        '<style>body{font-family:"Microsoft JhengHei",sans-serif;padding:20px;color:#000;}' +
-        'h2{text-align:center;margin:6px 0;} .meta{text-align:center;margin-bottom:14px;font-size:14px;}' +
-        'table{width:100%;border-collapse:collapse;margin-bottom:14px;} td,th{border:1px solid #333;padding:6px 10px;font-size:13px;}' +
-        'th{background:#eee;} .sec{font-weight:bold;background:#f5f5f5;} .big{font-size:18px;font-weight:bold;}</style></head><body>' +
-        '<h2>交接班現金點鈔表</h2>' +
-        '<div class="meta">日期：' + date + '　班別：' + shift + '　' + register + '　收銀員：' + cashier + '</div>' +
-        '<table><thead><tr><th>面額</th><th>實際金額</th><th>小計</th></tr></thead><tbody>' + rows +
-        '<tr class="sec"><td colspan="2">現金合計 (A)</td><td style="text-align:right;">$' + cashTotal.toLocaleString() + '</td></tr></tbody></table>' +
-        '<table><tbody>' +
-        '<tr><td>借零金庫 (B)</td><td style="text-align:right;">$' + num('choB').toLocaleString() + '</td></tr>' +
-        '<tr><td>店長加零</td><td style="text-align:right;">$' + num('cho4').toLocaleString() + '</td></tr>' +
-        '<tr><td>投零 (D)</td><td style="text-align:right;">$' + num('choD').toLocaleString() + '</td></tr>' +
-        '<tr><td>下一班接班金額 (E)</td><td style="text-align:right;">$' + num('choE').toLocaleString() + '</td></tr>' +
-        '<tr class="sec"><td>短/溢 (B+店長加零-A-D-E)</td><td style="text-align:right;" class="big">' + shTxt + '</td></tr>' +
-        '</tbody></table>' +
-        '<table><tbody>' +
-        '<tr><td>發票帳結金額 (GS)</td><td style="text-align:right;">$' + num('choGS').toLocaleString() + '</td></tr>' +
-        '<tr><td>− 退瓶、折讓</td><td style="text-align:right;">$' + num('choB2').toLocaleString() + '</td></tr>' +
-        '<tr><td>− 各項折讓/銷退</td><td style="text-align:right;">$' + (num('choC2')+num('choD2')+num('choE2')+num('choF2')+num('choG2')).toLocaleString() + '</td></tr>' +
-        '<tr class="sec"><td>實際銷貨收入 (h)</td><td style="text-align:right;">$' + h.toLocaleString() + '</td></tr>' +
-        '<tr><td>來客數</td><td style="text-align:right;">' + num('choCustomers').toLocaleString() + ' 人</td></tr>' +
-        '<tr><td>公共料金代收 / IC卡</td><td style="text-align:right;">$' + num('choPublic').toLocaleString() + ' / $' + num('choIcash').toLocaleString() + '</td></tr>' +
-        '</tbody></table>' +
-        '<div style="margin-top:30px;">收銀員簽名：________________　　店長簽名：________________</div>' +
-        '</body></html>';
-    w.document.write(html);
-    w.document.close();
-    setTimeout(function(){ w.print(); }, 400);
-}
-
-
-
 
 function initClockIn() {
     updateClockDisplay();
