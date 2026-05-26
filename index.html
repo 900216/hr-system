@@ -3282,13 +3282,13 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
                     </div>
                 </div>
                 <div class="panel-body">
-                    <div class="alert-box info" style="margin-bottom:12px;">💡 點各面額數量，系統自動計算金額與短溢。填完點「💾 儲存」。</div>
+                    <div class="alert-box info" style="margin-bottom:12px;">💡 各面額直接輸入<strong>實際金額</strong>（例：1元有100個就輸入 100），系統自動加總與算短溢。按確認鍵可跳下一格。填完點「💾 儲存」。</div>
                     
                     <!-- 現金清點 -->
                     <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
                         <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">💰 現金清點</h4>
                         <table class="work-table" style="width:100%;">
-                            <thead><tr><th>面額</th><th>數量</th><th style="text-align:right;">小計</th></tr></thead>
+                            <thead><tr><th>面額</th><th>實際金額</th><th style="text-align:right;">小計</th></tr></thead>
                             <tbody id="choCashBody"></tbody>
                             <tfoot><tr style="background:#fef3c7; font-weight:bold;"><td colspan="2">現金合計</td><td style="text-align:right;" id="choCashTotal">$0</td></tr></tfoot>
                         </table>
@@ -3298,7 +3298,7 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
                     <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
                         <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">🧮 取用金額 / 短溢計算</h4>
                         <table class="form-table" style="width:100%;">
-                            <tr><td class="label-col">借零金庫 (B)</td><td><input type="number" id="choB" oninput="calcCashHandover()" placeholder="1550" value="1550"></td></tr>
+                            <tr><td class="label-col">借零金庫 (B)</td><td><input type="number" id="choB" oninput="calcCashHandover()" placeholder="0" value="0"></td></tr>
                             <tr><td class="label-col">店長加零 (4)</td><td><input type="number" id="cho4" oninput="calcCashHandover()" placeholder="0"></td></tr>
                             <tr><td class="label-col">投零清點 (5)</td><td><input type="number" id="cho5" oninput="calcCashHandover()" placeholder="0"></td></tr>
                             <tr><td class="label-col">取用金額 A<br><span style="font-size:11px;color:#6b7280;">(現金合計)</span></td><td><span id="choA" style="font-weight:bold;">$0</span></td></tr>
@@ -19089,21 +19089,39 @@ function renderChoCashRows() {
         var d = CHO_DENOMS[i];
         html += '<tr>' +
             '<td><strong>' + d + ' 元</strong></td>' +
-            '<td><input type="number" class="cho-qty" data-denom="' + d + '" oninput="calcCashHandover()" placeholder="0" style="width:90px;"></td>' +
+            '<td><input type="number" inputmode="numeric" class="cho-qty" data-denom="' + d + '" oninput="calcCashHandover()" onkeydown="choEnterNext(event)" placeholder="0" style="width:110px;"></td>' +
             '<td style="text-align:right;" id="choSub' + d + '">$0</td>' +
             '</tr>';
     }
     tbody.innerHTML = html;
 }
 
+// ⏎ 按確認鍵跳到下一格
+function choEnterNext(e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault();
+        var page = document.getElementById('page-cashHandover');
+        if (!page) return;
+        var inputs = Array.prototype.slice.call(page.querySelectorAll('input:not([type=hidden]), select, textarea'));
+        var idx = inputs.indexOf(e.target);
+        if (idx >= 0 && idx < inputs.length - 1) {
+            var next = inputs[idx + 1];
+            next.focus();
+            if (next.select) { try { next.select(); } catch(err){} }
+        } else if (e.target.blur) {
+            e.target.blur();
+        }
+    }
+}
+
 function calcCashHandover() {
-    // 現金清點合計
+    // 現金清點合計（輸入即為該面額的「實際金額」，小計＝直接金額）
     var cashTotal = 0;
     var qtys = document.querySelectorAll('.cho-qty');
     for (var i = 0; i < qtys.length; i++) {
         var denom = parseInt(qtys[i].getAttribute('data-denom'));
-        var qty = parseInt(qtys[i].value) || 0;
-        var sub = denom * qty;
+        var amt = parseFloat(qtys[i].value) || 0;   // 直接輸入金額
+        var sub = amt;
         cashTotal += sub;
         var subEl = document.getElementById('choSub' + denom);
         if (subEl) subEl.textContent = '$' + sub.toLocaleString();
@@ -19150,9 +19168,9 @@ function saveCashHandover() {
     var cashTotal = 0;
     for (var i = 0; i < qtys.length; i++) {
         var denom = parseInt(qtys[i].getAttribute('data-denom'));
-        var qty = parseInt(qtys[i].value) || 0;
-        cashCounts[denom] = qty;
-        cashTotal += denom * qty;
+        var amt = parseFloat(qtys[i].value) || 0;   // 直接金額
+        cashCounts[denom] = amt;
+        cashTotal += amt;
     }
     var shortage = num('choB') + num('cho4') - cashTotal - num('choD') - num('choE');
     var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
@@ -19189,7 +19207,7 @@ function loadCashHandover() {
         var qtys = document.querySelectorAll('.cho-qty');
         for (var q = 0; q < qtys.length; q++) qtys[q].value = '';
         ['cho4','cho5','choD','choE','choGS','choB2','choC2','choD2','choE2','choF2','choG2','choCustomers','choPublic','choIcash','choBottle','choBottleFee','choExpense','choOther','choCashier'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-        document.getElementById('choB').value = '1550';
+        document.getElementById('choB').value = '0';
         calcCashHandover();
         showNotif('📂 此交接班尚無記錄，可開始填寫');
         return;
@@ -19257,16 +19275,16 @@ function printCashHandover() {
     var register = document.getElementById('choRegister').value || '';
     var cashier = (document.getElementById('choCashier') || {}).value || '';
     
-    // 面額明細
+    // 面額明細（實際金額）
     var rows = '';
     var cashTotal = 0;
     var qtys = document.querySelectorAll('.cho-qty');
     for (var i = 0; i < qtys.length; i++) {
         var denom = parseInt(qtys[i].getAttribute('data-denom'));
-        var qty = parseInt(qtys[i].value) || 0;
-        var sub = denom * qty;
+        var amt = parseFloat(qtys[i].value) || 0;
+        var sub = amt;
         cashTotal += sub;
-        rows += '<tr><td>' + denom + ' 元</td><td style="text-align:center;">' + qty + '</td><td style="text-align:right;">$' + sub.toLocaleString() + '</td></tr>';
+        rows += '<tr><td>' + denom + ' 元</td><td style="text-align:right;">$' + amt.toLocaleString() + '</td><td style="text-align:right;">$' + sub.toLocaleString() + '</td></tr>';
     }
     var shortage = num('choB') + num('cho4') - cashTotal - num('choD') - num('choE');
     var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
@@ -19280,7 +19298,7 @@ function printCashHandover() {
         'th{background:#eee;} .sec{font-weight:bold;background:#f5f5f5;} .big{font-size:18px;font-weight:bold;}</style></head><body>' +
         '<h2>交接班現金點鈔表</h2>' +
         '<div class="meta">日期：' + date + '　班別：' + shift + '　' + register + '　收銀員：' + cashier + '</div>' +
-        '<table><thead><tr><th>面額</th><th>數量</th><th>小計</th></tr></thead><tbody>' + rows +
+        '<table><thead><tr><th>面額</th><th>實際金額</th><th>小計</th></tr></thead><tbody>' + rows +
         '<tr class="sec"><td colspan="2">現金合計 (A)</td><td style="text-align:right;">$' + cashTotal.toLocaleString() + '</td></tr></tbody></table>' +
         '<table><tbody>' +
         '<tr><td>借零金庫 (B)</td><td style="text-align:right;">$' + num('choB').toLocaleString() + '</td></tr>' +
