@@ -1956,6 +1956,7 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
         <div class="menu-item" id="menu-daily-inv">📊 日別庫存 ▼
             <div class="submenu">
                 <div class="submenu-item" onclick="goToPage('cashReport','menu-daily-inv')">💵 現金日報</div>
+                <div class="submenu-item" onclick="goToPage('cashHandover','menu-daily-inv')">💴 交接班現金</div>
                 <div class="submenu-item" onclick="goToPage('purchaseReceipt','menu-daily-inv')">📦 進貨驗收</div>
                 <div class="submenu-item" onclick="goToPage('transferOrder','menu-daily-inv')">🔄 51-調撥單</div>
                 <div class="submenu-item" onclick="goToPage('inventoryReport','menu-daily-inv')">📊 日別庫存明細表</div>
@@ -3258,6 +3259,103 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
     </div>
     
     <!-- 📦 進貨驗收彙總表頁面 -->
+    
+    <!-- 💴 交接班現金管理 -->
+    <div id="page-cashHandover" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 📊 日別庫存 &gt; <strong>💴 交接班現金</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <h3>💴 交接班現金管理</h3>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <input type="date" id="choDate" style="padding:6px; border:1px solid #ccc; border-radius:6px;">
+                        <select id="choShift" style="padding:6px; border:1px solid #ccc; border-radius:6px;">
+                            <option value="早班">早班</option>
+                            <option value="中班">中班</option>
+                            <option value="夜班">夜班</option>
+                        </select>
+                        <span id="choRegLabel" style="padding:6px 12px; background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#4a2e08; border-radius:8px; font-weight:bold; font-size:14px;">🖥️ 收銀機 1</span>
+                        <input type="hidden" id="choRegister" value="收銀機1">
+                        <button id="choRegBtn" class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="choToggleRegister()">➡️ 下一步：收銀機 2</button>
+                        <button class="btn-secondary" style="padding:6px 12px; font-size:13px;" onclick="loadCashHandover()">📂 載入</button>
+                        <button class="btn-primary" style="padding:6px 12px; font-size:13px;" onclick="printCashHandover()">🖨️ 列印</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="alert-box info" style="margin-bottom:12px;">💡 點各面額數量，系統自動計算金額與短溢。填完點「💾 儲存」。</div>
+                    
+                    <!-- 現金清點 -->
+                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
+                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">💰 現金清點</h4>
+                        <table class="work-table" style="width:100%;">
+                            <thead><tr><th>面額</th><th>數量</th><th style="text-align:right;">小計</th></tr></thead>
+                            <tbody id="choCashBody"></tbody>
+                            <tfoot><tr style="background:#fef3c7; font-weight:bold;"><td colspan="2">現金合計</td><td style="text-align:right;" id="choCashTotal">$0</td></tr></tfoot>
+                        </table>
+                    </div>
+                    
+                    <!-- 取用金額計算 -->
+                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
+                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">🧮 取用金額 / 短溢計算</h4>
+                        <table class="form-table" style="width:100%;">
+                            <tr><td class="label-col">借零金庫 (B)</td><td><input type="number" id="choB" oninput="calcCashHandover()" placeholder="1550" value="1550"></td></tr>
+                            <tr><td class="label-col">店長加零 (4)</td><td><input type="number" id="cho4" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">投零清點 (5)</td><td><input type="number" id="cho5" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">取用金額 A<br><span style="font-size:11px;color:#6b7280;">(現金合計)</span></td><td><span id="choA" style="font-weight:bold;">$0</span></td></tr>
+                            <tr><td class="label-col">投零 (D)</td><td><input type="number" id="choD" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">下一班接班金額 (E)</td><td><input type="number" id="choE" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr style="background:#fef3c7;"><td class="label-col"><strong>短/溢</strong><br><span style="font-size:11px;color:#6b7280;">B+C-A-D-E</span></td><td><span id="choShortage" style="font-weight:bold; font-size:18px;">$0</span></td></tr>
+                        </table>
+                    </div>
+                    
+                    <!-- 銷貨計算 -->
+                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
+                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">📊 銷貨計算</h4>
+                        <table class="form-table" style="width:100%;">
+                            <tr><td class="label-col">發票帳結金額 (a/GS)</td><td><input type="number" id="choGS" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">− 退瓶、折讓 (b)</td><td><input type="number" id="choB2" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">− 門市/廠商折價卷 (c)</td><td><input type="number" id="choC2" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">− 組合促銷折讓-免稅 (d)</td><td><input type="number" id="choD2" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">− 組合促銷折讓-應稅 (e)</td><td><input type="number" id="choE2" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">− 誤打銷退重印-免稅 (f)</td><td><input type="number" id="choF2" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr><td class="label-col">− 誤打銷退重印-應稅 (g)</td><td><input type="number" id="choG2" oninput="calcCashHandover()" placeholder="0"></td></tr>
+                            <tr style="background:#d1fae5;"><td class="label-col"><strong>實際銷貨收入 (h)</strong></td><td><span id="choH" style="font-weight:bold; font-size:16px;">$0</span></td></tr>
+                            <tr><td class="label-col">來客數</td><td><input type="number" id="choCustomers" placeholder="0"></td></tr>
+                        </table>
+                    </div>
+                    
+                    <!-- 其他項目 -->
+                    <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;">
+                        <h4 style="margin:0 0 10px 0; color:var(--brand-dark);">📋 其他項目</h4>
+                        <table class="form-table" style="width:100%;">
+                            <tr><td class="label-col">公共料金合計(代收)</td><td><input type="number" id="choPublic" placeholder="0"></td></tr>
+                            <tr><td class="label-col">IC卡 (i-cash)</td><td><input type="number" id="choIcash" placeholder="0"></td></tr>
+                            <tr><td class="label-col">寶特瓶退處理商</td><td><input type="number" id="choBottle" placeholder="0"></td></tr>
+                            <tr><td class="label-col">寶特瓶佣金收入</td><td><input type="number" id="choBottleFee" placeholder="0"></td></tr>
+                            <tr><td class="label-col">現金進貨、費用支出</td><td><input type="number" id="choExpense" placeholder="0"></td></tr>
+                            <tr><td class="label-col">其他收入</td><td><input type="number" id="choOther" placeholder="0"></td></tr>
+                            <tr><td class="label-col">收銀員簽名</td><td><input type="text" id="choCashier" placeholder="收銀員姓名"></td></tr>
+                        </table>
+                    </div>
+                    
+                    <div style="text-align:center;">
+                        <button class="btn-confirm" style="padding:12px 30px; font-size:16px;" onclick="saveCashHandover()">💾 儲存交接班現金</button>
+                    </div>
+                    
+                    <!-- 記錄 -->
+                    <div style="margin-top:20px;">
+                        <h4 style="color:#374151;">📋 交接班記錄</h4>
+                        <div style="overflow-x:auto;">
+                            <table class="work-table" style="width:100%; min-width:600px;">
+                                <thead><tr><th>日期</th><th>班別</th><th>收銀機</th><th>現金合計</th><th>短/溢</th><th>實際銷貨</th><th>收銀員</th><th>操作</th></tr></thead>
+                                <tbody id="choHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <div id="page-cashReport" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>💵 現金日報</strong></div>
@@ -5363,14 +5461,14 @@ var ROLE_PERMISSIONS = {
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
                   'scheduleQuery', 'shiftSwap', 'reviewMonth', 'employeeBasic',
                   'leaveAllocation', 'insuranceAdd', 'insuranceRemove', 'insuranceQuery',
-                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary',
+                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'cashHandover', 'purchaseReceipt', 'transferOrder', 'productLibrary',
                   'inventoryReport', 'returnCampaign']
     },
     'deputy': {
         // 副店長：協助店長，可使用現金日報、排班、請假、薪資查詢
         allowed: ['workList', 'attendanceAbnormal', 'overtimeApply', 'businessTrip',
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
-                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary',
+                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'cashHandover', 'purchaseReceipt', 'transferOrder', 'productLibrary',
                   'inventoryReport', 'returnCampaign']
     },
     'staff': {
@@ -5387,7 +5485,7 @@ function hasAccess(pageName) {
     if (!currentUser) return false;
     
     // 🆕 新功能自動開放（避免舊自訂權限擋住新頁面）：檔期退貨所有人都可用
-    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords'];
+    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'cashHandover'];
     if (ALWAYS_ALLOW.indexOf(pageName) !== -1) {
         return true;
     }
@@ -5927,6 +6025,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'returnCampaign') initReturnCampaign();
     else if (pageName === 'clockIn') initClockIn();
     else if (pageName === 'clockRecords') initClockRecords();
+    else if (pageName === 'cashHandover') initCashHandover();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -15136,6 +15235,19 @@ function renderLeaveBalance() {
         myEmp = employees.find(function(e) { return e.num === currentUser.id || e.name === currentUser.name; });
     }
     
+    // 🆕 工讀生：無假別額度，顯示說明即可
+    var lbFullInfo = (myEmp && loadData('employeesFullInfo', {})[myEmp.id]) || {};
+    var lbPos = lbFullInfo.position || '';
+    var lbIsPartTime = (myEmp && myEmp.empType === 'parttime')
+                       || (currentUser && currentUser.role === 'user')
+                       || (lbPos.indexOf('時薪') >= 0) || (lbPos.indexOf('工讀') >= 0);
+    if (lbIsPartTime) {
+        elem.innerHTML = '<div style="grid-column:1/-1; background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:12px; padding:18px; text-align:center; color:#78350f;">' +
+            '👷 <strong>工讀生（時薪人員）</strong><br>' +
+            '<span style="font-size:13px;">時薪人員無假別額度限制，請假僅作出勤記錄，可自由申請多天。</span></div>';
+        return;
+    }
+    
     // 取得該員工的額外調整（管理員設定的，單位：小時）
     var adjustments = loadData('leaveBalanceAdjustments', {});
     var myAdj = (myEmp && adjustments[myEmp.id]) ? adjustments[myEmp.id] : {};
@@ -15288,8 +15400,13 @@ function submitLeave() {
         return (x.type === t && (x.status === 'approved' || x.status === 'pending')) ? sum + (x.days || 0) : sum;
     }, 0);
     
-    // 🆕 工讀生（時薪）取消請假額度限制，可請多天（時薪不支薪、僅記錄）
-    var isPartTime = myEmp && myEmp.empType === 'parttime';
+    // 🆕 工讀生（時薪）判斷：員工類型 parttime、或登入角色為時薪人員(user)、或職位含時薪/工讀
+    var myFullInfo = (myEmp && loadData('employeesFullInfo', {})[myEmp.id]) || {};
+    var myPos = myFullInfo.position || '';
+    var isPartTime = (myEmp && myEmp.empType === 'parttime')
+                     || (currentUser && currentUser.role === 'user')
+                     || (myPos.indexOf('時薪') >= 0)
+                     || (myPos.indexOf('工讀') >= 0);
     var totalAllowed = 0;
     
     if (t === 'comp') {
@@ -16310,6 +16427,7 @@ var BACKUP_KEYS = [
     'salarySlips',
     'leaveBalanceAdjustments',
     'dailyCashReports',
+    'cashHandovers',
     'purchaseReceipts',
     'transferOrders',
     'productCodes',
@@ -18907,9 +19025,287 @@ function openEditStoreModal(id) {
 }
 
 // ============================================================
-// 📍 GPS 定位打卡
+// 💴 交接班現金管理
 // ============================================================
-var _clockTimer = null;
+var CHO_DENOMS = [1, 5, 10, 50, 100, 500, 1000];
+
+function initCashHandover() {
+    if (!document.getElementById('choDate').value) {
+        document.getElementById('choDate').value = new Date().toISOString().substring(0, 10);
+    }
+    // 每次進入重置為收銀機1
+    var reg = document.getElementById('choRegister');
+    if (reg) reg.value = '收銀機1';
+    updateChoRegisterUI();
+    renderChoCashRows();
+    calcCashHandover();
+    renderChoHistory();
+}
+
+// 🖥️ 切換收銀機（下一步 / 返回）
+function choToggleRegister() {
+    var regEl = document.getElementById('choRegister');
+    var cur = regEl.value;
+    
+    if (cur === '收銀機1') {
+        // 先自動儲存收銀機1（若有填現金）
+        var hasData = false;
+        var qtys = document.querySelectorAll('.cho-qty');
+        for (var i = 0; i < qtys.length; i++) { if (qtys[i].value) { hasData = true; break; } }
+        if (hasData) {
+            saveCashHandover();
+            showNotif('💾 收銀機 1 已儲存，前往收銀機 2');
+        }
+        // 切到收銀機2
+        regEl.value = '收銀機2';
+        updateChoRegisterUI();
+        loadCashHandover();  // 載入收銀機2 既有資料或清空
+    } else {
+        // 返回收銀機1
+        regEl.value = '收銀機1';
+        updateChoRegisterUI();
+        loadCashHandover();
+    }
+}
+
+function updateChoRegisterUI() {
+    var cur = (document.getElementById('choRegister') || {}).value || '收銀機1';
+    var label = document.getElementById('choRegLabel');
+    var btn = document.getElementById('choRegBtn');
+    if (cur === '收銀機1') {
+        if (label) label.textContent = '🖥️ 收銀機 1';
+        if (btn) btn.textContent = '➡️ 下一步：收銀機 2';
+    } else {
+        if (label) label.textContent = '🖥️ 收銀機 2';
+        if (btn) btn.textContent = '⬅️ 返回：收銀機 1';
+    }
+}
+
+function renderChoCashRows() {
+    var tbody = document.getElementById('choCashBody');
+    if (!tbody) return;
+    var html = '';
+    for (var i = 0; i < CHO_DENOMS.length; i++) {
+        var d = CHO_DENOMS[i];
+        html += '<tr>' +
+            '<td><strong>' + d + ' 元</strong></td>' +
+            '<td><input type="number" class="cho-qty" data-denom="' + d + '" oninput="calcCashHandover()" placeholder="0" style="width:90px;"></td>' +
+            '<td style="text-align:right;" id="choSub' + d + '">$0</td>' +
+            '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function calcCashHandover() {
+    // 現金清點合計
+    var cashTotal = 0;
+    var qtys = document.querySelectorAll('.cho-qty');
+    for (var i = 0; i < qtys.length; i++) {
+        var denom = parseInt(qtys[i].getAttribute('data-denom'));
+        var qty = parseInt(qtys[i].value) || 0;
+        var sub = denom * qty;
+        cashTotal += sub;
+        var subEl = document.getElementById('choSub' + denom);
+        if (subEl) subEl.textContent = '$' + sub.toLocaleString();
+    }
+    var ct = document.getElementById('choCashTotal');
+    if (ct) ct.textContent = '$' + cashTotal.toLocaleString();
+    
+    // A = 現金合計（取用金額）
+    var A = cashTotal;
+    var aEl = document.getElementById('choA');
+    if (aEl) aEl.textContent = '$' + A.toLocaleString();
+    
+    var num = function(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; };
+    var B = num('choB');     // 借零金庫
+    var C4 = num('cho4');    // 店長加零
+    var D = num('choD');     // 投零
+    var E = num('choE');     // 下一班接班
+    
+    // 短/溢 = B + C - A - D - E（C 用店長加零代表，依表格 B+C-A-D-E）
+    var shortage = B + C4 - A - D - E;
+    var shEl = document.getElementById('choShortage');
+    if (shEl) {
+        shEl.textContent = (shortage > 0 ? '+$' : shortage < 0 ? '-$' : '$') + Math.abs(shortage).toLocaleString();
+        shEl.style.color = shortage < 0 ? '#dc2626' : shortage > 0 ? '#059669' : '#374151';
+    }
+    
+    // 銷貨：h = a - b - c - d - e - f - g
+    var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
+    var hEl = document.getElementById('choH');
+    if (hEl) hEl.textContent = '$' + h.toLocaleString();
+}
+
+function choKey() {
+    return document.getElementById('choDate').value + '_' + document.getElementById('choShift').value + '_' + document.getElementById('choRegister').value;
+}
+
+function saveCashHandover() {
+    var date = document.getElementById('choDate').value;
+    if (!date) return alert('⚠️ 請選擇日期');
+    
+    var num = function(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; };
+    var cashCounts = {};
+    var qtys = document.querySelectorAll('.cho-qty');
+    var cashTotal = 0;
+    for (var i = 0; i < qtys.length; i++) {
+        var denom = parseInt(qtys[i].getAttribute('data-denom'));
+        var qty = parseInt(qtys[i].value) || 0;
+        cashCounts[denom] = qty;
+        cashTotal += denom * qty;
+    }
+    var shortage = num('choB') + num('cho4') - cashTotal - num('choD') - num('choE');
+    var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
+    
+    var rec = {
+        key: choKey(),
+        date: date,
+        shift: document.getElementById('choShift').value,
+        register: document.getElementById('choRegister').value,
+        cashCounts: cashCounts, cashTotal: cashTotal,
+        B: num('choB'), c4: num('cho4'), c5: num('cho5'), D: num('choD'), E: num('choE'),
+        shortage: shortage,
+        GS: num('choGS'), b: num('choB2'), c: num('choC2'), d: num('choD2'), e: num('choE2'), f: num('choF2'), g: num('choG2'),
+        h: h, customers: num('choCustomers'),
+        publicFee: num('choPublic'), icash: num('choIcash'), bottle: num('choBottle'), bottleFee: num('choBottleFee'),
+        expense: num('choExpense'), other: num('choOther'),
+        cashier: (document.getElementById('choCashier') || {}).value || '',
+        savedAt: new Date().toISOString()
+    };
+    
+    var all = loadData('cashHandovers', {});
+    all[rec.key] = rec;
+    saveData('cashHandovers', all);
+    showNotif('💾 交接班現金已儲存');
+    renderChoHistory();
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+}
+
+function loadCashHandover() {
+    var all = loadData('cashHandovers', {});
+    var rec = all[choKey()];
+    if (!rec) {
+        // 清空
+        var qtys = document.querySelectorAll('.cho-qty');
+        for (var q = 0; q < qtys.length; q++) qtys[q].value = '';
+        ['cho4','cho5','choD','choE','choGS','choB2','choC2','choD2','choE2','choF2','choG2','choCustomers','choPublic','choIcash','choBottle','choBottleFee','choExpense','choOther','choCashier'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+        document.getElementById('choB').value = '1550';
+        calcCashHandover();
+        showNotif('📂 此交接班尚無記錄，可開始填寫');
+        return;
+    }
+    // 帶入
+    var qtys2 = document.querySelectorAll('.cho-qty');
+    for (var i = 0; i < qtys2.length; i++) {
+        var denom = parseInt(qtys2[i].getAttribute('data-denom'));
+        qtys2[i].value = (rec.cashCounts && rec.cashCounts[denom]) || '';
+    }
+    var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v || v === 0) ? v : ''; };
+    set('choB', rec.B); set('cho4', rec.c4); set('cho5', rec.c5); set('choD', rec.D); set('choE', rec.E);
+    set('choGS', rec.GS); set('choB2', rec.b); set('choC2', rec.c); set('choD2', rec.d); set('choE2', rec.e); set('choF2', rec.f); set('choG2', rec.g);
+    set('choCustomers', rec.customers); set('choPublic', rec.publicFee); set('choIcash', rec.icash);
+    set('choBottle', rec.bottle); set('choBottleFee', rec.bottleFee); set('choExpense', rec.expense); set('choOther', rec.other);
+    set('choCashier', rec.cashier);
+    calcCashHandover();
+    showNotif('📂 已載入交接班記錄');
+}
+
+function renderChoHistory() {
+    var tbody = document.getElementById('choHistoryBody');
+    if (!tbody) return;
+    var all = loadData('cashHandovers', {});
+    var recs = Object.keys(all).map(function(k){ return all[k]; });
+    recs.sort(function(a, b){ return (b.savedAt || '').localeCompare(a.savedAt || ''); });
+    if (recs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#9ca3af;">📭 尚無交接班記錄</td></tr>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < recs.length && i < 50; i++) {
+        var r = recs[i];
+        var shColor = r.shortage < 0 ? '#dc2626' : r.shortage > 0 ? '#059669' : '#374151';
+        var shTxt = (r.shortage > 0 ? '+$' : r.shortage < 0 ? '-$' : '$') + Math.abs(r.shortage || 0).toLocaleString();
+        html += '<tr>' +
+            '<td>' + r.date + '</td>' +
+            '<td>' + r.shift + '</td>' +
+            '<td>' + r.register + '</td>' +
+            '<td style="text-align:right;">$' + (r.cashTotal || 0).toLocaleString() + '</td>' +
+            '<td style="text-align:right; color:' + shColor + '; font-weight:bold;">' + shTxt + '</td>' +
+            '<td style="text-align:right;">$' + (r.h || 0).toLocaleString() + '</td>' +
+            '<td>' + (r.cashier || '-') + '</td>' +
+            '<td><button class="btn-danger" style="padding:4px 10px; font-size:11px;" onclick="deleteCashHandover(\'' + r.key + '\')">刪除</button></td>' +
+            '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function deleteCashHandover(key) {
+    if (!confirm('確定刪除這筆交接班記錄？')) return;
+    var all = loadData('cashHandovers', {});
+    delete all[key];
+    saveData('cashHandovers', all);
+    renderChoHistory();
+    showNotif('🗑️ 已刪除');
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+}
+
+// 🖨️ 列印交接班現金表
+function printCashHandover() {
+    var num = function(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; };
+    var date = document.getElementById('choDate').value || '';
+    var shift = document.getElementById('choShift').value || '';
+    var register = document.getElementById('choRegister').value || '';
+    var cashier = (document.getElementById('choCashier') || {}).value || '';
+    
+    // 面額明細
+    var rows = '';
+    var cashTotal = 0;
+    var qtys = document.querySelectorAll('.cho-qty');
+    for (var i = 0; i < qtys.length; i++) {
+        var denom = parseInt(qtys[i].getAttribute('data-denom'));
+        var qty = parseInt(qtys[i].value) || 0;
+        var sub = denom * qty;
+        cashTotal += sub;
+        rows += '<tr><td>' + denom + ' 元</td><td style="text-align:center;">' + qty + '</td><td style="text-align:right;">$' + sub.toLocaleString() + '</td></tr>';
+    }
+    var shortage = num('choB') + num('cho4') - cashTotal - num('choD') - num('choE');
+    var h = num('choGS') - num('choB2') - num('choC2') - num('choD2') - num('choE2') - num('choF2') - num('choG2');
+    var shTxt = (shortage > 0 ? '+$' : shortage < 0 ? '-$' : '$') + Math.abs(shortage).toLocaleString();
+    
+    var w = window.open('', '_blank');
+    var html = '<html><head><title>交接班現金表</title><meta charset="utf-8">' +
+        '<style>body{font-family:"Microsoft JhengHei",sans-serif;padding:20px;color:#000;}' +
+        'h2{text-align:center;margin:6px 0;} .meta{text-align:center;margin-bottom:14px;font-size:14px;}' +
+        'table{width:100%;border-collapse:collapse;margin-bottom:14px;} td,th{border:1px solid #333;padding:6px 10px;font-size:13px;}' +
+        'th{background:#eee;} .sec{font-weight:bold;background:#f5f5f5;} .big{font-size:18px;font-weight:bold;}</style></head><body>' +
+        '<h2>交接班現金點鈔表</h2>' +
+        '<div class="meta">日期：' + date + '　班別：' + shift + '　' + register + '　收銀員：' + cashier + '</div>' +
+        '<table><thead><tr><th>面額</th><th>數量</th><th>小計</th></tr></thead><tbody>' + rows +
+        '<tr class="sec"><td colspan="2">現金合計 (A)</td><td style="text-align:right;">$' + cashTotal.toLocaleString() + '</td></tr></tbody></table>' +
+        '<table><tbody>' +
+        '<tr><td>借零金庫 (B)</td><td style="text-align:right;">$' + num('choB').toLocaleString() + '</td></tr>' +
+        '<tr><td>店長加零</td><td style="text-align:right;">$' + num('cho4').toLocaleString() + '</td></tr>' +
+        '<tr><td>投零 (D)</td><td style="text-align:right;">$' + num('choD').toLocaleString() + '</td></tr>' +
+        '<tr><td>下一班接班金額 (E)</td><td style="text-align:right;">$' + num('choE').toLocaleString() + '</td></tr>' +
+        '<tr class="sec"><td>短/溢 (B+店長加零-A-D-E)</td><td style="text-align:right;" class="big">' + shTxt + '</td></tr>' +
+        '</tbody></table>' +
+        '<table><tbody>' +
+        '<tr><td>發票帳結金額 (GS)</td><td style="text-align:right;">$' + num('choGS').toLocaleString() + '</td></tr>' +
+        '<tr><td>− 退瓶、折讓</td><td style="text-align:right;">$' + num('choB2').toLocaleString() + '</td></tr>' +
+        '<tr><td>− 各項折讓/銷退</td><td style="text-align:right;">$' + (num('choC2')+num('choD2')+num('choE2')+num('choF2')+num('choG2')).toLocaleString() + '</td></tr>' +
+        '<tr class="sec"><td>實際銷貨收入 (h)</td><td style="text-align:right;">$' + h.toLocaleString() + '</td></tr>' +
+        '<tr><td>來客數</td><td style="text-align:right;">' + num('choCustomers').toLocaleString() + ' 人</td></tr>' +
+        '<tr><td>公共料金代收 / IC卡</td><td style="text-align:right;">$' + num('choPublic').toLocaleString() + ' / $' + num('choIcash').toLocaleString() + '</td></tr>' +
+        '</tbody></table>' +
+        '<div style="margin-top:30px;">收銀員簽名：________________　　店長簽名：________________</div>' +
+        '</body></html>';
+    w.document.write(html);
+    w.document.close();
+    setTimeout(function(){ w.print(); }, 400);
+}
+
+
+
 
 function initClockIn() {
     updateClockDisplay();
