@@ -2385,7 +2385,12 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
                     
                     <!-- 新增商品列 -->
                     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-end; background:#fffdf8; padding:12px; border-radius:12px; border:1px solid #f0e3cc;">
-                        <div><label style="font-size:12px; color:#6b7280;">商品名稱/條碼</label><br><input type="text" id="scItemName" placeholder="輸入商品名稱或條碼" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:160px;"></div>
+                        <div><label style="font-size:12px; color:#6b7280;">商品名稱/條碼</label><br>
+                            <span style="display:inline-flex; gap:4px;">
+                                <input type="text" id="scItemName" placeholder="輸入或掃描條碼" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:140px;">
+                                <button class="btn-secondary" style="padding:8px 10px; font-size:14px;" onclick="scScanBarcode()" title="掃描條碼">📷</button>
+                            </span>
+                        </div>
                         <div><label style="font-size:12px; color:#6b7280;">帳面</label><br><input type="number" inputmode="numeric" id="scItemBook" placeholder="0" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:80px;"></div>
                         <div><label style="font-size:12px; color:#6b7280;">實盤</label><br><input type="number" inputmode="numeric" id="scItemActual" placeholder="0" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:80px;"></div>
                         <button class="btn-confirm" style="padding:9px 16px; font-size:14px;" onclick="addStockItem()">➕ 加入</button>
@@ -5438,7 +5443,10 @@ function showWelcomeAnimation(name, roleName) {
 
 // 🆕 登入時自動同步
 function triggerLoginSync() {
-    var enabled = localStorage.getItem('_cs_enabled') === '1';
+    // 🔧 修正：只要有內建雲端網址（Firebase/Pantry）就自動啟用同步，免手動設定
+    var hasCloud = (typeof fbEnabled === 'function' && fbEnabled()) || (typeof pantryEnabled === 'function' && pantryEnabled());
+    var enabled = localStorage.getItem('_cs_enabled') === '1' || hasCloud;
+    if (hasCloud) localStorage.setItem('_cs_enabled', '1');  // 記住已啟用
     if (!enabled) {
         // 即使沒同步，也檢查本機待簽收調撥單
         setTimeout(function(){ checkPendingTransfers(); checkTaskNotifications(); }, 1500);
@@ -10691,6 +10699,10 @@ function closeBarcodeScanner() {
     if (window._scanMode === 'rcQuickAdd') {
         window._scanMode = null;
         if (typeof renderRcDetail === 'function' && _rcCurrentCampaign) renderRcDetail();
+    }
+    // 🆕 盤點掃描模式
+    if (window._scanMode === 'stockCount') {
+        window._scanMode = null;
     }
 }
 
@@ -17820,6 +17832,10 @@ function getActiveSyncEndpoint() {
     if (pantryId) {
         return { type: 'pantry', url: PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME };
     }
+    // 🔧 修正：加入 Firebase（內建網址即可用）
+    if (typeof fbEnabled === 'function' && fbEnabled()) {
+        return { type: 'firebase', url: fbGetUrl() };
+    }
     return null;
 }
 
@@ -18392,21 +18408,29 @@ window.saveData = function(key, value) {
 // 啟動時自動恢復同步狀態
 window.addEventListener('load', function() {
     setTimeout(function() {
-        var enabled = localStorage.getItem('_cs_enabled') === '1';
+        // 🔧 修正：支援內建 Firebase，且只要有雲端端點就自動啟用（免 _cs_enabled 手動設定）
+        var hasFb = (typeof fbEnabled === 'function' && fbEnabled());
+        var hasPantry = (typeof pantryEnabled === 'function' && pantryEnabled());
         var gistId = ghGetGistId();
         var token = ghGetToken();
-        var pantryId = getSyncPantryId();
-        if (enabled && ((gistId && token) || pantryId)) {
+        var enabled = localStorage.getItem('_cs_enabled') === '1' || hasFb || hasPantry || (gistId && token);
+        if (enabled) {
             _syncEnabled = true;
-            addSyncLog('恢復線上同步' + ((gistId && token) ? '（GitHub Gist）' : '（Pantry）'), 'info');
+            localStorage.setItem('_cs_enabled', '1');
+            addSyncLog('恢復線上同步' + (hasPantry ? '（Pantry）' : hasFb ? '（Firebase）' : '（GitHub Gist）'), 'info');
             startAutoPull();
-            // 🆕 啟動時立刻拉取（讓登入畫面的帳號/人臉是最新）
+            // 🆕 啟動時立刻拉取（讓登入畫面的帳號/人臉/資料是最新）
             setTimeout(function() {
-                manualPullFromCloud(true);
-                // 在登入頁顯示同步狀態
-                var loginPage = document.getElementById('loginPage');
-                if (loginPage && !loginPage.classList.contains('hidden')) {
-                    showNotif('☁️ 已同步雲端帳號與人臉資料');
+                var done = function() {
+                    var loginPage = document.getElementById('loginPage');
+                    if (loginPage && !loginPage.classList.contains('hidden')) {
+                        showNotif('☁️ 已同步雲端資料');
+                    }
+                };
+                if (typeof cloudPull === 'function') {
+                    cloudPull(true).then(done).catch(function(){});
+                } else {
+                    manualPullFromCloud(true); done();
                 }
             }, 800);
         }
@@ -19918,6 +19942,66 @@ function viewStockCount(id) {
     renderStockItems();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     showNotif('📋 已載入 ' + rec.date + ' ' + rec.category);
+}
+
+// 📷 盤點掃描條碼（掃一次→帶入商品名→關閉→跳帳面）
+function scScanBarcode() {
+    if (typeof Html5Qrcode === 'undefined') return alert('⚠️ 掃描功能未載入，請檢查網路連線');
+    window._scanMode = 'stockCount';
+    var modal = document.getElementById('barcodeScannerModal');
+    modal.classList.remove('hidden');
+    modal.style.zIndex = '99999';
+    var resultEl = document.getElementById('scanResult');
+    if (resultEl) resultEl.innerHTML = '<span style="color:#7c3aed; font-weight:bold;">⏳ 啟動相機中...對準商品條碼</span>';
+    
+    if (typeof _currentScanner !== 'undefined' && _currentScanner) {
+        try { _currentScanner.stop().catch(function(){}); } catch(e){}
+        _currentScanner = null;
+    }
+    setTimeout(function() {
+        _currentScanner = new Html5Qrcode("barcodeReader");
+        _currentScanner.start(
+            { facingMode: 'environment' },
+            {
+                fps: 10,
+                qrbox: function(vw, vh) { var w = Math.floor(vw*0.9), h = Math.floor(vh*0.22); if(h>150)h=150; if(h<80)h=80; return {width:w, height:h}; },
+                aspectRatio: 1.7777,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E, Html5QrcodeSupportedFormats.QR_CODE
+                ]
+            },
+            function(decodedText) {
+                // 嘗試從商品庫帶入名稱
+                var fill = decodedText;
+                var productCodes = loadData('productCodes', {});
+                for (var code in productCodes) {
+                    if (productCodes[code].lastBarcode === decodedText || decodedText.indexOf(code) === 0) {
+                        if (productCodes[code].productName) fill = productCodes[code].productName;
+                        break;
+                    }
+                }
+                var nameEl = document.getElementById('scItemName');
+                if (nameEl) nameEl.value = fill;
+                if (typeof playBeep === 'function') playBeep();
+                if (resultEl) resultEl.innerHTML = '<span style="color:#059669; font-weight:bold;">✅ 已帶入：' + fill + '</span>';
+                // 掃到就關閉，跳到帳面數量
+                setTimeout(function() {
+                    closeBarcodeScanner();
+                    var bookEl = document.getElementById('scItemBook');
+                    if (bookEl) bookEl.focus();
+                }, 500);
+            },
+            function() { /* ignore */ }
+        ).then(function() {
+            if (resultEl) resultEl.innerHTML = '<span style="color:#7c3aed; font-weight:bold;">📷 對準條碼，掃到自動帶入</span>';
+            if (typeof addScannerAimingLine === 'function') setTimeout(addScannerAimingLine, 300);
+        }).catch(function(err) {
+            if (resultEl) resultEl.innerHTML = '<span style="color:#dc2626;">❌ 無法啟動相機：' + err + '<br>請確認已授權相機、使用 HTTPS</span>';
+        });
+    }, 250);
 }
 
 function deleteStockCount(id) {
