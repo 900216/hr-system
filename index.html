@@ -1877,7 +1877,29 @@ hr { border: 0 !important; border-top: 1px solid var(--line) !important; }
 }
 .home-date { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
 .home-tulip { font-size: 52px; animation: homeBob 2.5s ease-in-out infinite; }
-@keyframes homeBob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+/* 🆕 Q 版可動頭像 */
+.home-avatar-wrap { position: relative; cursor: pointer; display: inline-block; }
+.home-avatar-img {
+    width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+    border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    /* Q 版鮮豔卡通濾鏡 */
+    filter: saturate(1.45) contrast(1.08) brightness(1.04);
+    animation: avatarBounce 2.2s ease-in-out infinite;
+}
+.home-avatar-wrap:hover .home-avatar-img { animation-duration: 0.7s; }
+.home-avatar-edit {
+    position: absolute; bottom: -2px; right: -2px;
+    background: var(--brand); color: #fff; border-radius: 50%;
+    width: 24px; height: 24px; font-size: 12px; line-height: 24px; text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25); border: 2px solid #fff;
+}
+@keyframes avatarBounce {
+    0%,100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-7px) scale(1.06, 0.94); }
+    50% { transform: translateY(0) scale(0.96, 1.04); }
+    70% { transform: translateY(-3px) scale(1.02, 0.98); }
+}
+@keyframes homeBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .home-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .home-stat-card {
     background: #fff; border: 1px solid var(--line); border-radius: 14px;
@@ -2075,6 +2097,55 @@ input:focus, select:focus, textarea:focus { transition: box-shadow .18s ease, bo
 }
 body.view-mobile .sc-stats { grid-template-columns: repeat(2, 1fr); }
 body.view-mobile .sc-stat .sc-num { font-size: 20px; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🎬 登入頁進階動畫                            ║
+   ╚══════════════════════════════════════════════╝ */
+/* 背景光暈緩慢漂浮 */
+.login-container::before { animation: glowFloat1 9s ease-in-out infinite; }
+.login-container::after  { animation: glowFloat2 11s ease-in-out infinite; }
+@keyframes glowFloat1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,30px) scale(1.15); } }
+@keyframes glowFloat2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-25px) scale(1.2); } }
+
+/* 標題下墜 + 副標淡入 */
+.system-title h1 { animation: titleDrop 0.6s cubic-bezier(0.18,0.89,0.32,1.2) both; }
+@keyframes titleDrop { from { opacity: 0; transform: translateY(-14px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.system-title p { animation: fadeUpL 0.6s ease 0.15s both; }
+@keyframes fadeUpL { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 內部元素依序進場 */
+.login-box .announcement { animation: fadeUpL 0.5s ease 0.25s both; }
+.login-box .login-form  { animation: fadeUpL 0.55s ease 0.35s both; }
+.login-box .form-row    { animation: fadeUpL 0.5s ease both; }
+.login-box .form-row:nth-of-type(1) { animation-delay: 0.42s; }
+.login-box .form-row:nth-of-type(2) { animation-delay: 0.50s; }
+.login-box .button-group { animation: fadeUpL 0.55s ease 0.58s both; }
+
+/* 緊急公告標題呼吸閃爍 */
+.announcement.urgent .announcement-title { animation: urgentBlink 1.8s ease-in-out infinite; }
+@keyframes urgentBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* 打卡鈕滑過閃光 */
+.btn-signin, .btn-signout { position: relative; overflow: hidden; }
+.btn-signin::after, .btn-signout::after {
+    content: ''; position: absolute; top: 0; left: -120%; width: 60%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.5), transparent);
+    transform: skewX(-20deg); pointer-events: none;
+}
+.btn-signin:hover::after, .btn-signout:hover::after { animation: btnShine 0.7s ease; }
+@keyframes btnShine { to { left: 130%; } }
+
+/* 登入鈕脈動光環 */
+.btn-login { animation: loginPulse 2.4s ease-in-out infinite; }
+@keyframes loginPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    50% { box-shadow: 0 0 0 6px rgba(16,185,129,0.14); }
+}
+
+/* 輸入聚焦時整列微放大 */
+.login-box .form-row { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.login-box .form-row:focus-within { transform: scale(1.015); }
+@keyframes loginTulip { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 </style>
 </head>
 <body>
@@ -2083,16 +2154,16 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
 <div id="loginPage" class="login-container">
     <div class="login-box">
         <div class="system-title">
-            <h1>🌷 考勤管理系統</h1>
+            <h1><span style="display:inline-block; animation:loginTulip 2.8s ease-in-out infinite;">🏪</span> 考勤管理系統</h1>
             <p>Rostering System</p>
         </div>
-        <div class="announcement urgent">
+        <div class="announcement urgent" id="loginUrgentBox">
             <div class="announcement-title">🔔 緊急公告</div>
-            <div class="announcement-content">• 系統測試期間，密碼錯誤請使用「密碼還原」功能。</div>
+            <div class="announcement-content" id="loginUrgentText">• 系統測試期間，密碼錯誤請使用「密碼還原」功能。</div>
         </div>
-        <div class="announcement normal">
+        <div class="announcement normal" id="loginNormalBox">
             <div class="announcement-title">📢 一般公告</div>
-            <div class="announcement-content">• 系統升級維護時間：每週日 02:00-04:00</div>
+            <div class="announcement-content" id="loginNormalText">• 系統升級維護時間：每週日 02:00-04:00</div>
         </div>
         <div class="login-form">
             <!-- 🆕 版本選擇 -->
@@ -2140,7 +2211,7 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
 <div id="mainPage" class="main-page hidden">
     <div class="header-bar">
         <div class="logo-area" onclick="showWorkList()">
-            <span style="font-size: 24px;">🌷</span>
+            <span style="font-size: 24px;">🏪</span>
             <div><h2>考勤管理系統</h2><span>Rostering System</span></div>
         </div>
         <div class="user-info-bar">
@@ -2213,6 +2284,7 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
                 <div class="submenu-item" onclick="goToPage('accountManagement','menu-system')">👤 帳號管理</div>
                 <div class="submenu-item" onclick="goToPage('permissionSettings','menu-system')">🔐 權限設定</div>
                 <div class="submenu-item" onclick="goToPage('systemParams','menu-system')">⚙️ 系統參數</div>
+                <div class="submenu-item" onclick="goToPage('announcementMgmt','menu-system')">📢 登入頁公告</div>
                 <div class="submenu-item" onclick="goToPage('systemLog','menu-system')">📜 系統紀錄</div>
                 <div class="submenu-item" onclick="goToPage('cloudSync','menu-system')">🌐 線上同步</div>
             </div>
@@ -4155,6 +4227,40 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
         </div>
     </div>
     
+    <!-- 📢 登入頁公告管理 -->
+    <div id="page-announcementMgmt" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⚙️ 系統管理 &gt; <strong>📢 登入頁公告</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header"><h3>📢 登入頁公告設定</h3></div>
+                <div class="panel-body">
+                    <div class="alert-box info" style="margin-bottom:16px;">💡 在此編輯<strong>登入畫面</strong>顯示的公告，儲存後所有員工開啟登入頁都會看到。可關閉不顯示。</div>
+                    
+                    <div style="background:#fffdf8; border:1px solid #f0e3cc; border-radius:12px; padding:16px; margin-bottom:16px;">
+                        <label style="font-weight:bold; color:#dc2626; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <input type="checkbox" id="annUrgentOn" style="width:18px; height:18px;"> 🔔 緊急公告（紅色）
+                        </label>
+                        <textarea id="annUrgentText" rows="3" placeholder="輸入緊急公告內容..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
+                    </div>
+                    
+                    <div style="background:#fffdf8; border:1px solid #f0e3cc; border-radius:12px; padding:16px; margin-bottom:16px;">
+                        <label style="font-weight:bold; color:#2563eb; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <input type="checkbox" id="annNormalOn" style="width:18px; height:18px;"> 📢 一般公告（藍色）
+                        </label>
+                        <textarea id="annNormalText" rows="3" placeholder="輸入一般公告內容..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
+                    </div>
+                    
+                    <button class="btn-confirm" style="padding:12px 28px; font-size:16px;" onclick="saveAnnouncements()">💾 儲存公告</button>
+                    
+                    <div style="margin-top:20px; padding-top:16px; border-top:1px dashed #ddd;">
+                        <div style="font-size:13px; color:#6b7280; margin-bottom:8px;">📱 登入頁預覽：</div>
+                        <div id="annPreview"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div id="page-systemParams" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⚙️ 系統管理 &gt; <strong>⚙️ 系統參數</strong></div>
         <div class="main-content">
@@ -4294,6 +4400,18 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
                 <div id="syncStatusBadge" style="padding:6px 14px; border-radius:20px; font-size:13px; font-weight:bold; background:#9ca3af; color:white;">⚫ 未啟用</div>
             </div>
             <div class="panel-body">
+                <!-- 🔍 一鍵診斷（最重要）-->
+                <div style="background:linear-gradient(135deg,#fef9c3,#fde68a); padding:16px; border-radius:12px; margin-bottom:16px; border:2px solid #f59e0b; text-align:center;">
+                    <div style="font-size:15px; font-weight:bold; color:#92400e; margin-bottom:8px;">🔍 同步有問題？先點這裡測試</div>
+                    <button onclick="fbDiagnostic()" style="padding:12px 28px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:0; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 3px 8px rgba(217,119,6,0.4);">🔍 一鍵診斷同步</button>
+                    <div style="font-size:12px; color:#78350f; margin-top:8px;">會自動測試雲端連線，並用彈窗告訴你問題在哪</div>
+                    <div id="fbDiagResult" style="margin-top:10px; font-size:12px; white-space:pre-wrap; font-family:monospace; background:#fffef5; padding:10px; border-radius:8px; display:none; text-align:left;"></div>
+                    <div style="display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;">
+                        <button onclick="fbForcePush()" style="padding:9px 16px; background:#0ea5e9; color:white; border:0; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">⬆️ 強制上傳本機資料</button>
+                        <button onclick="fbForcePull()" style="padding:9px 16px; background:#8b5cf6; color:white; border:0; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">⬇️ 強制下載雲端資料</button>
+                    </div>
+                </div>
+                
                 <div class="alert-box info" style="margin-bottom:16px;">
                     💡 <strong>線上同步</strong>讓多台設備（手機、平板、電腦）共享同一份資料：店長手機改班表，店員平板立即看到；門市間調撥單即時同步。
                 </div>
@@ -4354,7 +4472,7 @@ body.view-mobile .sc-stat .sc-num { font-size: 20px; }
                         <button onclick="fbForcePush()" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬆️ 強制上傳本機資料</button>
                         <button onclick="fbForcePull()" style="padding:8px 14px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬇️ 強制下載雲端資料</button>
                     </div>
-                    <div id="fbDiagResult" style="margin-top:8px; font-size:12px; white-space:pre-wrap; font-family:monospace; background:#f8fafc; padding:8px; border-radius:6px; display:none;"></div>
+                    <div id="fbDiagResultLegacy" style="margin-top:8px; font-size:12px; white-space:pre-wrap; font-family:monospace; background:#f8fafc; padding:8px; border-radius:6px; display:none;"></div>
                     <button onclick="window.open('https://console.firebase.google.com/','_blank')" style="margin-top:8px; padding:8px 14px; background:#f59e0b; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔥 開啟 Firebase 主控台</button>
                 </div>
                 </details>
@@ -5427,7 +5545,7 @@ function showWelcomeAnimation(name, roleName) {
     ov.id = 'welcomeOverlay';
     ov.innerHTML =
         '<div class="welcome-card">' +
-            '<div class="welcome-tulip">🌷</div>' +
+            '<div class="welcome-tulip">🏪</div>' +
             '<div class="welcome-greet">' + greetEmoji + ' ' + greet + '</div>' +
             '<div class="welcome-name">' + name + '</div>' +
             '<div class="welcome-role">' + roleName + '</div>' +
@@ -5750,7 +5868,7 @@ function showLogoutAnimation(name, onDone) {
         '<div class="logout-card">' +
             '<div class="logout-wave">👋</div>' +
             '<div class="logout-bye">再見' + (name ? '，' + name : '') + '</div>' +
-            '<div class="logout-sub">感謝您的辛勞，期待再相見 <span class="uniopen-mark" style="font-size:13px; padding:2px 6px;"><span class="o">O</span><span class="p">P</span><span class="e">E</span><span class="n">N</span><span class="x">!</span></span></div>' +
+            '<div class="logout-sub">感謝您的辛勞，期待再相見 🏪</div>' +
             '<div class="logout-bar"><div class="logout-bar-fill"></div></div>' +
         '</div>';
     document.body.appendChild(ov);
@@ -6336,6 +6454,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'clockIn') initClockIn();
     else if (pageName === 'clockRecords') initClockRecords();
     else if (pageName === 'stockCount') initStockCount();
+    else if (pageName === 'announcementMgmt') initAnnouncementMgmt();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -6401,6 +6520,19 @@ function renderHomeDashboard(works) {
         else if (works[i].status === 'done') done++;
     }
     
+    // 🆕 個人 Q 版頭像（點擊可上傳，存於本機，依使用者區分）
+    var avatarKey = 'homeAvatar_' + ((currentUser && currentUser.id) || 'guest');
+    var avatarData = localStorage.getItem(avatarKey) || '';
+    var avatarHtml;
+    if (avatarData) {
+        avatarHtml = '<div class="home-avatar-wrap" onclick="pickHomeAvatar()" title="點擊更換頭像">' +
+            '<img src="' + avatarData + '" class="home-avatar-img" alt="頭像">' +
+            '<span class="home-avatar-edit">📷</span>' +
+            '</div>';
+    } else {
+        avatarHtml = '<div class="home-tulip home-avatar-wrap" onclick="pickHomeAvatar()" title="點擊上傳專屬頭像">🏪<span class="home-avatar-edit">📷</span></div>';
+    }
+    
     el.innerHTML =
         '<div class="home-banner">' +
             '<div class="home-banner-text">' +
@@ -6408,13 +6540,63 @@ function renderHomeDashboard(works) {
                 (roleName ? '<div class="home-role">' + roleName + '</div>' : '') +
                 '<div class="home-date">📅 ' + dateStr + '</div>' +
             '</div>' +
-            '<div class="home-tulip">🌷</div>' +
+            avatarHtml +
         '</div>' +
         '<div class="home-stats">' +
             '<div class="home-stat-card pending"><div class="hs-num">' + pending + '</div><div class="hs-label">⏳ 未完成</div></div>' +
             '<div class="home-stat-card review"><div class="hs-num">' + review + '</div><div class="hs-label">🔄 進行中</div></div>' +
             '<div class="home-stat-card done"><div class="hs-num">' + done + '</div><div class="hs-label">✓ 已完成</div></div>' +
         '</div>';
+}
+
+// 📷 上傳並轉換成 Q 版頭像
+function pickHomeAvatar() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 12 * 1024 * 1024) return alert('⚠️ 圖片過大，請選 12MB 以下');
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            var img = new Image();
+            img.onload = function() {
+                // 自動裁成正方形、縮小到 160px、輸出 Q 版圓形頭像
+                var size = 160;
+                var canvas = document.createElement('canvas');
+                canvas.width = size; canvas.height = size;
+                var ctx = canvas.getContext('2d');
+                // 置中裁切成正方形
+                var min = Math.min(img.width, img.height);
+                var sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+                ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                var avatarKey = 'homeAvatar_' + ((currentUser && currentUser.id) || 'guest');
+                try {
+                    localStorage.setItem(avatarKey, dataUrl);
+                    showNotif('📷 已設定專屬 Q 版頭像！');
+                    renderWorkList();
+                } catch(err) {
+                    alert('⚠️ 儲存失敗，圖片可能太大，請換一張');
+                }
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+// 重設頭像
+function resetHomeAvatar() {
+    var avatarKey = 'homeAvatar_' + ((currentUser && currentUser.id) || 'guest');
+    if (!localStorage.getItem(avatarKey)) return pickHomeAvatar();
+    if (confirm('要移除目前頭像、改回預設圖示嗎？')) {
+        localStorage.removeItem(avatarKey);
+        renderWorkList();
+        showNotif('🔄 已恢復預設圖示');
+    }
 }
 
 function renderWorkList() {
@@ -17014,7 +17196,7 @@ function pushToFirebase(silent) {
 
 // 🔑 統一雲端讀取：優先 Firebase，其次 Gist（免Token）
 // 🥫 Pantry 同步（最簡單：只需 Pantry ID，免 Token、免規則）
-var DEFAULT_PANTRY_ID = '';  // ← 取得 Pantry ID 後填這裡，或在同步頁貼上
+var DEFAULT_PANTRY_ID = 'fa1fe25c-fd0a-4ba7-9cde-a67743c9ed74';  // ← 已內建，全員自動同步
 
 function pantryGetId() { return localStorage.getItem('_cs_pantryId') || DEFAULT_PANTRY_ID || ''; }
 function pantryEnabled() { return !!pantryGetId(); }
@@ -17157,6 +17339,7 @@ function fbDiagnostic() {
             log('❌ 寫入被拒（' + r.status + '）→ 資料庫規則沒開放！');
             log('   解法：Firebase → Realtime Database → 規則');
             log('   把 .read 和 .write 都改成 true 並發布');
+            alert('🔴 找到問題了！\n\nFirebase 資料庫規則「沒開放」或「已過期」（錯誤 ' + r.status + '）\n\n這就是各裝置不同步的原因！\n\n✅ 解法：\n1. 到 Firebase 主控台\n2. Realtime Database → 規則(Rules)\n3. 改成：\n   {\n     "rules": {\n       ".read": true,\n       ".write": true\n     }\n   }\n4. 按「發布」\n\n（測試模式規則 30 天會自動失效，要改成上面這樣才永久有效）');
             throw new Error('RULES');
         }
         if (!r.ok) { log('❌ 寫入失敗 HTTP ' + r.status); throw new Error('WRITE_FAIL'); }
@@ -17176,10 +17359,13 @@ function fbDiagnostic() {
         if (!data) {
             log('   ⚠️ 雲端尚無主資料（hrdata）');
             log('   解法：點「⬆️ 強制上傳本機資料」');
+            alert('🟡 連線正常，但雲端「還沒有資料」！\n\n這就是換裝置看不到的原因 —\n還沒把資料上傳到雲端。\n\n✅ 解法：\n在「有完整資料」的那台裝置\n點「⬆️ 強制上傳本機資料」\n\n之後其他裝置就會自動同步到了。');
         } else {
             var keys = Object.keys(data);
             var accCount = data.accounts ? data.accounts.length : 0;
+            var empCount = data.employees ? data.employees.length : 0;
             log('   ✅ 雲端有資料：' + keys.length + ' 類，帳號 ' + accCount + ' 個');
+            alert('🟢 連線正常，雲端也有資料！\n\n雲端目前：\n• 資料類別 ' + keys.length + ' 類\n• 帳號 ' + accCount + ' 個\n• 員工 ' + empCount + ' 位\n\n若這台裝置看不到，請點\n「⬇️ 強制下載雲端資料」即可。');
         }
         log('');
         log('✅ 診斷完成！連線正常。');
@@ -17189,8 +17375,13 @@ function fbDiagnostic() {
     }).catch(function(err) {
         log('');
         log('診斷中斷：' + (err.message || err));
-        if ((err.message || '').indexOf('逾時') >= 0) {
+        var m = err.message || '';
+        if (m === 'RULES') { /* 已彈窗 */ }
+        else if (m.indexOf('逾時') >= 0 || m.indexOf('timeout') >= 0) {
             log('→ 網路連線逾時，請換網路或關閉 VPN');
+            alert('🔴 網路連線逾時\n\n請：\n1. 確認網路正常（換 WiFi 或行動網路試試）\n2. 關閉 VPN\n3. 確認沒用 IG/Line 內建瀏覽器，改用 Safari');
+        } else {
+            alert('🔴 診斷遇到問題：' + m + '\n\n請確認網路正常、使用 Safari、HTTPS 連線。');
         }
     });
 }
@@ -17828,7 +18019,7 @@ function getActiveSyncEndpoint() {
     if (gistId && token) {
         return { type: 'github', gistId: gistId, token: token };
     }
-    var pantryId = localStorage.getItem('_cs_pantryId') || '';
+    var pantryId = (typeof pantryGetId === 'function') ? pantryGetId() : (localStorage.getItem('_cs_pantryId') || '');
     if (pantryId) {
         return { type: 'pantry', url: PANTRY_BASE_URL + '/' + pantryId + '/basket/' + PANTRY_BASKET_NAME };
     }
@@ -18409,6 +18600,7 @@ window.saveData = function(key, value) {
 window.addEventListener('load', function() {
     setTimeout(function() {
         // 🔧 修正：支援內建 Firebase，且只要有雲端端點就自動啟用（免 _cs_enabled 手動設定）
+        if (typeof applyLoginAnnouncements === 'function') applyLoginAnnouncements();
         var hasFb = (typeof fbEnabled === 'function' && fbEnabled());
         var hasPantry = (typeof pantryEnabled === 'function' && pantryEnabled());
         var gistId = ghGetGistId();
@@ -18422,6 +18614,7 @@ window.addEventListener('load', function() {
             // 🆕 啟動時立刻拉取（讓登入畫面的帳號/人臉/資料是最新）
             setTimeout(function() {
                 var done = function() {
+                    if (typeof applyLoginAnnouncements === 'function') applyLoginAnnouncements();
                     var loginPage = document.getElementById('loginPage');
                     if (loginPage && !loginPage.classList.contains('hidden')) {
                         showNotif('☁️ 已同步雲端資料');
@@ -19718,6 +19911,74 @@ function initClockRecords() {
 // ============================================================
 var scCurrentItems = [];  // 目前編輯中的盤點品項
 var DEFAULT_STOCK_CATS = ['一般商品', '飲料', '菸品', '酒類', '鮮食', '冰品', '日用品', '其他'];
+
+// ============================================================
+// 📢 登入頁公告管理
+// ============================================================
+var DEFAULT_ANNOUNCEMENTS = {
+    urgentOn: true, urgentText: '系統測試期間，密碼錯誤請使用「密碼還原」功能。',
+    normalOn: true, normalText: '系統升級維護時間：每週日 02:00-04:00'
+};
+
+function getAnnouncements() {
+    var a = loadData('loginAnnouncements', null);
+    if (!a || typeof a !== 'object') return Object.assign({}, DEFAULT_ANNOUNCEMENTS);
+    return a;
+}
+
+function applyLoginAnnouncements() {
+    var a = getAnnouncements();
+    var uBox = document.getElementById('loginUrgentBox');
+    var uTxt = document.getElementById('loginUrgentText');
+    var nBox = document.getElementById('loginNormalBox');
+    var nTxt = document.getElementById('loginNormalText');
+    if (uBox && uTxt) {
+        if (a.urgentOn && a.urgentText) { uBox.style.display = ''; uTxt.textContent = '• ' + a.urgentText; }
+        else uBox.style.display = 'none';
+    }
+    if (nBox && nTxt) {
+        if (a.normalOn && a.normalText) { nBox.style.display = ''; nTxt.textContent = '• ' + a.normalText; }
+        else nBox.style.display = 'none';
+    }
+}
+
+function initAnnouncementMgmt() {
+    var a = getAnnouncements();
+    document.getElementById('annUrgentOn').checked = !!a.urgentOn;
+    document.getElementById('annUrgentText').value = a.urgentText || '';
+    document.getElementById('annNormalOn').checked = !!a.normalOn;
+    document.getElementById('annNormalText').value = a.normalText || '';
+    renderAnnPreview();
+    ['annUrgentOn','annUrgentText','annNormalOn','annNormalText'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.oninput = el.onchange = renderAnnPreview;
+    });
+}
+
+function renderAnnPreview() {
+    var uOn = document.getElementById('annUrgentOn').checked;
+    var uTxt = document.getElementById('annUrgentText').value;
+    var nOn = document.getElementById('annNormalOn').checked;
+    var nTxt = document.getElementById('annNormalText').value;
+    var html = '';
+    if (uOn && uTxt) html += '<div class="announcement urgent" style="margin-bottom:8px;"><div class="announcement-title">🔔 緊急公告</div><div class="announcement-content">• ' + uTxt + '</div></div>';
+    if (nOn && nTxt) html += '<div class="announcement normal"><div class="announcement-title">📢 一般公告</div><div class="announcement-content">• ' + nTxt + '</div></div>';
+    if (!html) html = '<div style="color:#9ca3af; font-size:13px; padding:10px;">（登入頁將不顯示公告）</div>';
+    document.getElementById('annPreview').innerHTML = html;
+}
+
+function saveAnnouncements() {
+    var a = {
+        urgentOn: document.getElementById('annUrgentOn').checked,
+        urgentText: document.getElementById('annUrgentText').value.trim(),
+        normalOn: document.getElementById('annNormalOn').checked,
+        normalText: document.getElementById('annNormalText').value.trim()
+    };
+    saveData('loginAnnouncements', a);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    applyLoginAnnouncements();
+    showNotif('💾 公告已儲存，登入頁已更新');
+}
 
 function getStockCategories() {
     var cats = loadData('stockCategories', null);
