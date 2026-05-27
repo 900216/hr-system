@@ -2056,6 +2056,25 @@ input:focus, select:focus, textarea:focus { transition: box-shadow .18s ease, bo
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  🔢 門市盤點 UI                              ║
+   ╚══════════════════════════════════════════════╝ */
+.sc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.sc-stat {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow-sm); padding: 12px 8px; text-align: center;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+.sc-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.sc-stat .sc-num { font-size: 24px; font-weight: 900; line-height: 1; }
+.sc-stat .sc-lbl { font-size: 12px; color: var(--ink-soft); margin-top: 6px; font-weight: 600; }
+#page-stockCount .work-table td, #page-stockCount .work-table th { vertical-align: middle; }
+#page-stockCount input:focus, #page-stockCount select:focus {
+    border-color: var(--brand) !important; box-shadow: 0 0 0 3px rgba(224,140,44,0.15) !important;
+}
+body.view-mobile .sc-stats { grid-template-columns: repeat(2, 1fr); }
+body.view-mobile .sc-stat .sc-num { font-size: 20px; }
 </style>
 </head>
 <body>
@@ -2176,6 +2195,7 @@ input:focus, select:focus, textarea:focus { transition: box-shadow .18s ease, bo
                 <div class="submenu-item" onclick="goToPage('purchaseReceipt','menu-daily-inv')">📦 進貨驗收</div>
                 <div class="submenu-item" onclick="goToPage('transferOrder','menu-daily-inv')">🔄 51-調撥單</div>
                 <div class="submenu-item" onclick="goToPage('inventoryReport','menu-daily-inv')">📊 日別庫存明細表</div>
+                <div class="submenu-item" onclick="goToPage('stockCount','menu-daily-inv')">🔢 門市盤點</div>
                 <div class="submenu-item" onclick="goToPage('productLibrary','menu-daily-inv')">📋 條碼商品庫</div>
             </div>
         </div>
@@ -2340,6 +2360,77 @@ input:focus, select:focus, textarea:focus { transition: box-shadow .18s ease, bo
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🔢 門市盤點系統 -->
+    <div id="page-stockCount" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 📊 日別庫存 &gt; <strong>🔢 門市盤點</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <h3>🔢 門市盤點</h3>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <input type="date" id="scDate" style="padding:6px; border:1px solid #ccc; border-radius:8px;">
+                        <select id="scCategory" style="padding:6px; border:1px solid #ccc; border-radius:8px;"></select>
+                        <button class="btn-secondary" id="scCatSettingBtn" style="padding:6px 10px; font-size:13px; display:none;" onclick="openStockCatModal()">⚙️ 分類設定</button>
+                        <button class="btn-secondary" style="padding:6px 12px; font-size:13px;" onclick="loadStockCount()">📂 載入</button>
+                        <button class="btn-confirm" style="padding:6px 12px; font-size:13px;" onclick="saveStockCount()">💾 儲存</button>
+                        <button class="btn-primary" style="padding:6px 12px; font-size:13px;" onclick="printCurrentStock()">🖨️ 列印</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="alert-box info" style="margin-bottom:12px;">💡 輸入商品、<strong>帳面數量</strong>（系統庫存）與<strong>實盤數量</strong>（實際清點），系統自動算<strong>差異</strong>。差異紅色為短缺、綠色為盤盈。盤點人自動帶入登入者。</div>
+                    
+                    <!-- 新增商品列 -->
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-end; background:#fffdf8; padding:12px; border-radius:12px; border:1px solid #f0e3cc;">
+                        <div><label style="font-size:12px; color:#6b7280;">商品名稱/條碼</label><br><input type="text" id="scItemName" placeholder="輸入商品名稱或條碼" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:160px;"></div>
+                        <div><label style="font-size:12px; color:#6b7280;">帳面</label><br><input type="number" inputmode="numeric" id="scItemBook" placeholder="0" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:80px;"></div>
+                        <div><label style="font-size:12px; color:#6b7280;">實盤</label><br><input type="number" inputmode="numeric" id="scItemActual" placeholder="0" onkeydown="scItemEnter(event)" style="padding:8px; border:1px solid #ccc; border-radius:8px; width:80px;"></div>
+                        <button class="btn-confirm" style="padding:9px 16px; font-size:14px;" onclick="addStockItem()">➕ 加入</button>
+                    </div>
+                    
+                    <div id="scSummary" style="margin-bottom:10px; font-size:13px;"></div>
+                    <div style="overflow-x:auto;">
+                        <table class="work-table" style="width:100%; min-width:560px;">
+                            <thead><tr><th>商品</th><th>分類</th><th style="text-align:right;">帳面</th><th style="text-align:right;">實盤</th><th style="text-align:right;">差異</th><th>操作</th></tr></thead>
+                            <tbody id="scItemsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 盤點記錄 -->
+            <div class="work-list-panel" style="margin-top:16px;">
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h3>📋 盤點記錄</h3>
+                    <button class="btn-primary" style="padding:6px 12px; font-size:13px;" onclick="printStockByDate()">🖨️ 依類別列印本日</button>
+                </div>
+                <div class="panel-body">
+                    <table class="work-table" style="width:100%;">
+                        <thead><tr><th>日期</th><th>分類</th><th>盤點人</th><th>品項數</th><th>差異合計</th><th>操作</th></tr></thead>
+                        <tbody id="scHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🔢 盤點分類設定彈窗 -->
+    <div id="stockCatModal" class="modal-overlay hidden">
+        <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">⚙️ 盤點分類設定</h3>
+                <button onclick="closeModal('stockCatModal')" style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-box info" style="margin-bottom:12px;">💡 在此新增、刪除盤點分類，套用後盤點時即可選用。</div>
+                <div style="display:flex; gap:6px; margin-bottom:12px;">
+                    <input type="text" id="scNewCat" placeholder="輸入新分類名稱" onkeydown="if(event.key==='Enter'){event.preventDefault();addStockCategory();}" style="flex:1; padding:9px; border:1px solid #ccc; border-radius:8px;">
+                    <button class="btn-confirm" style="padding:9px 16px;" onclick="addStockCategory()">➕ 新增</button>
+                </div>
+                <div id="scCatList"></div>
             </div>
         </div>
     </div>
@@ -5672,14 +5763,14 @@ var ROLE_PERMISSIONS = {
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
                   'scheduleQuery', 'shiftSwap', 'reviewMonth', 'employeeBasic',
                   'leaveAllocation', 'insuranceAdd', 'insuranceRemove', 'insuranceQuery',
-                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary',
+                  'changePassword', 'payroll', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'stockCount', 'productLibrary',
                   'inventoryReport', 'returnCampaign']
     },
     'deputy': {
         // 副店長：協助店長，可使用現金日報、排班、請假、薪資查詢
         allowed: ['workList', 'attendanceAbnormal', 'overtimeApply', 'businessTrip',
                   'cardSupplement', 'leaveApply', 'attendanceQuery', 'schedule',
-                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'productLibrary',
+                  'shiftSwap', 'changePassword', 'mySalary', 'cashReport', 'purchaseReceipt', 'transferOrder', 'stockCount', 'productLibrary',
                   'inventoryReport', 'returnCampaign']
     },
     'staff': {
@@ -6236,6 +6327,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'returnCampaign') initReturnCampaign();
     else if (pageName === 'clockIn') initClockIn();
     else if (pageName === 'clockRecords') initClockRecords();
+    else if (pageName === 'stockCount') initStockCount();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -6630,6 +6722,16 @@ function onSchedStoreChange() {
     renderScheduleTable();
 }
 
+// 🆕 員工編號排序鍵：純數字依大小，含字母則用字串比較後備
+function empNumSortKey(emp) {
+    if (!emp) return Number.MAX_SAFE_INTEGER;
+    var num = emp.num || emp.id || '';
+    var digits = String(num).replace(/[^0-9]/g, '');
+    if (digits) return parseInt(digits, 10);
+    // 無數字：用字元碼，排到最後
+    return Number.MAX_SAFE_INTEGER - 1;
+}
+
 function renderScheduleTable() {
     var dates = getWeekDates(currentWeekStart);
     var employees = loadData('employees', defaultEmployees);
@@ -6732,6 +6834,8 @@ function renderScheduleTable() {
     
     // ============= 本店上班區（本店員工） =============
     var homeEmployees = employees.filter(function(e) { return getEmpHomeStore(e) === currentSchedStoreId; });
+    // 🆕 依員工編號大小排序
+    homeEmployees.sort(function(a, b) { return empNumSortKey(a) - empNumSortKey(b); });
     var homeHtml = '';
     var weekHours = 0;
     
@@ -6785,6 +6889,8 @@ function renderScheduleTable() {
     
     var supportHtml = '';
     var supportEmpIds = Object.keys(supportRecords);
+    // 🆕 依員工編號大小排序
+    supportEmpIds.sort(function(a, b) { return empNumSortKey(supportRecords[a]) - empNumSortKey(supportRecords[b]); });
     if (supportEmpIds.length === 0) {
         supportHtml = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#9ca3af;background:#f9fafb;">— 本週無他店員工支援 —</td></tr>';
     } else {
@@ -19583,6 +19689,331 @@ function initClockRecords() {
     renderClockRecords();
 }
 
+// ============================================================
+// 🔢 門市盤點系統
+// ============================================================
+var scCurrentItems = [];  // 目前編輯中的盤點品項
+var DEFAULT_STOCK_CATS = ['一般商品', '飲料', '菸品', '酒類', '鮮食', '冰品', '日用品', '其他'];
+
+function getStockCategories() {
+    var cats = loadData('stockCategories', null);
+    if (!cats || !Array.isArray(cats) || cats.length === 0) return DEFAULT_STOCK_CATS.slice();
+    return cats;
+}
+
+function fillStockCatDropdown() {
+    var sel = document.getElementById('scCategory');
+    if (!sel) return;
+    var prev = sel.value;
+    var cats = getStockCategories();
+    sel.innerHTML = cats.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('');
+    if (prev && cats.indexOf(prev) !== -1) sel.value = prev;
+}
+
+function initStockCount() {
+    var d = document.getElementById('scDate');
+    if (d && !d.value) d.value = new Date().toISOString().substring(0, 10);
+    fillStockCatDropdown();
+    // 分類設定按鈕：管理員/店長/副店長可見
+    var btn = document.getElementById('scCatSettingBtn');
+    if (btn) btn.style.display = (currentUser && ['admin','manager','deputy'].indexOf(currentUser.role) !== -1) ? '' : 'none';
+    scCurrentItems = [];
+    renderStockItems();
+    renderStockHistory();
+}
+
+// ── 分類設定 ──
+function openStockCatModal() {
+    renderStockCatList();
+    document.getElementById('stockCatModal').classList.remove('hidden');
+}
+function renderStockCatList() {
+    var el = document.getElementById('scCatList');
+    if (!el) return;
+    var cats = getStockCategories();
+    el.innerHTML = cats.map(function(c, i){
+        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border:1px solid #eee; border-radius:8px; margin-bottom:6px; background:#fff;">' +
+            '<span>' + (i+1) + '. ' + c + '</span>' +
+            '<button class="btn-danger" style="padding:3px 10px; font-size:12px;" onclick="deleteStockCategory(\'' + c.replace(/'/g,"\\'") + '\')">🗑️ 刪除</button>' +
+            '</div>';
+    }).join('');
+}
+function addStockCategory() {
+    var input = document.getElementById('scNewCat');
+    var name = (input.value || '').trim();
+    if (!name) return alert('⚠️ 請輸入分類名稱');
+    var cats = getStockCategories();
+    if (cats.indexOf(name) !== -1) return alert('⚠️ 此分類已存在');
+    cats.push(name);
+    saveData('stockCategories', cats);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    input.value = '';
+    renderStockCatList();
+    fillStockCatDropdown();
+    showNotif('➕ 已新增分類「' + name + '」');
+}
+function deleteStockCategory(name) {
+    var cats = getStockCategories();
+    if (cats.length <= 1) return alert('⚠️ 至少需保留一個分類');
+    if (!confirm('確定刪除分類「' + name + '」？\n（已儲存的盤點記錄不受影響）')) return;
+    cats = cats.filter(function(c){ return c !== name; });
+    saveData('stockCategories', cats);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderStockCatList();
+    fillStockCatDropdown();
+    showNotif('🗑️ 已刪除分類');
+}
+
+function scItemEnter(e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault();
+        // 名稱→帳面→實盤→加入
+        if (e.target.id === 'scItemName') document.getElementById('scItemBook').focus();
+        else if (e.target.id === 'scItemBook') document.getElementById('scItemActual').focus();
+        else if (e.target.id === 'scItemActual') addStockItem();
+    }
+}
+
+function addStockItem() {
+    var name = (document.getElementById('scItemName').value || '').trim();
+    var book = parseFloat(document.getElementById('scItemBook').value) || 0;
+    var actual = parseFloat(document.getElementById('scItemActual').value) || 0;
+    if (!name) { document.getElementById('scItemName').focus(); return alert('⚠️ 請輸入商品名稱或條碼'); }
+    var cat = document.getElementById('scCategory').value;
+    
+    scCurrentItems.push({ name: name, category: cat, book: book, actual: actual, diff: actual - book });
+    // 清空輸入，焦點回名稱
+    document.getElementById('scItemName').value = '';
+    document.getElementById('scItemBook').value = '';
+    document.getElementById('scItemActual').value = '';
+    document.getElementById('scItemName').focus();
+    renderStockItems();
+}
+
+function removeStockItem(idx) {
+    scCurrentItems.splice(idx, 1);
+    renderStockItems();
+}
+
+function renderStockItems() {
+    var tbody = document.getElementById('scItemsBody');
+    if (!tbody) return;
+    if (scCurrentItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#9ca3af;">📭 尚未加入盤點商品</td></tr>';
+        document.getElementById('scSummary').innerHTML = '';
+        return;
+    }
+    var html = '';
+    var totalDiff = 0, shortItems = 0, overItems = 0;
+    for (var i = 0; i < scCurrentItems.length; i++) {
+        var it = scCurrentItems[i];
+        totalDiff += it.diff;
+        if (it.diff < 0) shortItems++;
+        else if (it.diff > 0) overItems++;
+        var diffColor = it.diff < 0 ? '#dc2626' : it.diff > 0 ? '#16a34a' : '#6b7280';
+        var diffTxt = (it.diff > 0 ? '+' : '') + it.diff;
+        html += '<tr>' +
+            '<td><strong>' + it.name + '</strong></td>' +
+            '<td>' + it.category + '</td>' +
+            '<td style="text-align:right;">' + it.book + '</td>' +
+            '<td style="text-align:right;">' + it.actual + '</td>' +
+            '<td style="text-align:right; color:' + diffColor + '; font-weight:bold;">' + diffTxt + '</td>' +
+            '<td><button class="btn-danger" style="padding:4px 10px; font-size:12px;" onclick="removeStockItem(' + i + ')">🗑️</button></td>' +
+            '</tr>';
+    }
+    tbody.innerHTML = html;
+    var tdColor = totalDiff < 0 ? '#dc2626' : totalDiff > 0 ? '#16a34a' : '#374151';
+    document.getElementById('scSummary').innerHTML =
+        '<div class="sc-stats">' +
+            '<div class="sc-stat"><div class="sc-num" style="color:#2563eb;">' + scCurrentItems.length + '</div><div class="sc-lbl">📦 品項</div></div>' +
+            '<div class="sc-stat"><div class="sc-num" style="color:#dc2626;">' + shortItems + '</div><div class="sc-lbl">🔻 短缺</div></div>' +
+            '<div class="sc-stat"><div class="sc-num" style="color:#16a34a;">' + overItems + '</div><div class="sc-lbl">🔺 盤盈</div></div>' +
+            '<div class="sc-stat"><div class="sc-num" style="color:' + tdColor + ';">' + (totalDiff > 0 ? '+' : '') + totalDiff + '</div><div class="sc-lbl">⚖️ 差異合計</div></div>' +
+        '</div>';
+}
+
+function scStoreId() {
+    return (typeof getUserStoreId === 'function' ? getUserStoreId() : null) || localStorage.getItem('currentStoreId') || '';
+}
+
+function saveStockCount() {
+    if (scCurrentItems.length === 0) return alert('⚠️ 請先加入至少一項盤點商品');
+    var date = document.getElementById('scDate').value;
+    if (!date) return alert('⚠️ 請選擇盤點日期');
+    var cat = document.getElementById('scCategory').value;
+    var counter = (typeof getMyClockName === 'function') ? getMyClockName() : ((currentUser && currentUser.name) || '');
+    var sid = scStoreId();
+    var stores = loadData('stores', defaultStores);
+    var store = stores.find(function(s){ return s.id === sid; });
+    
+    var totalDiff = 0;
+    for (var i = 0; i < scCurrentItems.length; i++) totalDiff += scCurrentItems[i].diff;
+    
+    var all = loadData('stockCounts', []);
+    all.unshift({
+        id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
+        date: date, category: cat, counter: counter,
+        storeId: sid, storeName: store ? store.name : '',
+        items: scCurrentItems.slice(),
+        totalDiff: totalDiff,
+        createdAt: new Date().toISOString()
+    });
+    saveData('stockCounts', all);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    showNotif('💾 盤點已儲存（' + scCurrentItems.length + ' 項）');
+    scCurrentItems = [];
+    renderStockItems();
+    renderStockHistory();
+}
+
+function loadStockCount() {
+    var date = document.getElementById('scDate').value;
+    var cat = document.getElementById('scCategory').value;
+    var sid = scStoreId();
+    var all = loadData('stockCounts', []);
+    var rec = all.find(function(r){ return r.date === date && r.category === cat && (!sid || r.storeId === sid); });
+    if (!rec) return alert('📂 此日期/分類尚無盤點記錄');
+    scCurrentItems = rec.items.slice();
+    renderStockItems();
+    showNotif('📂 已載入盤點記錄');
+}
+
+function renderStockHistory() {
+    var tbody = document.getElementById('scHistoryBody');
+    if (!tbody) return;
+    var all = loadData('stockCounts', []);
+    var sid = scStoreId();
+    var isAdmin = currentUser && currentUser.role === 'admin';
+    // 非管理員只看本店
+    var list = all.filter(function(r){ return isAdmin || !sid || r.storeId === sid; });
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#9ca3af;">📭 尚無盤點記錄</td></tr>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+        var r = list[i];
+        var tdColor = r.totalDiff < 0 ? '#dc2626' : r.totalDiff > 0 ? '#16a34a' : '#374151';
+        html += '<tr>' +
+            '<td><strong>' + r.date + '</strong></td>' +
+            '<td>' + r.category + '</td>' +
+            '<td>' + (r.counter || '—') + '</td>' +
+            '<td style="text-align:right;">' + (r.items ? r.items.length : 0) + '</td>' +
+            '<td style="text-align:right; color:' + tdColor + '; font-weight:bold;">' + (r.totalDiff > 0 ? '+' : '') + r.totalDiff + '</td>' +
+            '<td><button class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="viewStockCount(\'' + r.id + '\')">查看</button> ' +
+            '<button class="btn-primary" style="padding:4px 8px; font-size:12px;" onclick="printStockRecord(\'' + r.id + '\')">🖨️</button> ' +
+            (isAdmin || (currentUser && (currentUser.role==='manager'||currentUser.role==='deputy')) ? '<button class="btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteStockCount(\'' + r.id + '\')">🗑️</button>' : '') +
+            '</td></tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function viewStockCount(id) {
+    var all = loadData('stockCounts', []);
+    var rec = all.find(function(r){ return r.id === id; });
+    if (!rec) return;
+    document.getElementById('scDate').value = rec.date;
+    document.getElementById('scCategory').value = rec.category;
+    scCurrentItems = rec.items.slice();
+    renderStockItems();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showNotif('📋 已載入 ' + rec.date + ' ' + rec.category);
+}
+
+function deleteStockCount(id) {
+    if (!confirm('確定刪除這筆盤點記錄？')) return;
+    var all = loadData('stockCounts', []);
+    all = all.filter(function(r){ return r.id !== id; });
+    saveData('stockCounts', all);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderStockHistory();
+    showNotif('🗑️ 已刪除');
+}
+
+// 🖨️ 列印：依類別產生盤點表
+function buildStockPrintHTML(title, groups) {
+    // groups: [{category, counter, items:[{name,book,actual,diff}]}]
+    var pad2 = function(n){ return n<10?'0'+n:''+n; };
+    var now = new Date();
+    var ts = now.getFullYear()+'/'+pad2(now.getMonth()+1)+'/'+pad2(now.getDate())+' '+pad2(now.getHours())+':'+pad2(now.getMinutes());
+    var body = '';
+    var grandDiff = 0, grandItems = 0;
+    for (var g = 0; g < groups.length; g++) {
+        var grp = groups[g];
+        var rows = '', catDiff = 0;
+        for (var i = 0; i < grp.items.length; i++) {
+            var it = grp.items[i];
+            catDiff += it.diff; grandDiff += it.diff; grandItems++;
+            var col = it.diff < 0 ? '#c00' : it.diff > 0 ? '#080' : '#333';
+            rows += '<tr><td>' + (i+1) + '</td><td>' + it.name + '</td><td class="r">' + it.book + '</td><td class="r">' + it.actual + '</td><td class="r" style="color:' + col + ';font-weight:bold;">' + (it.diff>0?'+':'') + it.diff + '</td></tr>';
+        }
+        var cdCol = catDiff < 0 ? '#c00' : catDiff > 0 ? '#080' : '#333';
+        body += '<div class="cat-block">' +
+            '<div class="cat-title">📦 ' + grp.category + '　<span class="cat-meta">盤點人：' + (grp.counter||'—') + '　品項：' + grp.items.length + '</span></div>' +
+            '<table><thead><tr><th>#</th><th>商品</th><th class="r">帳面</th><th class="r">實盤</th><th class="r">差異</th></tr></thead><tbody>' + rows +
+            '<tr class="sub"><td colspan="4">小計差異</td><td class="r" style="color:' + cdCol + ';font-weight:bold;">' + (catDiff>0?'+':'') + catDiff + '</td></tr>' +
+            '</tbody></table></div>';
+    }
+    var gdCol = grandDiff < 0 ? '#c00' : grandDiff > 0 ? '#080' : '#333';
+    
+    var w = window.open('', '_blank');
+    w.document.write('<html><head><title>' + title + '</title><meta charset="utf-8">' +
+        '<style>body{font-family:"Microsoft JhengHei",sans-serif;padding:20px;color:#000;}' +
+        'h2{text-align:center;margin:4px 0;} .meta{text-align:center;font-size:13px;color:#444;margin-bottom:16px;}' +
+        '.cat-block{margin-bottom:18px;} .cat-title{font-size:15px;font-weight:bold;background:#f3f4f6;padding:6px 10px;border-radius:6px;margin-bottom:4px;}' +
+        '.cat-meta{font-size:12px;color:#666;font-weight:normal;}' +
+        'table{width:100%;border-collapse:collapse;} td,th{border:1px solid #999;padding:5px 8px;font-size:13px;} th{background:#eee;}' +
+        '.r{text-align:right;} .sub{background:#fafafa;} ' +
+        '.grand{margin-top:14px;font-size:15px;font-weight:bold;text-align:right;border-top:2px solid #333;padding-top:8px;}' +
+        '</style></head><body>' +
+        '<h2>' + title + '</h2>' +
+        '<div class="meta">列印時間：' + ts + '</div>' +
+        body +
+        '<div class="grand">總品項：' + grandItems + '　｜　總差異：<span style="color:' + gdCol + ';">' + (grandDiff>0?'+':'') + grandDiff + '</span></div>' +
+        '<div style="margin-top:30px;font-size:13px;">盤點人簽名：____________　　店長確認：____________</div>' +
+        '</body></html>');
+    w.document.close();
+    setTimeout(function(){ w.print(); }, 400);
+}
+
+// 列印目前編輯中的盤點
+function printCurrentStock() {
+    if (scCurrentItems.length === 0) return alert('⚠️ 目前沒有盤點商品可列印');
+    var cat = document.getElementById('scCategory').value;
+    var counter = (typeof getMyClockName === 'function') ? getMyClockName() : ((currentUser&&currentUser.name)||'');
+    var date = document.getElementById('scDate').value;
+    var sid = scStoreId();
+    var stores = loadData('stores', defaultStores);
+    var store = stores.find(function(s){ return s.id === sid; });
+    var title = '門市盤點表 — ' + date + (store ? '（' + store.name + '）' : '');
+    buildStockPrintHTML(title, [{ category: cat, counter: counter, items: scCurrentItems }]);
+}
+
+// 列印某筆盤點記錄
+function printStockRecord(id) {
+    var all = loadData('stockCounts', []);
+    var rec = all.find(function(r){ return r.id === id; });
+    if (!rec) return;
+    var title = '門市盤點表 — ' + rec.date + (rec.storeName ? '（' + rec.storeName + '）' : '');
+    buildStockPrintHTML(title, [{ category: rec.category, counter: rec.counter, items: rec.items }]);
+}
+
+// 依類別列印「所選日期」的全部盤點
+function printStockByDate() {
+    var date = document.getElementById('scDate').value;
+    if (!date) return alert('⚠️ 請先選擇日期');
+    var sid = scStoreId();
+    var isAdmin = currentUser && currentUser.role === 'admin';
+    var all = loadData('stockCounts', []);
+    var recs = all.filter(function(r){ return r.date === date && (isAdmin || !sid || r.storeId === sid); });
+    if (recs.length === 0) return alert('📂 ' + date + ' 尚無盤點記錄');
+    var stores = loadData('stores', defaultStores);
+    var store = stores.find(function(s){ return s.id === sid; });
+    var title = '門市盤點表（依類別）— ' + date + (store ? '（' + store.name + '）' : '');
+    var groups = recs.map(function(r){ return { category: r.category, counter: r.counter, items: r.items }; });
+    buildStockPrintHTML(title, groups);
+}
+
 function renderClockRecords() {
     var tbody = document.getElementById('clockRecordsBody');
     var summaryEl = document.getElementById('clockRecordsSummary');
@@ -20162,6 +20593,8 @@ function printSchedule() {
     var homeEmployees = employees.filter(function(e) {
         return (e.homeStoreId || stores[0].id) === currentSchedStoreId;
     });
+    // 🆕 依員工編號大小排序
+    homeEmployees.sort(function(a, b) { return empNumSortKey(a) - empNumSortKey(b); });
     
     // 找出每位員工本週各天的「本店」和「他店」班別
     function getEmpWeekData(emp, targetStoreId) {
