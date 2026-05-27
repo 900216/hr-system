@@ -1974,6 +1974,88 @@ body.view-mobile .home-stat-card .hs-num { font-size: 24px; }
 
 body.view-mobile .login-box { padding: 22px 18px !important; }
 body.view-mobile .system-title h1 { font-size: 22px !important; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  ✨ 全系統動畫與 UI 質感提升                  ║
+   ╚══════════════════════════════════════════════╝ */
+
+/* 1️⃣ 頁面切換淡入 */
+.page-content:not(.hidden) { animation: pageFadeIn 0.4s ease both; }
+@keyframes pageFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 2️⃣ 卡片/面板進場 */
+.work-list-panel, .sched-section, .form-section, .login-form, .home-stat-card, .stat-box, .panel, .card {
+    animation: cardRise 0.45s cubic-bezier(0.18,0.89,0.32,1.05) both;
+}
+@keyframes cardRise { from { opacity: 0; transform: translateY(16px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* 3️⃣ 表格列依序淡入 */
+tbody tr { animation: rowFade 0.35s ease both; }
+@keyframes rowFade { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+tbody tr:nth-child(1){animation-delay:.02s} tbody tr:nth-child(2){animation-delay:.05s}
+tbody tr:nth-child(3){animation-delay:.08s} tbody tr:nth-child(4){animation-delay:.11s}
+tbody tr:nth-child(5){animation-delay:.14s} tbody tr:nth-child(6){animation-delay:.17s}
+tbody tr:nth-child(7){animation-delay:.20s} tbody tr:nth-child(8){animation-delay:.23s}
+
+/* 4️⃣ 按鈕統一微互動（按下回彈 + 漣漪光） */
+button, .btn-action, .btn-confirm, .btn-toolbar, .btn-edit, .btn-danger, .btn-secondary, .btn-primary, .menu-item, .submenu-item {
+    transition: transform .12s ease, box-shadow .15s ease, filter .15s ease, background .15s ease !important;
+}
+button:active, .btn-action:active, .btn-confirm:active, .btn-toolbar:active,
+.btn-edit:active, .btn-danger:active, .btn-secondary:active, .btn-primary:active {
+    transform: scale(0.94) !important;
+}
+button:hover:not(:disabled), .btn-confirm:hover, .btn-primary:hover {
+    filter: brightness(1.06);
+}
+
+/* 5️⃣ 待審核狀態輕脈動 */
+.status-pending { animation: tagPulse 2s ease-in-out infinite; }
+@keyframes tagPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.62; } }
+
+/* 6️⃣ 表格列 hover 高亮 */
+tbody tr { transition: background .15s ease, box-shadow .15s ease; }
+.work-table tbody tr:hover, .sched-h-table tbody tr:hover {
+    background: #fff7ec !important;
+}
+
+/* 7️⃣ 通知 Toast 動畫（右上角滑入） */
+.notification {
+    animation: toastIn 0.35s cubic-bezier(0.18,0.89,0.32,1.2), toastOut 0.4s ease 1.6s forwards !important;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(40px) scale(0.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(20px) scale(0.95); } }
+
+/* 8️⃣ 連結/標題 hover */
+.work-link { transition: color .15s ease, transform .15s ease; display: inline-block; }
+.work-link:hover { color: var(--brand-dark) !important; transform: translateX(2px); }
+
+/* 9️⃣ 輸入框聚焦放大微動 */
+input:focus, select:focus, textarea:focus { transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease; }
+
+/* 🔟 麵包屑/區段標題 hover */
+.breadcrumb a { transition: color .15s ease; cursor: pointer; }
+.breadcrumb a:hover { color: var(--brand-dark) !important; text-decoration: underline; }
+
+/* 1️⃣1️⃣ 圖示 hover 旋轉（選單下拉箭頭等） */
+.logo-area span:first-child { transition: transform .4s ease; display: inline-block; }
+.logo-area:hover span:first-child { transform: rotate(-12deg) scale(1.12); }
+
+/* 1️⃣2️⃣ 開關/標籤切換平滑 */
+.tab-btn, .filter-tab, .status-tag { transition: all .15s ease; }
+
+/* 1️⃣3️⃣ 載入旋轉器（供需要時使用） */
+.spinner {
+    display: inline-block; width: 18px; height: 18px;
+    border: 3px solid rgba(224,140,44,0.25); border-top-color: var(--brand);
+    border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 1️⃣4️⃣ 尊重使用者「減少動態」偏好 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
 </style>
 </head>
 <body>
@@ -2186,6 +2268,18 @@ body.view-mobile .system-title h1 { font-size: 22px !important; }
                 <table class="sched-h-table">
                     <thead><tr id="schSupportHeader"></tr></thead>
                     <tbody id="schSupportBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 🆕 打卡時數統整（每日上班總時數 + 加班審核） -->
+        <div class="sched-section no-print" id="clockHoursSection">
+            <div class="sched-section-title">⏱️ 本週打卡時數統整（每日上班總時數）</div>
+            <div style="font-size:12px; color:#6b7280; margin:4px 12px 10px;">由打卡記錄自動計算每日上班時數，超過 8 小時部分可由店長/管理員審核為加班。</div>
+            <div class="sched-h-wrap">
+                <table class="sched-h-table" id="clockHoursTable">
+                    <thead><tr><th>日期</th><th>員工</th><th>上班</th><th>下班</th><th>總時數</th><th>超時</th><th>加班審核</th></tr></thead>
+                    <tbody id="clockHoursBody"></tbody>
                 </table>
             </div>
         </div>
@@ -6722,6 +6816,118 @@ function renderScheduleTable() {
     if (stats) {
         stats.innerHTML = '👥 本店員工 <strong>' + homeEmployees.length + '</strong> 人 ｜ 他店支援 <strong>' + supportEmpIds.length + '</strong> 人 ｜ 本店週工時 <strong style="color:#1e40af;">' + weekHours.toFixed(1) + ' H</strong>';
     }
+    
+    // 🆕 打卡時數統整
+    renderClockHoursSummary(dates);
+}
+
+// 🆕 統整本週打卡記錄為每日上班總時數 + 加班審核
+function renderClockHoursSummary(dates) {
+    var tbody = document.getElementById('clockHoursBody');
+    if (!tbody) return;
+    
+    var records = loadData('clockRecords', []);
+    var approvals = loadData('overtimeApprovals', {});  // { empId_date: {status:'approved'/'rejected', otHours, by, at} }
+    var isReviewer = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'deputy');
+    
+    // 本週日期字串集合
+    var weekKeys = dates.map(function(d){ return formatDate(d); });
+    var weekStart = new Date(dates[0]); weekStart.setHours(0,0,0,0);
+    var weekEnd = new Date(dates[6]); weekEnd.setHours(23,59,59,999);
+    
+    // 門市過濾：非管理員只看本店
+    var storeFilter = currentSchedStoreId;
+    
+    // 收集本週、本門市的打卡，依 員工+日期 分組
+    var groups = {};  // key: empId|dateKey
+    for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        var t = new Date(r.time);
+        if (t < weekStart || t > weekEnd) continue;
+        if (storeFilter && r.storeId !== storeFilter) continue;
+        var dateKey = formatDate(t);
+        var key = r.empId + '|' + dateKey;
+        if (!groups[key]) groups[key] = { empId: r.empId, empName: r.empName, dateKey: dateKey, ins: [], outs: [] };
+        if (r.type === 'in') groups[key].ins.push(t);
+        else if (r.type === 'out') groups[key].outs.push(t);
+    }
+    
+    var keys = Object.keys(groups).sort();
+    if (keys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#9ca3af;">📭 本週尚無打卡記錄</td></tr>';
+        return;
+    }
+    
+    var html = '';
+    for (var k = 0; k < keys.length; k++) {
+        var g = groups[keys[k]];
+        g.ins.sort(function(a,b){ return a-b; });
+        g.outs.sort(function(a,b){ return a-b; });
+        var firstIn = g.ins.length ? g.ins[0] : null;
+        var lastOut = g.outs.length ? g.outs[g.outs.length-1] : null;
+        
+        var pad = function(n){ return n<10?'0'+n:''+n; };
+        var fmtT = function(d){ return d ? pad(d.getHours())+':'+pad(d.getMinutes()) : '—'; };
+        
+        var hours = 0;
+        if (firstIn && lastOut && lastOut > firstIn) {
+            hours = (lastOut - firstIn) / 3600000;
+        }
+        var otHours = Math.max(0, hours - 8);
+        
+        var apKey = g.empId + '_' + g.dateKey;
+        var ap = approvals[apKey];
+        
+        // 加班審核欄
+        var reviewCell;
+        if (otHours <= 0) {
+            reviewCell = '<span style="color:#9ca3af; font-size:12px;">—</span>';
+        } else if (ap && ap.status === 'approved') {
+            reviewCell = '<span class="status-tag status-done">✓ 加班 ' + (ap.otHours||otHours).toFixed(1) + 'H</span>';
+            if (isReviewer) reviewCell += ' <button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="reviewClockOT(\'' + apKey + '\',\'cancel\',0)">取消</button>';
+        } else if (ap && ap.status === 'rejected') {
+            reviewCell = '<span class="status-tag" style="background:#fee2e2; color:#991b1b;">✕ 不予加班</span>';
+            if (isReviewer) reviewCell += ' <button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="reviewClockOT(\'' + apKey + '\',\'cancel\',0)">重審</button>';
+        } else if (isReviewer) {
+            reviewCell = '<button class="btn-confirm" style="padding:4px 10px; font-size:12px;" onclick="reviewClockOT(\'' + apKey + '\',\'approve\',' + otHours.toFixed(2) + ')">✓ 核准加班</button> ' +
+                         '<button class="btn-danger" style="padding:4px 8px; font-size:12px;" onclick="reviewClockOT(\'' + apKey + '\',\'reject\',0)">✕</button>';
+        } else {
+            reviewCell = '<span class="status-tag status-pending">⏳ 待審核</span>';
+        }
+        
+        var otTxt = otHours > 0 ? '<strong style="color:#dc2626;">+' + otHours.toFixed(1) + 'H</strong>' : '<span style="color:#9ca3af;">—</span>';
+        var hoursTxt = hours > 0 ? '<strong>' + hours.toFixed(1) + ' H</strong>' : '<span style="color:#9ca3af;">無下班</span>';
+        var incomplete = (firstIn && !lastOut) ? ' <span style="font-size:10px; color:#f59e0b;">⚠️未打下班</span>' : '';
+        
+        html += '<tr>' +
+            '<td>' + g.dateKey + '</td>' +
+            '<td>' + (g.empName || g.empId) + '</td>' +
+            '<td>' + fmtT(firstIn) + '</td>' +
+            '<td>' + fmtT(lastOut) + incomplete + '</td>' +
+            '<td>' + hoursTxt + '</td>' +
+            '<td>' + otTxt + '</td>' +
+            '<td>' + reviewCell + '</td>' +
+            '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+// 加班審核動作
+function reviewClockOT(apKey, action, otHours) {
+    var approvals = loadData('overtimeApprovals', {});
+    if (action === 'approve') {
+        approvals[apKey] = { status: 'approved', otHours: parseFloat(otHours)||0, by: (currentUser&&currentUser.name)||'', at: new Date().toISOString() };
+        showNotif('✅ 已核准加班 ' + (parseFloat(otHours)||0).toFixed(1) + ' 小時');
+    } else if (action === 'reject') {
+        approvals[apKey] = { status: 'rejected', by: (currentUser&&currentUser.name)||'', at: new Date().toISOString() };
+        showNotif('已標記為不予加班');
+    } else if (action === 'cancel') {
+        delete approvals[apKey];
+        showNotif('🔄 已重設審核');
+    }
+    saveData('overtimeApprovals', approvals);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderScheduleTable();
 }
 
 // 渲染員工資訊欄
@@ -16613,6 +16819,7 @@ var BACKUP_KEYS = [
     'customRolePermissions',
     'customAccountPermissions',
     'clockRecords',
+    'overtimeApprovals',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
