@@ -2381,6 +2381,39 @@ body.has-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
 /* 只在手機版顯示 */
 body:not(.view-mobile) .bottom-nav { display: none !important; }
 
+/* ── 📱 底部導覽上拉小選單 ── */
+.bnav-popup-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 9100;
+    background: rgba(0,0,0,0.35);
+}
+.bnav-popup-backdrop.show { display: block; animation: fadeIn .2s ease; }
+.bnav-popup {
+    display: none; position: fixed; left: 10px; right: 10px;
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px)); z-index: 9200;
+    background: rgba(45,55,72,0.98);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-radius: 18px; padding: 8px;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.35);
+}
+.bnav-popup.show { display: block; animation: bnavPopUp 0.3s cubic-bezier(0.18,0.89,0.32,1.1); }
+@keyframes bnavPopUp { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.bnav-popup-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: 12px; cursor: pointer;
+    color: #fdf6e3; font-size: 16px; font-weight: 600;
+    transition: background .15s ease; margin: 2px 0;
+    animation: bnavItemIn 0.3s ease both;
+}
+.bnav-popup-item:active { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #4a2e08; }
+.bnav-popup-item .bp-icon { font-size: 22px; }
+.bnav-popup-item:nth-child(2){animation-delay:.04s} .bnav-popup-item:nth-child(3){animation-delay:.08s}
+.bnav-popup-item:nth-child(4){animation-delay:.12s} .bnav-popup-item:nth-child(5){animation-delay:.16s}
+@keyframes bnavItemIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+.bnav-popup-title {
+    color: #fbbf24; font-size: 12px; font-weight: 800; text-align: center;
+    padding: 4px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 4px;
+}
+
 /* ── 📱 統整：手機版收起上方選單，改用底部☰開抽屜 ── */
 .menu-backdrop {
     display: none; position: fixed; inset: 0; z-index: 9500;
@@ -6790,28 +6823,69 @@ function showWorkList() {
     renderWorkList();
 }
 
-// 📱 UI 2.0 底部導覽
+// 📱 UI 2.0 底部導覽（上拉小選單）
+var BNAV_MENUS = {
+    home: { title: '🏠 首頁', items: [
+        { icon: '📋', label: '工作清單', fn: function(){ showWorkList(); window.scrollTo({top:0,behavior:'smooth'}); } },
+        { icon: '📷', label: '更換頭像', fn: function(){ if(typeof pickHomeAvatar==='function') pickHomeAvatar(); } }
+    ]},
+    clock: { title: '📍 打卡', items: [
+        { icon: '📍', label: 'GPS 打卡', fn: function(){ goToPage('clockIn','menu-attendance'); } },
+        { icon: '🗂️', label: '打卡記錄', fn: function(){ goToPage('clockRecords','menu-attendance'); } }
+    ]},
+    schedule: { title: '📅 班表', items: [
+        { icon: '📅', label: '排班作業', perm: 'schedule', fn: function(){ goToSchedule(); } },
+        { icon: '🔍', label: '班表查詢', fn: function(){ goToPage('scheduleQuery','menu-schedule'); } },
+        { icon: '🔄', label: '換班申請', fn: function(){ goToPage('shiftSwap','menu-schedule'); } },
+        { icon: '✅', label: '月度審核', perm: 'reviewMonth', fn: function(){ goToPage('reviewMonth','menu-schedule'); } }
+    ]},
+    leave: { title: '🌴 請假 / 申請', items: [
+        { icon: '🌴', label: '請假申請', fn: function(){ goToPage('leaveApply','menu-attendance'); } },
+        { icon: '⏱️', label: '加班申請', fn: function(){ goToPage('overtimeApply','menu-attendance'); } },
+        { icon: '✈️', label: '出差申請', fn: function(){ goToPage('businessTrip','menu-attendance'); } },
+        { icon: '🪪', label: '補卡申請', fn: function(){ goToPage('cardSupplement','menu-attendance'); } }
+    ]}
+};
+
 function bottomNavGo(nav) {
+    if (nav === 'menu') { setBottomNavActive('menu'); toggleMenuDrawer(); return; }
     setBottomNavActive(nav);
-    if (nav === 'home') {
-        showWorkList();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (nav === 'clock') {
-        if (typeof initClockIn === 'function') goToPage('clockIn', 'menu-attendance');
-    } else if (nav === 'schedule') {
-        // 有排班權限走排班，否則走班表查詢
-        if (currentUser && hasAccess('schedule')) {
-            goToSchedule();
-        } else {
-            goToPage('scheduleQuery', 'menu-schedule');
-        }
-    } else if (nav === 'leave') {
-        goToPage('leaveApply', 'menu-attendance');
-        if (typeof renderLeaveBalance === 'function') renderLeaveBalance();
-        if (typeof renderLeaveHistory === 'function') renderLeaveHistory();
-    } else if (nav === 'menu') {
-        toggleMenuDrawer();
+    var menu = BNAV_MENUS[nav];
+    if (!menu) return;
+    // 依權限過濾
+    var items = menu.items.filter(function(it){ return !it.perm || !currentUser || hasAccess(it.perm); });
+    if (items.length === 0) items = menu.items;
+    // 只有一項 → 直接執行
+    if (items.length === 1) { items[0].fn(); return; }
+    // 多項 → 上拉小選單
+    showBnavPopup(menu.title, items);
+}
+
+function showBnavPopup(title, items) {
+    var popup = document.getElementById('bnavPopup');
+    var backdrop = document.getElementById('bnavPopupBackdrop');
+    if (!popup) return;
+    var html = '<div class="bnav-popup-title">' + title + '</div>';
+    for (var i = 0; i < items.length; i++) {
+        html += '<div class="bnav-popup-item" data-idx="' + i + '"><span class="bp-icon">' + items[i].icon + '</span>' + items[i].label + '</div>';
     }
+    popup.innerHTML = html;
+    // 綁定點擊
+    var nodes = popup.querySelectorAll('.bnav-popup-item');
+    for (var n = 0; n < nodes.length; n++) {
+        (function(idx){
+            nodes[idx].onclick = function(){ closeBnavPopup(); setTimeout(function(){ items[idx].fn(); }, 120); };
+        })(n);
+    }
+    popup.classList.add('show');
+    backdrop.classList.add('show');
+}
+
+function closeBnavPopup() {
+    var popup = document.getElementById('bnavPopup');
+    var backdrop = document.getElementById('bnavPopupBackdrop');
+    if (popup) popup.classList.remove('show');
+    if (backdrop) backdrop.classList.remove('show');
 }
 
 // 📱 選單抽屜開關
@@ -21759,6 +21833,9 @@ window.addEventListener('load', function() {
         <span class="bnav-icon">☰</span><span class="bnav-label">選單</span>
     </button>
 </div>
+<!-- 📱 底部導覽上拉小選單 -->
+<div id="bnavPopupBackdrop" class="bnav-popup-backdrop" onclick="closeBnavPopup()"></div>
+<div id="bnavPopup" class="bnav-popup"></div>
 
 </body>
 </html>
