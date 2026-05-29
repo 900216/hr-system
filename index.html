@@ -2510,6 +2510,347 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
     75% { transform: translateY(-3px) scale(1.02, 0.98); }
 }
 .pet-medal { display: inline-block; font-size: 18px; margin-right: 4px; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  📅 專業排班頁                                ║
+   ╚══════════════════════════════════════════════╝ */
+.sched-title-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px; padding: 10px 4px;
+    border-bottom: 1px solid #f0e3cc; margin-bottom: 12px;
+}
+.sched-page-title {
+    font-size: 19px; color: var(--brand-dark); font-weight: 900; margin: 0;
+    letter-spacing: 0.5px;
+}
+.sched-subtitle { font-size: 13px; color: #6b7280; font-weight: normal; margin-left: 6px; }
+.sched-action-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.sched-tab {
+    padding: 9px 14px; border-radius: 10px; border: 1.5px solid #e5d3b3;
+    background: #fff; color: var(--brand-dark); font-weight: 700;
+    cursor: pointer; transition: all .15s ease; font-size: 13px;
+}
+.sched-tab:hover {
+    background: #fef3c7; transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(245,158,11,0.18);
+}
+.sched-tab.active {
+    background: linear-gradient(135deg, #1f2937, #374151);
+    color: #fde68a; border-color: #1f2937;
+    box-shadow: 0 3px 8px rgba(31,41,55,0.3);
+}
+.sched-tab.approved {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    color: #fff; border-color: #059669;
+    box-shadow: 0 3px 8px rgba(16,185,129,0.35);
+}
+
+/* 色彩圖例 */
+.sched-legend {
+    background: linear-gradient(180deg, #fffdf8, #fff8eb);
+    border: 1px solid #f0e3cc; border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 12px; font-size: 12px;
+    box-shadow: 0 2px 8px rgba(180,100,30,0.06);
+}
+.legend-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    padding: 6px 0;
+}
+.legend-row + .legend-row { border-top: 1px dashed #f3e8d2; }
+.legend-label {
+    font-weight: 800; color: var(--brand-dark);
+    margin-right: 4px; min-width: 56px;
+}
+.legend-item {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #374151; font-weight: 600;
+}
+.legend-dot {
+    display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.12);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.legend-note { margin-left: auto; color: #dc2626; font-size: 11px; font-weight: 700; }
+
+/* 班別色點 */
+.dot-normal { background: #fff; border-color: #9ca3af; }
+.dot-business { background: #bfdbfe; }
+.dot-fc-a { background: #c4b5fd; }
+.dot-fc-b { background: #ddd6fe; }
+.dot-fc-counsel { background: #fde68a; }
+.dot-rest-business { background: #fed7aa; }
+.dot-rest-work { background: #fecaca; }
+.dot-rest-fc { background: #ddd6fe; border-style: dashed; }
+
+/* 假別色點 */
+.dot-regular-leave { background: #fecaca; }
+.dot-rest-day { background: #bae6fd; }
+.dot-special { background: #bbf7d0; }
+.dot-sick { background: #fef3c7; }
+.dot-personal { background: #fde68a; }
+.dot-mourning { background: #d1d5db; }
+.dot-menstrual { background: #fbcfe8; }
+
+/* 日期色彩 */
+.dot-holiday { background: #dc2626; }
+.dot-sunday { background: #fca5a5; }
+.dot-saturday { background: #93c5fd; }
+.dot-workday { background: #fff; border-color: #d1d5db; }
+
+/* 排班頁底部說明 */
+.sched-footer-notes {
+    background: #fffdf8; border: 1px solid #f0e3cc; border-radius: 10px;
+    padding: 12px 14px; margin-top: 16px; font-size: 12px;
+    color: #6b7280; line-height: 1.7;
+}
+.sched-footer-notes strong { color: var(--brand-dark); }
+.sched-footer-notes ul { margin: 4px 0 4px 18px; padding: 0; }
+
+/* ╔══════════════════════════════════════════════╗
+   ║  ✨🚀 高科技風格升級                          ║
+   ╚══════════════════════════════════════════════╝ */
+
+/* 1️⃣ 統計數字：發光脈動（科技感）*/
+.hs-num, .sc-num, #petTodaySteps, #petTotalSteps, #petPoints {
+    text-shadow: 0 0 10px rgba(245,158,11,0.35), 0 1px 0 rgba(255,255,255,0.5);
+    animation: techNumGlow 3.5s ease-in-out infinite;
+}
+@keyframes techNumGlow {
+    0%,100% { text-shadow: 0 0 6px rgba(245,158,11,0.25), 0 1px 0 rgba(255,255,255,0.5); }
+    50% { text-shadow: 0 0 18px rgba(245,158,11,0.5), 0 1px 0 rgba(255,255,255,0.5); }
+}
+
+/* 2️⃣ 狀態標籤：閃光掃過 */
+.status-tag { position: relative; overflow: hidden; }
+.status-tag::before {
+    content: ''; position: absolute; top: 0; left: -120%;
+    width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+    transform: skewX(-25deg);
+    animation: tagSheen 5s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes tagSheen {
+    0%, 75% { left: -120%; }
+    100% { left: 220%; }
+}
+
+/* 3️⃣ 頂部標題列：細網格疊加 */
+.header-bar { position: relative; overflow: hidden; }
+.header-bar::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+        linear-gradient(rgba(245,158,11,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.6;
+}
+
+/* 4️⃣ 底部導覽 active 強化發光 */
+.bnav-item.active {
+    box-shadow: inset 0 0 16px rgba(245,158,11,0.2);
+}
+.bnav-item.active .bnav-icon {
+    filter: drop-shadow(0 0 8px rgba(245,158,11,0.6));
+}
+
+/* 5️⃣ 同步指示器：狀態光暈 */
+.sync-indicator.synced {
+    box-shadow: 0 0 14px rgba(16,185,129,0.45), 0 0 4px rgba(16,185,129,0.6) !important;
+}
+.sync-indicator.syncing {
+    box-shadow: 0 0 14px rgba(245,158,11,0.45), 0 0 4px rgba(245,158,11,0.6) !important;
+}
+.sync-indicator.error {
+    box-shadow: 0 0 14px rgba(239,68,68,0.45), 0 0 4px rgba(239,68,68,0.6) !important;
+}
+
+/* 6️⃣ 輸入框聚焦：科技感發光 */
+input:focus, select:focus, textarea:focus {
+    box-shadow:
+        0 0 0 3px rgba(245,158,11,0.18),
+        0 0 14px rgba(245,158,11,0.30) !important;
+}
+
+/* 7️⃣ 寵物 emoji 發光環 */
+#petEmoji {
+    filter: drop-shadow(0 0 18px rgba(245,158,11,0.45));
+}
+
+/* 8️⃣ 經驗條：斜紋流動 */
+#petExpBar {
+    background-image:
+        linear-gradient(90deg, #fbbf24, #f59e0b),
+        repeating-linear-gradient(-45deg, transparent 0 8px, rgba(255,255,255,0.22) 8px 16px) !important;
+    background-blend-mode: overlay;
+    animation: expFlow 1.5s linear infinite;
+}
+@keyframes expFlow {
+    from { background-position: 0 0, 0 0; }
+    to { background-position: 0 0, 32px 0; }
+}
+
+/* 9️⃣ 面板頂部：金色掃描線 */
+.panel-header::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, #fbbf24 30%, #fbbf24 70%, transparent);
+    animation: headerScan 5s ease-in-out infinite;
+    opacity: 0.7;
+    pointer-events: none;
+}
+@keyframes headerScan {
+    0% { transform: translateX(-100%); opacity: 0.2; }
+    50% { transform: translateX(0%); opacity: 0.9; }
+    100% { transform: translateX(100%); opacity: 0.2; }
+}
+
+/* 🔟 頁面進場 */
+.page-content:not(.hidden) {
+    animation: pageEnter 0.35s cubic-bezier(0.18,0.89,0.32,1.1);
+}
+@keyframes pageEnter {
+    from { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* 1️⃣1️⃣ 表格列 hover：左滑 + 發光色條 */
+.work-table tbody tr, .sched-h-table tbody tr {
+    transition: all .18s ease;
+}
+.work-table tbody tr:hover {
+    transform: translateX(3px);
+    box-shadow: inset 4px 0 0 var(--brand), 0 2px 8px rgba(245,158,11,0.1);
+}
+
+/* 1️⃣2️⃣ 主要按鈕 hover：科技光暈 */
+.btn-confirm:hover, .btn-primary:hover {
+    box-shadow: 0 6px 14px rgba(16,185,129,0.45), 0 0 24px rgba(16,185,129,0.20), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+    transform: translateY(-1px);
+}
+.btn-danger:hover {
+    box-shadow: 0 6px 14px rgba(239,68,68,0.45), 0 0 24px rgba(239,68,68,0.20) !important;
+    transform: translateY(-1px);
+}
+.btn-edit:hover {
+    box-shadow: 0 6px 14px rgba(59,130,246,0.45), 0 0 24px rgba(59,130,246,0.20) !important;
+    transform: translateY(-1px);
+}
+
+/* 1️⃣3️⃣ 首頁橫幅：流動光帶 */
+.home-banner { position: relative; overflow: hidden; }
+.home-banner::before {
+    content: ''; position: absolute; top: -50%; left: -100%;
+    width: 60%; height: 200%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.28), transparent);
+    transform: skewX(-20deg);
+    animation: bannerShimmer 6s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes bannerShimmer {
+    0%, 80% { left: -100%; }
+    100% { left: 220%; }
+}
+
+/* 1️⃣4️⃣ 麵包屑：科技點裝飾 */
+.breadcrumb { position: relative; }
+.breadcrumb::before {
+    content: '●'; color: #f59e0b; font-size: 8px;
+    margin-right: 6px; animation: dotPulse 1.5s ease-in-out infinite;
+    text-shadow: 0 0 6px rgba(245,158,11,0.8);
+    display: inline-block;
+}
+@keyframes dotPulse {
+    0%,100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.4); }
+}
+
+/* 1️⃣5️⃣ 統計卡懸停：彩色光暈 */
+.home-stat-card:hover, .sc-stat:hover {
+    box-shadow: 0 8px 20px rgba(245,158,11,0.18), 0 0 30px rgba(245,158,11,0.10), inset 0 1px 0 #fff !important;
+}
+
+/* 1️⃣6️⃣ 排行榜獎牌跳動 */
+.pet-medal {
+    display: inline-block;
+    animation: medalSpin 4s ease-in-out infinite;
+    transform-origin: center;
+}
+@keyframes medalSpin {
+    0%, 70%, 100% { transform: rotate(0deg) scale(1); }
+    75% { transform: rotate(-10deg) scale(1.15); }
+    85% { transform: rotate(10deg) scale(1.15); }
+}
+
+/* 1️⃣7️⃣ 通知 toast 邊光 */
+.notif {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 0 20px rgba(16,185,129,0.25) !important;
+}
+
+/* 1️⃣8️⃣ 選單抽屜開啟時，主內容輕微縮放（深度感）*/
+body.view-mobile.menu-drawer-open #mainPage {
+    transform: scale(0.96);
+    transition: transform 0.3s ease, filter 0.3s ease;
+    filter: brightness(0.85);
+}
+body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; }
+
+/* 1️⃣9️⃣ 上拉小選單項目發光 */
+.bnav-popup-item:active {
+    box-shadow: 0 0 18px rgba(245,158,11,0.5);
+}
+
+/* 2️⃣0️⃣ 工作清單面板：金色邊光（hover）*/
+.work-list-panel { transition: box-shadow .3s ease; }
+.work-list-panel:hover {
+    box-shadow: 0 6px 22px rgba(180,100,30,0.15), 0 0 0 1px rgba(245,158,11,0.18), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+}
+
+/* 2️⃣1️⃣ 登入按鈕：強化光暈 */
+.btn-login { box-shadow: 0 4px 16px rgba(16,185,129,0.35), 0 0 30px rgba(16,185,129,0.15) !important; }
+.btn-signin { box-shadow: 0 4px 16px rgba(245,158,11,0.35), 0 0 30px rgba(245,158,11,0.18) !important; }
+.btn-signout { box-shadow: 0 4px 16px rgba(239,68,68,0.35), 0 0 30px rgba(239,68,68,0.18) !important; }
+
+/* 2️⃣2️⃣ 排班表：建議/實際工時、轉入代休假、本店費用列 */
+.sch-suggest-cell {
+    background: #fffdf6 !important;
+    font-size: 11px !important;
+    color: #6b7280 !important;
+    font-weight: normal !important;
+    padding: 4px 6px !important;
+    border-bottom: 1px dashed #f0e3cc !important;
+}
+.sch-actual-cell {
+    background: #fffbf2 !important;
+    font-size: 11px !important;
+    color: #6b7280 !important;
+    font-weight: normal !important;
+    padding: 4px 6px !important;
+}
+.sch-leave-transfer-row { background: #ecfdf5; }
+.sch-leave-transfer-lbl {
+    font-weight: bold; color: #047857; font-size: 12px;
+    background: #d1fae5 !important; padding: 6px 10px !important;
+}
+.sch-leave-transfer-cell {
+    text-align: center; font-size: 12px; color: #6b7280;
+    background: #f0fdf4 !important;
+}
+.sch-cost-row {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    border-top: 2px solid #f59e0b !important;
+}
+.sch-cost-lbl {
+    font-weight: bold; color: var(--brand-dark);
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+    color: #4a2e08 !important;
+    padding: 8px 10px !important;
+    font-size: 13px;
+}
+.sch-cost-cell {
+    text-align: right; font-weight: bold; color: var(--brand-dark);
+    padding: 8px 10px !important;
+    font-size: 13px;
+}
 </style>
 </head>
 <body>
@@ -2612,6 +2953,7 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
                 <div class="submenu-item" onclick="goToPage('scheduleQuery','menu-schedule')">🔍 班表查詢</div>
                 <div class="submenu-item" onclick="goToPage('shiftSwap','menu-schedule')">🔄 換班申請</div>
                 <div class="submenu-item" onclick="goToPage('reviewMonth','menu-schedule')">✅ 審核作業（月）</div>
+                <div class="submenu-item" onclick="goToPage('monthlySettle','menu-schedule')">💰 月度結算（勞基法精算）</div>
             </div>
         </div>
         <div class="menu-item" id="menu-employee">👥 員工資料 ▼
@@ -2753,29 +3095,87 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
         
         <!-- 頂部選擇區 -->
         <div class="sched-filters no-print">
+            <!-- 標題與動作分頁 -->
+            <div class="sched-title-bar">
+                <h2 class="sched-page-title">📅 排班作業<span class="sched-subtitle">（依勞基法制度）</span></h2>
+                <div class="sched-action-tabs">
+                    <button class="sched-tab active">📋 安排班表</button>
+                    <button class="sched-tab" onclick="toggleCostColumn()" id="costToggleBtn">💰 顯示費用欄位</button>
+                    <button class="sched-tab" onclick="printSchedule()">🖨 列印本週班表</button>
+                    <button class="sched-tab approved" onclick="applyApprovedLeavesToCurrentWeek()">✅ 帶入已核准假別</button>
+                </div>
+            </div>
+            
             <div class="filter-row">
-                <span class="filter-label">📌 顯示門市：</span>
-                <select id="schedStore" class="filter-select" onchange="onSchedStoreChange()"></select>
-                <span class="filter-label" style="margin-left:20px;">📅 週區間：</span>
+                <span class="filter-label">📅 排班週區間：</span>
                 <span class="week-display" id="weekDisplay"></span>
+                <span class="filter-label" style="margin-left:14px;">👔 區營業部：</span>
+                <select id="schedRegion" class="filter-select">
+                    <option>北一區營業部副總</option>
+                    <option>北二區營業部副總</option>
+                    <option>中區營業部副總</option>
+                    <option>南區營業部副總</option>
+                </select>
+            </div>
+            <div class="filter-row">
+                <span class="filter-label">🏬 顯示門市：</span>
+                <select id="schedStore" class="filter-select" onchange="onSchedStoreChange()"></select>
                 <button class="btn-toolbar" onclick="prevWeek()">◀ 上週</button>
                 <button class="btn-toolbar" onclick="currentWeek()">本週</button>
                 <button class="btn-toolbar" onclick="nextWeek()">下週 ▶</button>
+                <span class="filter-label" style="margin-left:14px;">👥 人員類型：</span>
+                <select id="schedEmpType" class="filter-select" onchange="renderScheduleTable()">
+                    <option value="all">全部</option>
+                    <option value="fulltime">正職</option>
+                    <option value="parttime">工讀</option>
+                </select>
             </div>
             <div class="filter-row" id="schedAdminToolbar">
                 <button class="add-employee-btn" style="width:auto; padding:6px 14px;" onclick="openAddEmployeeModal()">➕ 新增員工</button>
                 <button class="btn-toolbar green" onclick="saveScheduleAlert()">💾 儲存</button>
-                <button class="btn-toolbar" onclick="printSchedule()">🖨 列印</button>
                 <button class="btn-toolbar red" onclick="showWorkList()">↩ 返回</button>
                 <span style="margin-left:auto;" id="weekStatsInline"></span>
-            </div>
-            <div class="filter-row" style="background:#dbeafe; padding:6px 12px; border-radius:6px; border:1px solid #3b82f6; font-size:12px; color:#1e3a8a;">
-                💡 <strong>操作提示：</strong>① 點空格新增排班 ② <strong>拖拉格子可複製到其他日期/員工</strong> ③ 請假類型可填寫時數，自動於假別額度扣除 ④ 時間採 24 小時制
             </div>
             <div class="filter-row" id="schedViewToolbar" style="display:none;">
                 <button class="btn-toolbar" onclick="printSchedule()">🖨 列印我的班表</button>
                 <button class="btn-toolbar red" onclick="showWorkList()">↩ 返回</button>
-                <span style="margin-left:auto; color:#92400e; font-size:12px;" id="schedViewInfo">👁️ 您目前是「<strong>唯讀模式</strong>」，只能查看不能修改</span>
+                <span style="margin-left:auto; color:#92400e; font-size:12px;" id="schedViewInfo">👁️ 唯讀模式：只能查看不能修改</span>
+            </div>
+            <div class="filter-row" style="background:#dbeafe; padding:6px 12px; border-radius:6px; border:1px solid #3b82f6; font-size:12px; color:#1e3a8a;">
+                💡 <strong>操作提示：</strong>① 點空格新增排班 ② <strong>拖拉格子可複製到其他日期/員工</strong> ③ 請假類型可填寫時數，自動於假別額度扣除 ④ 時間採 24 小時制
+            </div>
+        </div>
+        
+        <!-- 色彩圖例 -->
+        <div class="sched-legend no-print">
+            <div class="legend-row">
+                <span class="legend-label">班別：</span>
+                <span class="legend-item"><span class="legend-dot dot-normal"></span>正常班</span>
+                <span class="legend-item"><span class="legend-dot dot-business"></span>公出</span>
+                <span class="legend-item"><span class="legend-dot dot-fc-a"></span>FC支援(A)</span>
+                <span class="legend-item"><span class="legend-dot dot-fc-b"></span>FC支援(B)</span>
+                <span class="legend-item"><span class="legend-dot dot-fc-counsel"></span>FC駐店輔導</span>
+                <span class="legend-item"><span class="legend-dot dot-rest-business"></span>休息日公出</span>
+                <span class="legend-item"><span class="legend-dot dot-rest-work"></span>休上班</span>
+                <span class="legend-item"><span class="legend-dot dot-rest-fc"></span>休息日FC支援</span>
+            </div>
+            <div class="legend-row">
+                <span class="legend-label">假別：</span>
+                <span class="legend-item"><span class="legend-dot dot-regular-leave"></span>例假日</span>
+                <span class="legend-item"><span class="legend-dot dot-rest-day"></span>休假日</span>
+                <span class="legend-item"><span class="legend-dot dot-special"></span>特代休</span>
+                <span class="legend-item"><span class="legend-dot dot-sick"></span>病假</span>
+                <span class="legend-item"><span class="legend-dot dot-personal"></span>事假</span>
+                <span class="legend-item"><span class="legend-dot dot-mourning"></span>喪假</span>
+                <span class="legend-item"><span class="legend-dot dot-menstrual"></span>生理假</span>
+            </div>
+            <div class="legend-row">
+                <span class="legend-label">日期色彩：</span>
+                <span class="legend-item"><span class="legend-dot dot-holiday"></span>國定假日</span>
+                <span class="legend-item"><span class="legend-dot dot-sunday"></span>例假日(日)</span>
+                <span class="legend-item"><span class="legend-dot dot-saturday"></span>休息日(六)</span>
+                <span class="legend-item"><span class="legend-dot dot-workday"></span>工作日</span>
+                <span class="legend-note">※ 國定假日出勤須加倍工資（勞基法 §39）</span>
             </div>
         </div>
         
@@ -3205,6 +3605,70 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
             </table>
             <div style="text-align:center; margin-top:15px;"><button class="btn-confirm" onclick="submitShiftSwap()">✅ 提交</button></div>
         </div></div></div>
+    </div>
+    
+    <!-- 💰 月度結算（依勞基法精算）-->
+    <div id="page-monthlySettle" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 📅 班表作業 &gt; <strong>💰 月度結算</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h3>💰 月度結算（依勞基法精算）</h3>
+                    <button class="btn-primary" style="padding:6px 14px; font-size:13px;" onclick="printMonthlySettle()">🖨️ 列印</button>
+                </div>
+                <div class="panel-body">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+                        <label style="font-size:13px;">📅 月份：</label>
+                        <input type="month" id="msMonth" style="padding:7px 10px; border-radius:8px;" onchange="renderMonthlySettle()">
+                        <label style="font-size:13px;">🏬 門市：</label>
+                        <select id="msStore" style="padding:7px 10px; border-radius:8px;" onchange="renderMonthlySettle()"></select>
+                        <span id="msInfo" style="font-size:12px; color:#6b7280; margin-left:auto;"></span>
+                    </div>
+                    
+                    <div class="alert-box info" style="margin-bottom:12px; font-size:12px;">
+                        💡 <strong>勞基法精算規則：</strong><br>
+                        • 平日加班：超過 8 小時的前 2 小時 × 1.34、第 3-4 小時 × 1.67<br>
+                        • 休息日上班：前 2 小時 × 1.34、第 3-8 小時 × 1.67、第 9-12 小時 × 2.67<br>
+                        • 國定假日：×2（勞基法 §39）<br>
+                        • 假別給薪：特休/婚/喪/公假/公傷/產假 = 全薪；病假/生理假 = 半薪；事假 = 無薪
+                    </div>
+                    
+                    <div style="overflow-x:auto;">
+                        <table class="work-table" style="width:100%; font-size:12px; min-width:900px;">
+                            <thead>
+                                <tr style="background:linear-gradient(135deg,#fef3c7,#fde68a);">
+                                    <th rowspan="2" style="vertical-align:middle;">員工</th>
+                                    <th colspan="3" style="background:#dbeafe;">⏰ 工時與加班</th>
+                                    <th colspan="2" style="background:#fee2e2;">📅 假日上班</th>
+                                    <th rowspan="2" style="vertical-align:middle; background:#d1fae5;">🌴 請假時數</th>
+                                    <th rowspan="2" style="vertical-align:middle; background:#fce7f3;">💵 應發費用</th>
+                                </tr>
+                                <tr style="background:#fef3c7;">
+                                    <th>正常班</th>
+                                    <th>加班 ×1.34</th>
+                                    <th>加班 ×1.67</th>
+                                    <th>休息日</th>
+                                    <th>國定假日</th>
+                                </tr>
+                            </thead>
+                            <tbody id="msBody"></tbody>
+                            <tfoot id="msFoot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 個人明細展開區 -->
+            <div class="work-list-panel" id="msDetailPanel" style="margin-top:14px; display:none;">
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 id="msDetailTitle">📋 個人明細</h3>
+                    <button class="btn-secondary" style="padding:4px 12px; font-size:12px;" onclick="closeMsDetail()">✕ 關閉</button>
+                </div>
+                <div class="panel-body">
+                    <div id="msDetailContent"></div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div id="page-reviewMonth" class="page-content hidden">
@@ -5950,7 +6414,7 @@ function getClockStoreForEmp(emp) {
             var slots = (typeof getDaySlots === 'function') ? getDaySlots(todayShift) : (todayShift.slots || []);
             for (var i = 0; i < slots.length; i++) {
                 var slot = slots[i];
-                if (slot && ['work','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
+                if (slot && ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
                     var ws = stores.find(function(s) { return s.id === slot.workStoreId; });
                     if (ws) { ws._isDispatch = (slot.workStoreId !== emp.homeStoreId); return ws; }
                 }
@@ -6486,7 +6950,7 @@ function hasAccess(pageName) {
     if (!currentUser) return false;
     
     // 🆕 新功能自動開放（避免舊自訂權限擋住新頁面）：檔期退貨所有人都可用
-    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'petGame', 'storeCompete'];
+    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'petGame', 'storeCompete', 'monthlySettle'];
     if (ALWAYS_ALLOW.indexOf(pageName) !== -1) {
         return true;
     }
@@ -7032,6 +7496,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'announcementMgmt') initAnnouncementMgmt();
     else if (pageName === 'petGame') initPetGame();
     else if (pageName === 'storeCompete') initStoreCompete();
+    else if (pageName === 'monthlySettle') initMonthlySettle();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -7543,6 +8008,80 @@ function calculateHours(start, end) {
     return h;
 }
 
+// 🏛️ 勞基法請假支付率（依勞基法第 43 條及相關規定）
+function leavePayRate(leaveType) {
+    if (!leaveType) return 1.0;
+    var t = String(leaveType);
+    // 全薪：特休、喪假、婚假、公假、公傷病假、產假、陪產假、休假日
+    if (t.indexOf('特休') >= 0 || t.indexOf('代休') >= 0) return 1.0;
+    if (t.indexOf('喪') >= 0) return 1.0;
+    if (t.indexOf('婚') >= 0) return 1.0;
+    if (t.indexOf('公假') >= 0 || t.indexOf('公傷') >= 0) return 1.0;
+    if (t.indexOf('產') >= 0) return 1.0;  // 含產假/陪產
+    if (t.indexOf('休假') >= 0 || t.indexOf('例假') >= 0) return 1.0;
+    // 半薪：普通傷病假、生理假
+    if (t.indexOf('病') >= 0) return 0.5;
+    if (t.indexOf('生理') >= 0) return 0.5;
+    // 無薪：事假
+    if (t.indexOf('事') >= 0) return 0.0;
+    return 1.0;
+}
+
+// 🏛️ 勞基法精算單日費用（含加班 1.34x / 1.67x、休息日、國定假日、各類假別）
+function calcDayLaborCost(slots, hourlyRate) {
+    var r = {
+        cost: 0,
+        workHours: 0, ot134Hours: 0, ot167Hours: 0,
+        restWorkHours: 0, restOT134: 0, restOT167: 0, restOT267: 0,
+        holidayWorkHours: 0,
+        leaveHours: 0, leaveByType: {}, leaveCost: 0
+    };
+    if (!slots || !slots.length) return r;
+    var workTotal = 0, restTotal = 0, holidayTotal = 0;
+    var WORK_TYPES = ['work','business','fcA','fcB','fcCounsel'];
+    var REST_TYPES = ['restWork','restBusiness','restFc'];
+    for (var i = 0; i < slots.length; i++) {
+        var s = slots[i];
+        if (!s || !s.type) continue;
+        if (WORK_TYPES.indexOf(s.type) !== -1 && s.start) workTotal += calculateHours(s.start, s.end);
+        else if (REST_TYPES.indexOf(s.type) !== -1 && s.start) restTotal += calculateHours(s.start, s.end);
+        else if (s.type === 'holidayWork' && s.start) holidayTotal += calculateHours(s.start, s.end);
+        else if (s.type === 'leave') {
+            var lh = parseFloat(s.leaveHours) || 8;
+            var lt = s.leaveType || '其他';
+            r.leaveByType[lt] = (r.leaveByType[lt] || 0) + lh;
+            r.leaveHours += lh;
+            r.leaveCost += lh * hourlyRate * leavePayRate(lt);
+        }
+    }
+    // 平日：8 小時內 1x、超 8 至 10 = 1.34x、超 10 = 1.67x
+    if (workTotal > 0) {
+        r.workHours = Math.min(8, workTotal);
+        r.ot134Hours = Math.max(0, Math.min(10, workTotal) - 8);
+        r.ot167Hours = Math.max(0, workTotal - 10);
+        r.cost += r.workHours * hourlyRate;
+        r.cost += r.ot134Hours * hourlyRate * 1.34;
+        r.cost += r.ot167Hours * hourlyRate * 1.67;
+    }
+    // 休息日上班：前 2 小時 1.34x、3-8 小時 1.67x、9-12 小時 2.67x
+    if (restTotal > 0) {
+        r.restWorkHours = restTotal;
+        r.restOT134 = Math.min(2, restTotal);
+        r.restOT167 = Math.max(0, Math.min(8, restTotal) - 2);
+        r.restOT267 = Math.max(0, restTotal - 8);
+        r.cost += r.restOT134 * hourlyRate * 1.34;
+        r.cost += r.restOT167 * hourlyRate * 1.67;
+        r.cost += r.restOT267 * hourlyRate * 2.67;
+    }
+    // 國定假日上班：加倍（勞基法 §39）
+    if (holidayTotal > 0) {
+        r.holidayWorkHours = holidayTotal;
+        r.cost += holidayTotal * hourlyRate * 2;
+    }
+    r.cost += r.leaveCost;
+    return r;
+}
+
 // 全域：目前選擇的門市（瀏覽中）
 var currentSchedStoreId = null;
 
@@ -7682,18 +8221,33 @@ function renderScheduleTable() {
     
     var isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager');
     
-    // 表頭（兩個 table 共用）
-    var headerHtml = '<th class="emp-col">員工</th>';
+    // 🆕 預計每日實際工時（先初始化，本店上班區會累計）
+    var dayActualHours = new Array(dates.length).fill(0);
+    var dayActualCost = new Array(dates.length).fill(0);
+    
+    // 表頭（兩個 table 共用）：加上「建議工時 / 實際工時」
+    var headerHtml = '<th class="emp-col" rowspan="3">員工</th>';
     var todayStr = new Date().toDateString();
+    var dateHeaderHtml = '';
     for (var d = 0; d < dates.length; d++) {
         var dt = dates[d];
         var isWE = (dt.getDay() === 0 || dt.getDay() === 6);
         var isToday = (dt.toDateString() === todayStr);
         var cls = isToday ? 'today' : (isWE ? 'weekend' : '');
-        headerHtml += '<th' + (cls ? ' class="' + cls + '"' : '') + '>' + formatDate(dt) + '<br>星期' + getDayName(dt) + (isToday ? '<br><span style="font-size:9px;">📍今天</span>' : '') + '</th>';
+        dateHeaderHtml += '<th' + (cls ? ' class="' + cls + '"' : '') + '>' + formatDate(dt) + '<br>星期' + getDayName(dt) + (isToday ? '<br><span style="font-size:9px;">📍今天</span>' : '') + '</th>';
     }
-    document.getElementById('schHHeader').innerHTML = headerHtml;
-    document.getElementById('schSupportHeader').innerHTML = headerHtml;
+    // 建議工時列（依勞基法每日 8 小時為基準，建議區間 6~10 小時）
+    var suggestRow = '';
+    var actualRow = '';
+    for (var d2 = 0; d2 < dates.length; d2++) {
+        suggestRow += '<th class="sch-suggest-cell">建議工時：<br><span style="color:#92400e;">6.0 ~ 10.0</span></th>';
+        actualRow  += '<th class="sch-actual-cell" data-day-idx="' + d2 + '">實際工時：<span class="sch-actual-val" style="color:#16a34a;font-weight:bold;">0.0</span></th>';
+    }
+    var fullHeader = '<tr>' + headerHtml + dateHeaderHtml + '</tr>' +
+                     '<tr>' + suggestRow + '</tr>' +
+                     '<tr>' + actualRow + '</tr>';
+    document.getElementById('schHHeader').innerHTML = fullHeader;
+    document.getElementById('schSupportHeader').innerHTML = '<tr><th class="emp-col">員工</th>' + dateHeaderHtml + '</tr>';
     
     // ============= 本店上班區（本店員工） =============
     var homeEmployees = employees.filter(function(e) { return getEmpHomeStore(e) === currentSchedStoreId; });
@@ -7716,17 +8270,42 @@ function renderScheduleTable() {
                 var slots = getDaySlots(rawShift);
                 homeHtml += renderScheduleCell(emp.id, dateKey, slots, isAdmin, stores, currentSchedStoreId, emp.homeStoreId);
                 
-                // 計算工時
-                for (var ss = 0; ss < slots.length; ss++) {
-                    if (['work','restWork','holidayWork'].indexOf(slots[ss].type) !== -1 && slots[ss].start) {
-                        weekHours += calculateHours(slots[ss].start, slots[ss].end);
-                    }
-                }
+                // 🏛️ 依勞基法精算（含加班 1.34x/1.67x、休息日、國定假日、假別）
+                var empHourly = (emp.hourlyRate || ((emp.monthlySalary||0)/30/8)) || 190;
+                var dr = calcDayLaborCost(slots, empHourly);
+                // 工時統計（不含請假）
+                var workTotalH = dr.workHours + dr.ot134Hours + dr.ot167Hours + dr.restWorkHours + dr.holidayWorkHours;
+                weekHours += workTotalH;
+                dayActualHours[di] += workTotalH;
+                dayActualCost[di] += dr.cost;
             }
             homeHtml += '</tr>';
         }
+        // 🆕 轉入代休假列（顯示已從本週工時轉入的代休時數，先放佔位）
+        homeHtml += '<tr class="sch-leave-transfer-row"><td class="sch-leave-transfer-lbl">🔄 轉入代休假</td>';
+        for (var dt2 = 0; dt2 < dates.length; dt2++) {
+            homeHtml += '<td class="sch-leave-transfer-cell">—</td>';
+        }
+        homeHtml += '</tr>';
+        // 🆕 本店上班費用 (A) 列
+        homeHtml += '<tr class="sch-cost-row"><td class="sch-cost-lbl">💰 本店上班費用 (A)</td>';
+        for (var dc = 0; dc < dates.length; dc++) {
+            homeHtml += '<td class="sch-cost-cell">' + dayActualCost[dc].toFixed(0) + '</td>';
+        }
+        homeHtml += '</tr>';
     }
     document.getElementById('schHBody').innerHTML = homeHtml;
+    
+    // 🆕 填入表頭的「實際工時」儲存格
+    var actualCells = document.querySelectorAll('#schHHeader .sch-actual-cell .sch-actual-val');
+    for (var ac = 0; ac < actualCells.length; ac++) {
+        var idx = parseInt(actualCells[ac].parentElement.getAttribute('data-day-idx'), 10);
+        if (!isNaN(idx) && dayActualHours[idx] !== undefined) {
+            actualCells[ac].textContent = dayActualHours[idx].toFixed(1);
+            // 工時太低紅色提醒
+            actualCells[ac].style.color = dayActualHours[idx] === 0 ? '#9ca3af' : (dayActualHours[idx] < 6 ? '#dc2626' : '#16a34a');
+        }
+    }
     
     // ============= 他店支援區（外店員工來本店） =============
     var supportRecords = {}; // empId → has any support slot
@@ -7742,7 +8321,7 @@ function renderScheduleTable() {
             var oslots = getDaySlots(os);
             for (var sk = 0; sk < oslots.length; sk++) {
                 if (oslots[sk].workStoreId === currentSchedStoreId &&
-                    ['work','restWork','holidayWork'].indexOf(oslots[sk].type) !== -1) {
+                    ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(oslots[sk].type) !== -1) {
                     supportRecords[oemp.id] = oemp;
                     break;
                 }
@@ -7768,7 +8347,7 @@ function renderScheduleTable() {
                 var sslots = getDaySlots(sraw);
                 // 只顯示派駐到本店的 slot
                 var displaySlots = sslots.map(function(slot) {
-                    if (slot.workStoreId === currentSchedStoreId && ['work','restWork','holidayWork'].indexOf(slot.type) !== -1) {
+                    if (slot.workStoreId === currentSchedStoreId && ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1) {
                         return slot;
                     }
                     return emptySlot();
@@ -7932,8 +8511,10 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
         }
     } else {
         var typeNames = {
-            'work':'正常班', 'rest':'休息日', 'holiday':'例假日',
-            'national':'國定假日', 'restWork':'休上班', 'holidayWork':'國上班', 'leave':'請假'
+            'work':'正常班', 'business':'公出', 'fcA':'FC支援(A)', 'fcB':'FC支援(B)', 'fcCounsel':'FC駐店輔導',
+            'restWork':'休上班', 'restBusiness':'休息日公出', 'restFc':'休息日FC支援',
+            'holidayWork':'國上班',
+            'rest':'休息日', 'holiday':'例假日', 'national':'國定假日', 'leave':'請假'
         };
         
         for (var i = 0; i < slots.length; i++) {
@@ -7943,7 +8524,7 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
             html += '<div class="slot-mini ' + slot.type + '">';
             html += '<div class="mini-type">' + typeNames[slot.type] + '</div>';
             
-            var needTime = ['work','restWork','holidayWork'].indexOf(slot.type) !== -1;
+            var needTime = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1;
             if (needTime && slot.start && slot.end) {
                 html += '<div class="mini-time">' + slot.start + '-' + slot.end + '</div>';
                 
@@ -8107,8 +8688,20 @@ function openEditShiftModal(empId, dateKey) {
 function renderSlotEditCard(slotIndex, slot, homeStoreId) {
     var stores = loadData('stores', defaultStores);
     var typeOptions = {
-        'empty':'(未排班)', 'work':'正常班', 'restWork':'休上班', 'holidayWork':'國上班',
-        'rest':'休息日', 'holiday':'例假日', 'national':'國定假日', 'leave':'請假'
+        'empty':'(未排班)',
+        'work':'正常班',
+        'business':'公出',
+        'fcA':'FC支援(A)',
+        'fcB':'FC支援(B)',
+        'fcCounsel':'FC駐店輔導',
+        'restWork':'休上班',
+        'restBusiness':'休息日公出',
+        'restFc':'休息日FC支援',
+        'holidayWork':'國上班',
+        'rest':'休息日',
+        'holiday':'例假日',
+        'national':'國定假日',
+        'leave':'請假'
     };
     
     var html = '<div class="modal-slot-card">';
@@ -8122,7 +8715,7 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
     });
     html += '</select></div>';
     
-    var needTime = ['work','restWork','holidayWork'].indexOf(slot.type) !== -1;
+    var needTime = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1;
     if (needTime) {
         // 時間
         html += '<div class="form-row"><label>上班：</label><input type="time" value="' + (slot.start || '08:00') + '" onchange="modalUpdateSlot(' + slotIndex + ',\'start\',this.value)"></div>';
@@ -8156,7 +8749,7 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         
         html += '<div class="form-row"><label>假別：</label>';
         html += '<select onchange="modalUpdateLeaveSlot(' + slotIndex + ',\'leaveType\',this.value)">';
-        var leaveTypes = ['特休假','事假','病假','婚假','喪假','產假','陪產假','育嬰假','公假','生理假','其他'];
+        var leaveTypes = ['特休假','特代休','例假日','休假日','病假','事假','喪假','生理假','婚假','產假','陪產假','育嬰假','公假','公傷病假','其他'];
         for (var li = 0; li < leaveTypes.length; li++) {
             var lsel = (slot.leaveType === leaveTypes[li]) ? ' selected' : '';
             html += '<option value="' + leaveTypes[li] + '"' + lsel + '>' + leaveTypes[li] + '</option>';
@@ -8186,7 +8779,7 @@ function modalChangeSlotType(slotIndex, newType) {
     }
     
     var current = existing.slots[slotIndex] || emptySlot();
-    var needTime = ['work','restWork','holidayWork'].indexOf(newType) !== -1;
+    var needTime = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(newType) !== -1;
     
     existing.slots[slotIndex] = {
         type: newType,
@@ -17610,6 +18203,7 @@ function renderAccountList() {
         var storeName = a.role === 'admin' ? '🌐 全部' : (a.storeId ? ('🏬 ' + (storeMap[a.storeId] || '?')) : '（未指定）');
         var opBtn = currentUser && currentUser.role === 'admin'
             ? '<button class="btn-edit" onclick="openEditAccountModal(\'' + a.id + '\')">編輯</button> '
+              + '<button class="btn-secondary" style="padding:4px 10px;font-size:11px;background:#fde68a;color:#92400e;" onclick="resetAccountPassword(\'' + a.id + '\')" title="重設為 123456">🔑 重設密碼</button> '
               + '<button class="' + (a.status === 'active' ? 'btn-danger' : 'btn-confirm') + '" style="padding:4px 10px;font-size:11px;" onclick="toggleAccountStatus(\'' + a.id + '\')">' + (a.status === 'active' ? '停用' : '啟用') + '</button>'
             : '-';
         html += '<tr><td>' + a.username + '</td><td>' + a.name + '</td><td><span class="status-tag status-info">' + (roleMap[a.role] || a.role) + '</span></td><td style="font-size:12px;">' + storeName + '</td><td>' + statusHtml + '</td><td>' + opBtn + '</td></tr>';
@@ -17711,6 +18305,29 @@ function toggleAccountStatus(id) {
     saveData('accounts', accounts);
     renderAccountList();
     showNotif('✅ 狀態已切換');
+}
+
+// 🔑 管理員重設員工密碼為原始密碼 (123456)
+function resetAccountPassword(id) {
+    if (!currentUser || currentUser.role !== 'admin') return alert('⚠️ 只有系統管理員能重設密碼');
+    var accounts = loadData('accounts', defaultAccounts);
+    var idx = accounts.findIndex(function(x) { return x.id === id; });
+    if (idx === -1) return;
+    var a = accounts[idx];
+    if (!confirm('🔑 確定將「' + a.name + '（' + a.username + '）」的密碼重設為「123456」嗎？\n\n員工下次登入請使用：123456\n登入後請提醒員工自行修改密碼。')) return;
+    accounts[idx].password = '123456';
+    // 同時清除可能的鎖定狀態
+    if (accounts[idx].status === 'locked') accounts[idx].status = 'active';
+    accounts[idx].passwordResetAt = new Date().toISOString();
+    accounts[idx].passwordResetBy = (currentUser && currentUser.name) || 'admin';
+    saveData('accounts', accounts);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    // 寫系統記錄
+    if (typeof addSystemLog === 'function') {
+        try { addSystemLog('密碼重設', '管理員重設「' + a.name + '」(' + a.username + ') 密碼為 123456'); } catch(e){}
+    }
+    renderAccountList();
+    alert('✅ 已重設！\n\n員工「' + a.name + '」的新密碼：123456\n請通知員工登入後修改密碼。');
 }
 
 // ============= 系統參數 =============
@@ -19709,7 +20326,7 @@ function calcEmpMonthStats(empId, yearMonth) {
             var slot = slots[i];
             if (!slot || slot.type === 'empty') continue;
             
-            if (['work','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end && slot.start !== '-') {
+            if (['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end && slot.start !== '-') {
                 var h = calculateHours(slot.start, slot.end);
                 totalHours += h;
                 if (slot.type === 'restWork' || slot.type === 'holidayWork') {
@@ -20554,7 +21171,7 @@ function getMyClockStore() {
             for (var i = 0; i < slots.length; i++) {
                 var slot = slots[i];
                 // 只看上班類型且有指定工作門市
-                if (slot && ['work','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
+                if (slot && ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
                     var workStore = stores.find(function(s) { return s.id === slot.workStoreId; });
                     if (workStore) {
                         workStore._isDispatch = (slot.workStoreId !== myEmp.homeStoreId);
@@ -21020,6 +21637,192 @@ function getCompetitions() { return loadData('storeCompetitions', []); }
 function saveCompetitions(arr) {
     saveData('storeCompetitions', arr);
     if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+}
+
+// ============================================================
+// 💰 月度結算（依勞基法精算）
+// ============================================================
+function initMonthlySettle() {
+    var m = document.getElementById('msMonth');
+    if (m && !m.value) {
+        var n = new Date();
+        m.value = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0');
+    }
+    // 門市下拉
+    var sel = document.getElementById('msStore');
+    if (sel) {
+        var stores = loadData('stores', defaultStores);
+        var isAdmin = currentUser && currentUser.role === 'admin';
+        var html = isAdmin ? '<option value="all">🌐 全部門市</option>' : '';
+        var allowed = stores;
+        if (!isAdmin && typeof getUserStoreId === 'function') {
+            var mySid = getUserStoreId();
+            if (mySid) allowed = stores.filter(function(s){return s.id===mySid;});
+        }
+        for (var i = 0; i < allowed.length; i++) html += '<option value="' + allowed[i].id + '">🏬 ' + allowed[i].name + '</option>';
+        sel.innerHTML = html;
+    }
+    renderMonthlySettle();
+}
+
+function renderMonthlySettle() {
+    var month = (document.getElementById('msMonth') || {value:''}).value;
+    var storeFilter = (document.getElementById('msStore') || {value:'all'}).value;
+    var tbody = document.getElementById('msBody');
+    var tfoot = document.getElementById('msFoot');
+    var info = document.getElementById('msInfo');
+    if (!tbody || !month) return;
+    
+    // 月份範圍
+    var parts = month.split('-');
+    var yy = parseInt(parts[0], 10), mm = parseInt(parts[1], 10) - 1;
+    var firstDay = new Date(yy, mm, 1);
+    var lastDay = new Date(yy, mm + 1, 0);
+    var employees = loadData('employees', defaultEmployees);
+    var shifts = loadData('shifts', {});
+    var stores = loadData('stores', defaultStores);
+    
+    // 員工過濾
+    var emps = employees.filter(function(e) {
+        if (storeFilter === 'all') return true;
+        return getEmpHomeStore(e) === storeFilter;
+    });
+    if (typeof empNumSortKey === 'function') emps.sort(function(a,b){ return empNumSortKey(a) - empNumSortKey(b); });
+    
+    // 逐員工逐日累計
+    var rows = [];
+    var totals = { work:0, ot134:0, ot167:0, rest:0, holiday:0, leave:0, cost:0 };
+    for (var ei = 0; ei < emps.length; ei++) {
+        var emp = emps[ei];
+        var empHourly = (emp.hourlyRate || ((emp.monthlySalary||0)/30/8)) || 190;
+        var sum = { work:0, ot134:0, ot167:0, rest:0, holiday:0, leaveByType:{}, leaveTotal:0, cost:0 };
+        for (var dx = new Date(firstDay); dx <= lastDay; dx.setDate(dx.getDate()+1)) {
+            var dKey = formatDate(dx);
+            var raw = shifts[dKey] && shifts[dKey][emp.id];
+            if (!raw) continue;
+            var slots = getDaySlots(raw);
+            var r = calcDayLaborCost(slots, empHourly);
+            sum.work += r.workHours;
+            sum.ot134 += r.ot134Hours + r.restOT134;
+            sum.ot167 += r.ot167Hours + r.restOT167 + r.restOT267;
+            sum.rest += r.restWorkHours;
+            sum.holiday += r.holidayWorkHours;
+            sum.leaveTotal += r.leaveHours;
+            for (var lt in r.leaveByType) sum.leaveByType[lt] = (sum.leaveByType[lt]||0) + r.leaveByType[lt];
+            sum.cost += r.cost;
+        }
+        // 跳過完全沒資料的員工
+        if (sum.work + sum.ot134 + sum.ot167 + sum.rest + sum.holiday + sum.leaveTotal === 0) continue;
+        
+        var leaveDetail = Object.keys(sum.leaveByType).map(function(k){return k+' '+sum.leaveByType[k].toFixed(1);}).join('、') || '—';
+        var fmt = function(n){ return n > 0 ? n.toFixed(1) : '—'; };
+        var costFmt = sum.cost ? '$ ' + Math.round(sum.cost).toLocaleString() : '—';
+        var typeBadge = emp.empType === 'parttime' ? '<span class="status-tag" style="background:#fef3c7;color:#92400e;font-size:10px;">工讀</span>' : '<span class="status-tag status-done" style="font-size:10px;">正職</span>';
+        var detailBtn = '<button class="btn-edit" style="padding:2px 8px;font-size:10px;margin-left:4px;" onclick="viewMonthlyDetail(\'' + emp.id + '\')">明細</button>';
+        rows.push('<tr><td>' + emp.name + ' (' + emp.num + ') ' + typeBadge + '</td>' +
+            '<td style="text-align:right;">' + fmt(sum.work) + '</td>' +
+            '<td style="text-align:right;color:#d97706;font-weight:bold;">' + fmt(sum.ot134) + '</td>' +
+            '<td style="text-align:right;color:#dc2626;font-weight:bold;">' + fmt(sum.ot167) + '</td>' +
+            '<td style="text-align:right;">' + fmt(sum.rest) + '</td>' +
+            '<td style="text-align:right;">' + fmt(sum.holiday) + '</td>' +
+            '<td style="font-size:11px;">' + leaveDetail + '</td>' +
+            '<td style="text-align:right;font-weight:bold;color:#dc2626;">' + costFmt + detailBtn + '</td></tr>');
+        
+        totals.work += sum.work; totals.ot134 += sum.ot134; totals.ot167 += sum.ot167;
+        totals.rest += sum.rest; totals.holiday += sum.holiday;
+        totals.leave += sum.leaveTotal; totals.cost += sum.cost;
+    }
+    
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#9ca3af;">📭 ' + month + ' 尚無排班資料</td></tr>';
+        if (tfoot) tfoot.innerHTML = '';
+    } else {
+        tbody.innerHTML = rows.join('');
+        if (tfoot) tfoot.innerHTML = '<tr style="background:linear-gradient(135deg,#fef3c7,#fde68a);font-weight:bold;">' +
+            '<td>📊 合計</td>' +
+            '<td style="text-align:right;">' + totals.work.toFixed(1) + '</td>' +
+            '<td style="text-align:right;color:#d97706;">' + totals.ot134.toFixed(1) + '</td>' +
+            '<td style="text-align:right;color:#dc2626;">' + totals.ot167.toFixed(1) + '</td>' +
+            '<td style="text-align:right;">' + totals.rest.toFixed(1) + '</td>' +
+            '<td style="text-align:right;">' + totals.holiday.toFixed(1) + '</td>' +
+            '<td style="text-align:right;">' + totals.leave.toFixed(1) + '</td>' +
+            '<td style="text-align:right;color:#dc2626;font-size:14px;">$ ' + Math.round(totals.cost).toLocaleString() + '</td></tr>';
+    }
+    if (info) info.textContent = '👥 ' + rows.length + ' 位員工 ｜ 💵 總計 $ ' + Math.round(totals.cost).toLocaleString();
+}
+
+function viewMonthlyDetail(empId) {
+    var month = document.getElementById('msMonth').value;
+    var parts = month.split('-');
+    var yy = parseInt(parts[0], 10), mm = parseInt(parts[1], 10) - 1;
+    var firstDay = new Date(yy, mm, 1);
+    var lastDay = new Date(yy, mm + 1, 0);
+    var employees = loadData('employees', defaultEmployees);
+    var emp = employees.find(function(e){return e.id===empId;});
+    if (!emp) return;
+    var shifts = loadData('shifts', {});
+    var empHourly = (emp.hourlyRate || ((emp.monthlySalary||0)/30/8)) || 190;
+    
+    var detailHtml = '<table class="work-table" style="width:100%; font-size:12px;">' +
+        '<thead><tr><th>日期</th><th>正常</th><th>×1.34</th><th>×1.67</th><th>休息日</th><th>國定</th><th>請假</th><th style="text-align:right;">日費用</th></tr></thead><tbody>';
+    var totalCost = 0;
+    for (var dx = new Date(firstDay); dx <= lastDay; dx.setDate(dx.getDate()+1)) {
+        var dKey = formatDate(dx);
+        var raw = shifts[dKey] && shifts[dKey][emp.id];
+        if (!raw) continue;
+        var slots = getDaySlots(raw);
+        var r = calcDayLaborCost(slots, empHourly);
+        var hasAny = (r.workHours+r.ot134Hours+r.ot167Hours+r.restWorkHours+r.holidayWorkHours+r.leaveHours) > 0;
+        if (!hasAny) continue;
+        var fmt = function(n){ return n > 0 ? n.toFixed(1) : '—'; };
+        var leaveStr = Object.keys(r.leaveByType).map(function(k){return k+' '+r.leaveByType[k].toFixed(1);}).join('、') || '—';
+        var dowName = ['日','一','二','三','四','五','六'][dx.getDay()];
+        detailHtml += '<tr><td>' + dKey + '(' + dowName + ')</td>' +
+            '<td style="text-align:right;">' + fmt(r.workHours) + '</td>' +
+            '<td style="text-align:right;color:#d97706;">' + fmt(r.ot134Hours+r.restOT134) + '</td>' +
+            '<td style="text-align:right;color:#dc2626;">' + fmt(r.ot167Hours+r.restOT167+r.restOT267) + '</td>' +
+            '<td style="text-align:right;">' + fmt(r.restWorkHours) + '</td>' +
+            '<td style="text-align:right;">' + fmt(r.holidayWorkHours) + '</td>' +
+            '<td style="font-size:11px;">' + leaveStr + '</td>' +
+            '<td style="text-align:right;font-weight:bold;">$ ' + Math.round(r.cost).toLocaleString() + '</td></tr>';
+        totalCost += r.cost;
+    }
+    detailHtml += '</tbody><tfoot><tr style="background:#fef3c7;font-weight:bold;"><td colspan="7" style="text-align:right;">月度應發合計</td><td style="text-align:right;color:#dc2626;font-size:14px;">$ ' + Math.round(totalCost).toLocaleString() + '</td></tr></tfoot></table>';
+    
+    document.getElementById('msDetailTitle').textContent = '📋 ' + emp.name + ' (' + emp.num + ') — ' + month + ' 明細';
+    document.getElementById('msDetailContent').innerHTML = detailHtml;
+    document.getElementById('msDetailPanel').style.display = '';
+    document.getElementById('msDetailPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function closeMsDetail() {
+    var p = document.getElementById('msDetailPanel');
+    if (p) p.style.display = 'none';
+}
+
+function printMonthlySettle() {
+    var month = document.getElementById('msMonth').value;
+    var storeFilter = document.getElementById('msStore').value;
+    var stores = loadData('stores', defaultStores);
+    var storeName = storeFilter === 'all' ? '全部門市' : (function(){
+        var s = stores.find(function(x){return x.id===storeFilter;});
+        return s ? s.name : '—';
+    })();
+    var tableHtml = document.querySelector('#page-monthlySettle .work-table').outerHTML;
+    var w = window.open('', '_blank');
+    w.document.write('<html><head><title>月度結算 ' + month + '</title><meta charset="utf-8">' +
+        '<style>body{font-family:"Microsoft JhengHei",sans-serif;padding:18px;}' +
+        'h2{text-align:center;margin:6px 0;} .meta{text-align:center;font-size:13px;color:#444;margin-bottom:12px;}' +
+        'table{width:100%;border-collapse:collapse;font-size:12px;} td,th{border:1px solid #999;padding:5px 8px;}' +
+        'thead th{background:#fef3c7;} .btn-edit{display:none;}</style></head><body>' +
+        '<h2>📅 月度結算（' + month + '）</h2>' +
+        '<div class="meta">門市：' + storeName + '　｜　依勞基法精算　｜　列印時間：' + new Date().toLocaleString() + '</div>' +
+        tableHtml +
+        '<div style="margin-top:24px;font-size:11px;color:#666;">說明：本表依勞基法精算 — 平日超過 8 小時加班前 2 小時 ×1.34、第 3-4 小時 ×1.67；休息日上班前 2 小時 ×1.34、第 3-8 小時 ×1.67、第 9-12 小時 ×2.67；國定假日 ×2（勞基法 §39）。</div>' +
+        '<div style="margin-top:30px;font-size:13px;">店長簽核：____________　　會計核章：____________　　主管核章：____________</div>' +
+        '</body></html>');
+    w.document.close();
+    setTimeout(function(){ w.print(); }, 400);
 }
 
 function initStoreCompete() {
@@ -22299,7 +23102,7 @@ function printSchedule() {
                 html += '<div>國定假日</div>';
             } else if (slot.type === 'leave') {
                 html += '<div>請假</div>';
-            } else if (['work','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end) {
+            } else if (['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end) {
                 var hrs = calculateHours(slot.start, slot.end);
                 totalHrs += hrs;
                 
@@ -22350,7 +23153,7 @@ function printSchedule() {
                 if (!slot || slot.type === 'empty') continue;
                 
                 var slotStoreId = slot.workStoreId || (emp.homeStoreId || stores[0].id);
-                var isWorkSlot = ['work','restWork','holidayWork'].indexOf(slot.type) !== -1;
+                var isWorkSlot = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1;
                 var isOffSlot = ['rest','holiday','national','leave'].indexOf(slot.type) !== -1;
                 
                 if (isWorkSlot && slotStoreId === targetStoreId) {
@@ -22461,7 +23264,7 @@ function printSchedule() {
                 if (!dslot || dslot.type === 'empty') continue;
                 var dStoreId = dslot.workStoreId;
                 if (!dStoreId || dStoreId === currentSchedStoreId) continue;
-                if (['work','restWork','holidayWork'].indexOf(dslot.type) === -1) continue;
+                if (['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(dslot.type) === -1) continue;
                 
                 if (!dispatchByStore[dStoreId]) {
                     dispatchByStore[dStoreId] = { days: [], total: 0 };
