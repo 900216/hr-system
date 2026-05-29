@@ -2346,13 +2346,17 @@ input:focus, select:focus, textarea:focus {
    ║  📱 UI 2.0 底部導覽列                         ║
    ╚══════════════════════════════════════════════╝ */
 .bottom-nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 9000;
+    position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    z-index: 9999 !important;
     display: flex; justify-content: space-around; align-items: stretch;
-    background: rgba(255,255,255,0.96);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    background: #ffffff;
     border-top: 1px solid #f0e3cc;
-    box-shadow: 0 -4px 20px rgba(180,100,30,0.12);
+    box-shadow: 0 -4px 20px rgba(180,100,30,0.18);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    /* 強制 GPU 合成層，避免 iOS Safari 把 fixed 當絕對定位 */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
     animation: bnavUp 0.4s cubic-bezier(0.18,0.89,0.32,1.1);
 }
 @keyframes bnavUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -2389,11 +2393,11 @@ body:not(.view-mobile) .bottom-nav { display: none !important; }
 .bnav-popup-backdrop.show { display: block; animation: fadeIn .2s ease; }
 .bnav-popup {
     display: none; position: fixed; left: 10px; right: 10px;
-    bottom: calc(74px + env(safe-area-inset-bottom, 0px)); z-index: 9200;
-    background: rgba(45,55,72,0.98);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px)); z-index: 9998;
+    background: #2d3748;
     border-radius: 18px; padding: 8px;
-    box-shadow: 0 -8px 30px rgba(0,0,0,0.35);
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.5);
+    transform: translateZ(0); -webkit-transform: translateZ(0);
 }
 .bnav-popup.show { display: block; animation: bnavPopUp 0.3s cubic-bezier(0.18,0.89,0.32,1.1); }
 @keyframes bnavPopUp { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -2481,6 +2485,22 @@ body.view-mobile.menu-drawer-open .system-menu .menu-item:nth-child(5){animation
 body.view-mobile.menu-drawer-open .system-menu .menu-item:nth-child(6){animation-delay:.30s}
 body.view-mobile.menu-drawer-open .system-menu .menu-item:nth-child(7){animation-delay:.35s}
 @keyframes drawerItemUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ☁️ 同步狀態指示器 */
+.sync-indicator {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 8px;
+    z-index: 9998; padding: 5px 11px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: all .25s ease; opacity: 0; pointer-events: none;
+    transform: translateY(-4px);
+    display: none;
+}
+body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: translateY(0); }
+.sync-indicator.idle    { background: rgba(255,255,255,0.92); color: #6b7280; border: 1px solid #e5e7eb; }
+.sync-indicator.syncing { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; animation: syncPulse 1.4s ease-in-out infinite; }
+.sync-indicator.synced  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; }
+.sync-indicator.error   { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
+@keyframes syncPulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(0) scale(1.06); } }
 </style>
 </head>
 <body>
@@ -5839,6 +5859,7 @@ function doLoginAs(user) {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('mainPage').classList.remove('hidden');
     if (typeof showBottomNav === 'function') showBottomNav();
+    if (typeof startAutoSync5s === 'function') startAutoSync5s();
     
     // 🆕 取得員工姓名（優先用帳號姓名，其次查員工資料）
     var dispName = currentUser.name || '';
@@ -6198,6 +6219,7 @@ function logout() {
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             if (typeof hideBottomNav === 'function') hideBottomNav();
+            if (typeof stopAutoSync5s === 'function') stopAutoSync5s();
         });
     }
 }
@@ -18971,6 +18993,80 @@ function startAutoPull() {
     }, 30000);  // 每 30 秒
 }
 
+// ╔══════════════════════════════════════════════╗
+// ║  🔄 5 秒自動「儲存→上傳→下載驗證」循環          ║
+// ╚══════════════════════════════════════════════╝
+var _autoSync5sTimer = null;
+var _lastPushedSnapshot = '';
+var _isAutoSyncing = false;
+
+// 產生資料變動指紋（快速比對，避免無變動也上傳）
+function buildSyncSnapshot() {
+    if (typeof BACKUP_KEYS === 'undefined') return Date.now() + '';
+    var s = '';
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var v = localStorage.getItem(BACKUP_KEYS[i]);
+        s += (v ? v.length : 0) + '|';
+    }
+    return s;
+}
+
+// 設定同步狀態指示器
+function setSyncIndicator(state) {
+    var ind = document.getElementById('syncIndicator');
+    if (!ind) return;
+    var map = {
+        uploading: { txt: '☁️ 上傳中', cls: 'syncing' },
+        verifying: { txt: '🔍 驗證中', cls: 'syncing' },
+        synced:    { txt: '✅ 已同步', cls: 'synced' },
+        error:     { txt: '⚠️ 同步失敗', cls: 'error' },
+        idle:      { txt: '☁️ 即時同步', cls: 'idle' }
+    };
+    var m = map[state] || map.idle;
+    ind.textContent = m.txt;
+    ind.className = 'sync-indicator ' + m.cls;
+}
+
+// 主循環
+function autoSync5sCycle() {
+    if (_isAutoSyncing) return;
+    if (!currentUser) return;
+    if (typeof isUserActivelyEditing === 'function' && isUserActivelyEditing()) return;
+    if (!fbEnabled() && !pantryEnabled() && !(typeof ghGetGistId === 'function' && ghGetGistId())) return;
+    
+    var snap = buildSyncSnapshot();
+    if (snap === _lastPushedSnapshot) return;  // 無變動跳過
+    
+    _isAutoSyncing = true;
+    setSyncIndicator('uploading');
+    
+    cloudPush(true).then(function() {
+        _lastPushedSnapshot = snap;
+        setSyncIndicator('verifying');
+        // ⬇️ 上傳成功後，立即下載驗證
+        return cloudPull(true);
+    }).then(function() {
+        setSyncIndicator('synced');
+        setTimeout(function(){ setSyncIndicator('idle'); }, 2500);
+    }).catch(function(err) {
+        setSyncIndicator('error');
+        setTimeout(function(){ setSyncIndicator('idle'); }, 4000);
+    }).then(function() {
+        _isAutoSyncing = false;
+    });
+}
+
+function startAutoSync5s() {
+    if (_autoSync5sTimer) clearInterval(_autoSync5sTimer);
+    setSyncIndicator('idle');
+    _autoSync5sTimer = setInterval(autoSync5sCycle, 5000);
+}
+
+function stopAutoSync5s() {
+    if (_autoSync5sTimer) clearInterval(_autoSync5sTimer);
+    _autoSync5sTimer = null;
+}
+
 function updateAutoSyncSetting() {
     var autoPush = document.getElementById('cs_autoPush').checked;
     var autoPull = document.getElementById('cs_autoPull').checked;
@@ -21836,6 +21932,8 @@ window.addEventListener('load', function() {
 <!-- 📱 底部導覽上拉小選單 -->
 <div id="bnavPopupBackdrop" class="bnav-popup-backdrop" onclick="closeBnavPopup()"></div>
 <div id="bnavPopup" class="bnav-popup"></div>
+<!-- ☁️ 同步狀態指示器 -->
+<div id="syncIndicator" class="sync-indicator idle">☁️ 即時同步</div>
 
 </body>
 </html>
