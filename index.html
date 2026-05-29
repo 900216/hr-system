@@ -2501,6 +2501,15 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
 .sync-indicator.synced  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; }
 .sync-indicator.error   { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
 @keyframes syncPulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(0) scale(1.06); } }
+
+/* 🐾 寵物樂園 */
+@keyframes petBounce {
+    0%,100% { transform: translateY(0) scale(1); }
+    25% { transform: translateY(-6px) scale(1.04, 0.96); }
+    50% { transform: translateY(0) scale(0.96, 1.04); }
+    75% { transform: translateY(-3px) scale(1.02, 0.98); }
+}
+.pet-medal { display: inline-block; font-size: 18px; margin-right: 4px; }
 </style>
 </head>
 <body>
@@ -2583,6 +2592,8 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
     
     <div class="system-menu" id="systemMenu">
         <div class="menu-item active" id="menu-work" onclick="showWorkList()">📋 工作清單</div>
+        <div class="menu-item" id="menu-pet" onclick="goToPage('petGame','menu-pet')">🐾 寵物樂園</div>
+        <div class="menu-item" id="menu-compete" onclick="goToPage('storeCompete','menu-compete')">🏆 門市競賽</div>
         <div class="menu-item" id="menu-attendance">⏰ 出勤管理 ▼
             <div class="submenu">
                 <div class="submenu-item" onclick="goToPage('clockIn','menu-attendance')">📍 GPS 打卡</div>
@@ -2649,6 +2660,75 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
     <div id="menuBackdrop" class="menu-backdrop" onclick="closeMenuDrawer()"></div>
     
     <!-- 工作清單 -->
+    <!-- 🐾 寵物樂園 -->
+    <div id="page-petGame" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>🐾 寵物樂園</strong></div>
+        <div class="main-content">
+            <!-- 寵物主畫面 -->
+            <div class="work-list-panel">
+                <div class="panel-header"><h3>🐾 我的寵物</h3></div>
+                <div class="panel-body">
+                    <div id="petMain" style="text-align:center; padding:20px 10px;">
+                        <div id="petEmoji" style="font-size:90px; line-height:1; animation: petBounce 2s ease-in-out infinite;">🥚</div>
+                        <div id="petStage" style="font-size:14px; color:#92400e; font-weight:bold; margin-top:8px;">等級 1：蛋</div>
+                        <div id="petName" style="font-size:22px; font-weight:bold; color:var(--brand-dark); margin-top:6px;">小寶</div>
+                        <div style="margin-top:10px;">
+                            <button class="btn-secondary" style="padding:5px 14px; font-size:12px;" onclick="renamePet()">✏️ 改名</button>
+                            <button class="btn-secondary" style="padding:5px 14px; font-size:12px;" onclick="changePetType()">🔄 換寵物</button>
+                        </div>
+                        <!-- 經驗條 -->
+                        <div style="margin-top:16px;">
+                            <div id="petExpText" style="font-size:13px; color:#6b7280; margin-bottom:4px;">經驗：0 / 500</div>
+                            <div style="background:#e5e7eb; border-radius:999px; height:14px; overflow:hidden;">
+                                <div id="petExpBar" style="background:linear-gradient(90deg,#fbbf24,#f59e0b); height:100%; width:0%; transition:width .5s ease; box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 統計卡 -->
+                    <div class="sc-stats" style="margin-top:14px;">
+                        <div class="sc-stat"><div class="sc-num" id="petTodaySteps" style="color:#2563eb;">0</div><div class="sc-lbl">👟 今日步數</div></div>
+                        <div class="sc-stat"><div class="sc-num" id="petTotalSteps" style="color:#16a34a;">0</div><div class="sc-lbl">🏃 累積步數</div></div>
+                        <div class="sc-stat"><div class="sc-num" id="petPoints" style="color:#dc2626;">0</div><div class="sc-lbl">⭐ 積分</div></div>
+                    </div>
+                    
+                    <!-- 計步控制 -->
+                    <div style="margin-top:16px; padding:16px; background:#fffdf8; border:1px solid #f0e3cc; border-radius:12px;">
+                        <div style="font-size:14px; color:#92400e; font-weight:bold; margin-bottom:10px;">🏃 自動計步（手機放口袋走路就會自動累積）</div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button id="stepBtn" class="btn-confirm" style="flex:1;" onclick="toggleStepCounter()">▶️ 啟動計步</button>
+                        </div>
+                        <div id="stepStatus" style="font-size:12px; color:#6b7280; margin-top:8px; text-align:center;"></div>
+                    </div>
+                    
+                    <div class="alert-box info" style="margin-top:12px; font-size:13px;">
+                        💡 每 1 步 = 1 經驗 + 1 積分。手機放口袋走路，寵物自動累積經驗升級！
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 門市競賽排行 -->
+            <div class="work-list-panel" style="margin-top:16px;">
+                <div class="panel-header"><h3>🏆 門市競賽排行榜</h3></div>
+                <div class="panel-body">
+                    <div style="font-size:13px; color:#6b7280; margin-bottom:10px;">📊 全門市員工積分加總排名（資料同步後即時更新）</div>
+                    <table class="work-table" style="width:100%;">
+                        <thead><tr><th>排名</th><th>🏬 門市</th><th>👥 人數</th><th>⭐ 總積分</th><th>📊 平均</th></tr></thead>
+                        <tbody id="storeRankBody"></tbody>
+                    </table>
+                    
+                    <div style="margin-top:20px; padding-top:14px; border-top:1px dashed #ddd;">
+                        <h4 style="margin:0 0 10px; color:var(--brand-dark);">🥇 個人排行 TOP 10</h4>
+                        <table class="work-table" style="width:100%;">
+                            <thead><tr><th>名次</th><th>姓名</th><th>🏬 門市</th><th>🐾 寵物</th><th>⭐ 積分</th></tr></thead>
+                            <tbody id="empRankBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div id="page-workList" class="page-content">
         <div class="main-content">
             <div id="homeDashboard"></div>
@@ -2847,6 +2927,132 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
                         <tbody id="scHistoryBody"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🏆 門市競賽 -->
+    <div id="page-storeCompete" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>🏆 門市競賽</strong></div>
+        <div class="main-content">
+            <!-- 競賽選擇 -->
+            <div class="work-list-panel">
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h3>🏆 門市競賽</h3>
+                    <button id="compCreateBtn" class="btn-confirm" style="padding:6px 14px; font-size:13px; display:none;" onclick="openCompCreateModal()">➕ 新增競賽</button>
+                </div>
+                <div class="panel-body">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:13px; color:#6b7280;">選擇競賽：</label>
+                        <select id="compSelect" style="padding:8px 10px; border-radius:8px; flex:1; min-width:180px;" onchange="renderCompDetail()"></select>
+                        <button id="compEditBtn" class="btn-edit" style="padding:6px 12px; font-size:12px; display:none;" onclick="openCompEditModal()">✏️ 編輯</button>
+                        <button id="compDeleteBtn" class="btn-danger" style="padding:6px 12px; font-size:12px; display:none;" onclick="deleteCompetition()">🗑️</button>
+                    </div>
+                    <div id="compInfo" style="margin-top:10px;"></div>
+                </div>
+            </div>
+            
+            <!-- 評分項目（管理員可編輯）-->
+            <div class="work-list-panel" id="compItemsPanel" style="margin-top:12px; display:none;">
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h3>📋 評分項目</h3>
+                    <button id="compAddItemBtn" class="btn-confirm" style="padding:5px 12px; font-size:12px; display:none;" onclick="openCompItemModal()">➕ 新增項目</button>
+                </div>
+                <div class="panel-body">
+                    <table class="work-table" style="width:100%; font-size:13px;">
+                        <thead><tr><th>項目名稱</th><th style="width:80px; text-align:right;">每次積分</th><th id="compItemActionTh" style="width:60px; display:none;">操作</th></tr></thead>
+                        <tbody id="compItemsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 加分（管理員）-->
+            <div class="work-list-panel" id="compAddScorePanel" style="margin-top:12px; display:none;">
+                <div class="panel-header"><h3>➕ 給員工加分</h3></div>
+                <div class="panel-body">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                        <div>
+                            <label style="font-size:12px; color:#6b7280;">員工</label>
+                            <select id="compScoreEmp" style="width:100%; padding:8px; border-radius:8px;"></select>
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:#6b7280;">評分項目</label>
+                            <select id="compScoreItem" style="width:100%; padding:8px; border-radius:8px;"></select>
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:#6b7280;">次數</label>
+                            <input type="number" id="compScoreCount" value="1" min="1" style="width:100%; padding:8px; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:#6b7280;">備註（選填）</label>
+                            <input type="text" id="compScoreNote" placeholder="如：5月3日表現優異" style="width:100%; padding:8px; border-radius:8px;">
+                        </div>
+                    </div>
+                    <button class="btn-confirm" style="width:100%;" onclick="submitCompScore()">💾 送出加分</button>
+                </div>
+            </div>
+            
+            <!-- 排行榜 -->
+            <div class="work-list-panel" id="compRankPanel" style="margin-top:12px; display:none;">
+                <div class="panel-header"><h3>🏅 排行榜</h3></div>
+                <div class="panel-body">
+                    <div id="myCompScore" style="background:linear-gradient(135deg,#fef3c7,#fde68a); padding:12px; border-radius:12px; margin-bottom:12px; text-align:center;"></div>
+                    <table class="work-table" style="width:100%; font-size:13px;">
+                        <thead><tr><th>名次</th><th>姓名</th><th>🏬 門市</th><th style="text-align:right;">⭐ 積分</th><th>操作</th></tr></thead>
+                        <tbody id="compRankBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 我的明細 -->
+            <div class="work-list-panel" id="compMyDetailPanel" style="margin-top:12px; display:none;">
+                <div class="panel-header"><h3>📋 我的得分明細</h3></div>
+                <div class="panel-body">
+                    <table class="work-table" style="width:100%; font-size:12px;">
+                        <thead><tr><th>日期</th><th>項目</th><th style="text-align:right;">次數</th><th style="text-align:right;">積分</th><th>備註</th></tr></thead>
+                        <tbody id="compMyDetailBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增/編輯競賽彈窗 -->
+    <div id="compCreateModal" class="modal-overlay hidden">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">🏆 競賽設定</h3>
+                <button onclick="closeModal('compCreateModal')" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:10px;"><label style="font-size:12px; color:#6b7280;">競賽名稱</label><input type="text" id="ccName" placeholder="例：5月服務之星" style="width:100%; padding:8px; border-radius:8px;"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                    <div><label style="font-size:12px; color:#6b7280;">開始日期</label><input type="date" id="ccStart" style="width:100%; padding:8px; border-radius:8px;"></div>
+                    <div><label style="font-size:12px; color:#6b7280;">結束日期</label><input type="date" id="ccEnd" style="width:100%; padding:8px; border-radius:8px;"></div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:12px; color:#6b7280;">參賽範圍</label>
+                    <select id="ccStore" style="width:100%; padding:8px; border-radius:8px;">
+                        <option value="all">🌐 全公司（所有門市）</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:14px;"><label style="font-size:12px; color:#6b7280;">說明（選填）</label><textarea id="ccDesc" rows="2" style="width:100%; padding:8px; border-radius:8px;"></textarea></div>
+                <button class="btn-confirm" style="width:100%;" onclick="saveCompetition()">💾 儲存競賽</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增/編輯評分項目彈窗 -->
+    <div id="compItemModal" class="modal-overlay hidden">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">📋 評分項目</h3>
+                <button onclick="closeModal('compItemModal')" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:10px;"><label style="font-size:12px; color:#6b7280;">項目名稱</label><input type="text" id="ciName" placeholder="例：新客開發、遲到（負分）" style="width:100%; padding:8px; border-radius:8px;"></div>
+                <div style="margin-bottom:14px;"><label style="font-size:12px; color:#6b7280;">每次積分（負數＝扣分）</label><input type="number" id="ciPoints" value="10" style="width:100%; padding:8px; border-radius:8px;"></div>
+                <button class="btn-confirm" style="width:100%;" onclick="saveCompItem()">💾 儲存項目</button>
             </div>
         </div>
     </div>
@@ -6280,7 +6486,7 @@ function hasAccess(pageName) {
     if (!currentUser) return false;
     
     // 🆕 新功能自動開放（避免舊自訂權限擋住新頁面）：檔期退貨所有人都可用
-    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords'];
+    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'petGame', 'storeCompete'];
     if (ALWAYS_ALLOW.indexOf(pageName) !== -1) {
         return true;
     }
@@ -6824,6 +7030,8 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'clockRecords') initClockRecords();
     else if (pageName === 'stockCount') initStockCount();
     else if (pageName === 'announcementMgmt') initAnnouncementMgmt();
+    else if (pageName === 'petGame') initPetGame();
+    else if (pageName === 'storeCompete') initStoreCompete();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
     
@@ -6849,6 +7057,7 @@ function showWorkList() {
 var BNAV_MENUS = {
     home: { title: '🏠 首頁', items: [
         { icon: '📋', label: '工作清單', fn: function(){ showWorkList(); window.scrollTo({top:0,behavior:'smooth'}); } },
+        { icon: '🐾', label: '寵物樂園', fn: function(){ goToPage('petGame','menu-pet'); } },
         { icon: '📷', label: '更換頭像', fn: function(){ if(typeof pickHomeAvatar==='function') pickHomeAvatar(); } }
     ]},
     clock: { title: '📍 打卡', items: [
@@ -20564,6 +20773,619 @@ function fillStockCatDropdown() {
     sel.innerHTML = cats.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('');
     if (prev && cats.indexOf(prev) !== -1) sel.value = prev;
 }
+
+// ============================================================
+// 🐾 寵物樂園
+// ============================================================
+var PET_TYPES = ['🐱','🐶','🐹','🐰','🐻','🦊','🐼','🐯','🦁','🐸','🐵','🐧','🦄','🐲'];
+var PET_STAGES = [
+    { name: '蛋',   minExp: 0,     emojiOverride: '🥚' },
+    { name: '幼體', minExp: 500 },
+    { name: '小體', minExp: 1500 },
+    { name: '中體', minExp: 4000 },
+    { name: '成體', minExp: 9000 },
+    { name: '進化體', minExp: 18000 },
+    { name: '神獸', minExp: 35000, emojiSuffix: '✨' }
+];
+
+function getMyPet() {
+    var pets = loadData('petData', {});
+    var key = currentUser && currentUser.id ? currentUser.id : 'guest';
+    if (!pets[key]) {
+        pets[key] = {
+            empId: key,
+            type: '🐱', name: '小寶',
+            todaySteps: 0, totalSteps: 0, points: 0,
+            lastStepDate: new Date().toISOString().slice(0,10),
+            createdAt: new Date().toISOString()
+        };
+        saveData('petData', pets);
+    }
+    return pets[key];
+}
+
+function savePet(pet) {
+    var pets = loadData('petData', {});
+    var key = currentUser && currentUser.id ? currentUser.id : 'guest';
+    pets[key] = pet;
+    saveData('petData', pets);
+}
+
+function getPetStageInfo(totalSteps) {
+    var stageIdx = 0;
+    for (var i = PET_STAGES.length - 1; i >= 0; i--) {
+        if (totalSteps >= PET_STAGES[i].minExp) { stageIdx = i; break; }
+    }
+    var current = PET_STAGES[stageIdx];
+    var next = PET_STAGES[stageIdx + 1];
+    var progressMin = current.minExp;
+    var progressMax = next ? next.minExp : current.minExp;
+    var pct = next ? Math.min(100, ((totalSteps - progressMin) / (progressMax - progressMin)) * 100) : 100;
+    return { idx: stageIdx, name: current.name, override: current.emojiOverride, suffix: current.emojiSuffix || '', pct: pct, current: totalSteps, next: progressMax };
+}
+
+function initPetGame() {
+    // 跨日重設今日步數
+    var pet = getMyPet();
+    var today = new Date().toISOString().slice(0,10);
+    if (pet.lastStepDate !== today) {
+        pet.todaySteps = 0; pet.lastStepDate = today; savePet(pet);
+    }
+    renderPetPage();
+    renderStoreLeaderboard();
+}
+
+function renderPetPage() {
+    var pet = getMyPet();
+    var stage = getPetStageInfo(pet.totalSteps);
+    // 寵物表情：蛋階段顯示🥚，其餘顯示寵物類型+特效
+    var emoji = stage.override || (pet.type + stage.suffix);
+    var emojiEl = document.getElementById('petEmoji');
+    if (emojiEl) emojiEl.textContent = emoji;
+    var stageEl = document.getElementById('petStage');
+    if (stageEl) stageEl.textContent = '等級 ' + (stage.idx + 1) + '：' + stage.name;
+    var nameEl = document.getElementById('petName');
+    if (nameEl) nameEl.textContent = pet.name;
+    var expText = document.getElementById('petExpText');
+    if (expText) expText.textContent = '經驗：' + pet.totalSteps + ' / ' + stage.next + (stage.idx === PET_STAGES.length - 1 ? '（已滿級）' : '');
+    var expBar = document.getElementById('petExpBar');
+    if (expBar) expBar.style.width = stage.pct + '%';
+    var td = document.getElementById('petTodaySteps');
+    if (td) td.textContent = pet.todaySteps;
+    var tot = document.getElementById('petTotalSteps');
+    if (tot) tot.textContent = pet.totalSteps;
+    var pts = document.getElementById('petPoints');
+    if (pts) pts.textContent = pet.points;
+}
+
+function renamePet() {
+    var pet = getMyPet();
+    var n = prompt('幫寵物取個名字：', pet.name);
+    if (!n) return;
+    pet.name = n.substring(0, 10);
+    savePet(pet);
+    renderPetPage();
+}
+
+function changePetType() {
+    var pet = getMyPet();
+    var listText = PET_TYPES.join(' ');
+    var pick = prompt('選一個寵物（複製貼上）：\n' + listText, pet.type);
+    if (!pick) return;
+    if (PET_TYPES.indexOf(pick) === -1) return alert('⚠️ 請從上面列表選一個');
+    pet.type = pick;
+    savePet(pet);
+    renderPetPage();
+}
+
+function addPetSteps(n) {
+    var pet = getMyPet();
+    var today = new Date().toISOString().slice(0,10);
+    if (pet.lastStepDate !== today) { pet.todaySteps = 0; pet.lastStepDate = today; }
+    var oldStage = getPetStageInfo(pet.totalSteps).idx;
+    pet.todaySteps += n;
+    pet.totalSteps += n;
+    pet.points += n;
+    savePet(pet);
+    var newStage = getPetStageInfo(pet.totalSteps).idx;
+    if (newStage > oldStage) {
+        setTimeout(function(){
+            alert('🎉 寵物升級了！\n進化為「' + PET_STAGES[newStage].name + '」！');
+        }, 200);
+    }
+    renderPetPage();
+}
+
+// ── 自動計步（加速度感應器）──
+var _stepWatch = { active: false, lastPeakTime: 0, threshold: 12, handler: null };
+function toggleStepCounter() {
+    if (_stepWatch.active) stopStepCounter();
+    else startStepCounter();
+}
+function startStepCounter() {
+    var statusEl = document.getElementById('stepStatus');
+    var btnEl = document.getElementById('stepBtn');
+    if (typeof DeviceMotionEvent === 'undefined') {
+        if (statusEl) statusEl.textContent = '❌ 本裝置不支援動作感應';
+        return;
+    }
+    var begin = function() {
+        _stepWatch.handler = function(e) {
+            var a = e.accelerationIncludingGravity || e.acceleration;
+            if (!a) return;
+            var mag = Math.sqrt((a.x||0)*(a.x||0) + (a.y||0)*(a.y||0) + (a.z||0)*(a.z||0));
+            var now = Date.now();
+            // 峰值偵測：超過閾值且距上次至少 280ms
+            if (mag > _stepWatch.threshold && now - _stepWatch.lastPeakTime > 280) {
+                _stepWatch.lastPeakTime = now;
+                addPetSteps(1);
+            }
+        };
+        window.addEventListener('devicemotion', _stepWatch.handler);
+        _stepWatch.active = true;
+        if (statusEl) statusEl.textContent = '🟢 計步中... 把手機放口袋走走看（再點一次停止）';
+        if (btnEl) { btnEl.textContent = '⏸️ 停止計步'; btnEl.classList.remove('btn-confirm'); btnEl.classList.add('btn-danger'); }
+    };
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        // iOS 13+ 需要授權
+        DeviceMotionEvent.requestPermission().then(function(res) {
+            if (res === 'granted') begin();
+            else { if (statusEl) statusEl.textContent = '❌ 需要動作感應權限才能計步，請到「設定→Safari→動作與方向存取權」開啟'; }
+        }).catch(function(err){
+            if (statusEl) statusEl.textContent = '❌ 啟動失敗：' + err.message;
+        });
+    } else {
+        begin();
+    }
+}
+function stopStepCounter() {
+    if (_stepWatch.handler) window.removeEventListener('devicemotion', _stepWatch.handler);
+    _stepWatch.active = false; _stepWatch.handler = null;
+    var statusEl = document.getElementById('stepStatus');
+    var btnEl = document.getElementById('stepBtn');
+    if (statusEl) statusEl.textContent = '⏸️ 已停止';
+    if (btnEl) { btnEl.textContent = '▶️ 啟動計步'; btnEl.classList.remove('btn-danger'); btnEl.classList.add('btn-confirm'); }
+}
+
+// ── 排行榜 ──
+function renderStoreLeaderboard() {
+    var pets = loadData('petData', {});
+    var employees = loadData('employees', defaultEmployees);
+    var stores = loadData('stores', defaultStores);
+    
+    // 門市彙總
+    var storeStats = {};
+    employees.forEach(function(emp) {
+        var p = pets[emp.id] || pets[emp.num];
+        if (!p) return;
+        var sid = emp.homeStoreId || 'none';
+        if (!storeStats[sid]) storeStats[sid] = { totalPoints: 0, count: 0 };
+        storeStats[sid].totalPoints += (p.points || 0);
+        storeStats[sid].count += 1;
+    });
+    var storeList = stores.map(function(s){
+        var st = storeStats[s.id] || { totalPoints: 0, count: 0 };
+        return { id: s.id, name: s.name, points: st.totalPoints, count: st.count, avg: st.count ? Math.round(st.totalPoints/st.count) : 0 };
+    }).sort(function(a,b){ return b.points - a.points; });
+    
+    var sbody = document.getElementById('storeRankBody');
+    if (sbody) {
+        if (storeList.length === 0 || storeList[0].points === 0) {
+            sbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:16px; color:#9ca3af;">📭 尚無積分</td></tr>';
+        } else {
+            var medals = ['🥇','🥈','🥉'];
+            sbody.innerHTML = storeList.map(function(s, i){
+                var medal = i < 3 ? '<span class="pet-medal">' + medals[i] + '</span>' : (i+1) + '.';
+                return '<tr><td style="font-weight:bold;">' + medal + '</td><td>🏬 ' + s.name + '</td><td>' + s.count + '</td><td style="font-weight:bold; color:#dc2626;">⭐ ' + s.points + '</td><td>' + s.avg + '</td></tr>';
+            }).join('');
+        }
+    }
+    
+    // 個人 TOP 10
+    var empList = [];
+    employees.forEach(function(emp) {
+        var p = pets[emp.id] || pets[emp.num];
+        if (!p || !p.points) return;
+        var store = stores.find(function(s){ return s.id === emp.homeStoreId; });
+        empList.push({ name: emp.name, num: emp.num, store: store ? store.name : '—', pet: p.type, petName: p.name, points: p.points });
+    });
+    empList.sort(function(a,b){ return b.points - a.points; });
+    empList = empList.slice(0, 10);
+    
+    var ebody = document.getElementById('empRankBody');
+    if (ebody) {
+        if (empList.length === 0) {
+            ebody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:16px; color:#9ca3af;">📭 尚無排名資料</td></tr>';
+        } else {
+            var medals2 = ['🥇','🥈','🥉'];
+            ebody.innerHTML = empList.map(function(e, i){
+                var medal = i < 3 ? '<span class="pet-medal">' + medals2[i] + '</span>' : (i+1) + '.';
+                return '<tr><td style="font-weight:bold;">' + medal + '</td><td>' + e.name + '</td><td>🏬 ' + e.store + '</td><td>' + e.pet + ' ' + e.petName + '</td><td style="font-weight:bold; color:#dc2626;">⭐ ' + e.points + '</td></tr>';
+            }).join('');
+        }
+    }
+}
+
+// ============================================================
+// 🏆 門市競賽
+// ============================================================
+var _editingCompId = null;  // 編輯中的競賽 ID
+var _editingItemId = null;  // 編輯中的項目 ID
+
+function isCompManager() {
+    return currentUser && ['admin','manager','deputy'].indexOf(currentUser.role) !== -1;
+}
+
+function getCompetitions() { return loadData('storeCompetitions', []); }
+function saveCompetitions(arr) {
+    saveData('storeCompetitions', arr);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+}
+
+function initStoreCompete() {
+    // 填入「新增競賽」按鈕權限
+    var createBtn = document.getElementById('compCreateBtn');
+    if (createBtn) createBtn.style.display = isCompManager() ? '' : 'none';
+    
+    // 填參賽範圍下拉
+    var ccStore = document.getElementById('ccStore');
+    if (ccStore) {
+        var stores = loadData('stores', defaultStores);
+        var html = '<option value="all">🌐 全公司（所有門市）</option>';
+        for (var i = 0; i < stores.length; i++) html += '<option value="' + stores[i].id + '">🏬 ' + stores[i].name + '</option>';
+        ccStore.innerHTML = html;
+    }
+    
+    fillCompSelect();
+    renderCompDetail();
+}
+
+function fillCompSelect() {
+    var sel = document.getElementById('compSelect');
+    if (!sel) return;
+    var all = getCompetitions();
+    // 員工只看到自己門市/全公司的競賽
+    var visible = all;
+    if (!isCompManager() && currentUser) {
+        var emps = loadData('employees', defaultEmployees);
+        var me = emps.find(function(e){ return e.id===currentUser.id || e.num===currentUser.id; });
+        var myStore = me ? me.homeStoreId : '';
+        visible = all.filter(function(c){ return c.storeId === 'all' || c.storeId === myStore; });
+    }
+    if (visible.length === 0) {
+        sel.innerHTML = '<option value="">（目前沒有競賽）</option>';
+    } else {
+        sel.innerHTML = visible.map(function(c){
+            var range = c.storeId === 'all' ? '全公司' : (function(){
+                var s = loadData('stores', defaultStores).find(function(st){return st.id===c.storeId;});
+                return s ? s.name : '門市';
+            })();
+            return '<option value="' + c.id + '">' + c.name + '（' + range + '）</option>';
+        }).join('');
+    }
+}
+
+function getSelectedComp() {
+    var sel = document.getElementById('compSelect');
+    if (!sel || !sel.value) return null;
+    return getCompetitions().find(function(c){ return c.id === sel.value; });
+}
+
+function renderCompDetail() {
+    var c = getSelectedComp();
+    var infoEl = document.getElementById('compInfo');
+    var itemsPanel = document.getElementById('compItemsPanel');
+    var addScorePanel = document.getElementById('compAddScorePanel');
+    var rankPanel = document.getElementById('compRankPanel');
+    var myDetailPanel = document.getElementById('compMyDetailPanel');
+    var editBtn = document.getElementById('compEditBtn');
+    var delBtn = document.getElementById('compDeleteBtn');
+    
+    if (!c) {
+        if (infoEl) infoEl.innerHTML = '<div class="alert-box info">📭 目前沒有競賽。' + (isCompManager() ? '點上方「➕ 新增競賽」開始第一個競賽！' : '請等管理員建立競賽。') + '</div>';
+        [itemsPanel, addScorePanel, rankPanel, myDetailPanel].forEach(function(el){ if(el) el.style.display = 'none'; });
+        if (editBtn) editBtn.style.display = 'none';
+        if (delBtn) delBtn.style.display = 'none';
+        return;
+    }
+    
+    var storeName = c.storeId === 'all' ? '全公司' : (function(){
+        var s = loadData('stores', defaultStores).find(function(st){return st.id===c.storeId;});
+        return s ? s.name : '—';
+    })();
+    var html = '<div style="background:#fffdf8; padding:12px; border-radius:10px; border:1px solid #f0e3cc;">';
+    html += '<div style="font-size:16px; font-weight:bold; color:var(--brand-dark);">🏆 ' + c.name + '</div>';
+    html += '<div style="font-size:12px; color:#6b7280; margin-top:4px;">📅 ' + (c.start||'—') + ' ~ ' + (c.end||'—') + '　｜　🏬 ' + storeName + '</div>';
+    if (c.desc) html += '<div style="font-size:13px; color:#374151; margin-top:6px;">' + c.desc + '</div>';
+    html += '</div>';
+    if (infoEl) infoEl.innerHTML = html;
+    
+    if (editBtn) editBtn.style.display = isCompManager() ? '' : 'none';
+    if (delBtn) delBtn.style.display = isCompManager() ? '' : 'none';
+    [itemsPanel, addScorePanel, rankPanel, myDetailPanel].forEach(function(el){ if(el) el.style.display = ''; });
+    
+    renderCompItems(c);
+    renderCompRanking(c);
+    renderMyCompDetail(c);
+    if (isCompManager()) fillCompScoreSelects(c);
+    else { var p = document.getElementById('compAddScorePanel'); if (p) p.style.display = 'none'; }
+}
+
+function renderCompItems(c) {
+    var tbody = document.getElementById('compItemsBody');
+    var addBtn = document.getElementById('compAddItemBtn');
+    var actionTh = document.getElementById('compItemActionTh');
+    if (!tbody) return;
+    var canEdit = isCompManager();
+    if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
+    if (actionTh) actionTh.style.display = canEdit ? '' : 'none';
+    var items = c.items || [];
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="' + (canEdit?3:2) + '" style="text-align:center; padding:14px; color:#9ca3af;">📭 尚無評分項目，請先新增</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(function(it){
+        var ptColor = it.points >= 0 ? '#16a34a' : '#dc2626';
+        var sign = it.points > 0 ? '+' : '';
+        var actionCell = canEdit ? '<td><button class="btn-danger" style="padding:3px 8px; font-size:11px;" onclick="deleteCompItem(\'' + it.id + '\')">🗑️</button></td>' : '';
+        return '<tr><td>' + it.name + '</td><td style="text-align:right; font-weight:bold; color:' + ptColor + ';">' + sign + it.points + ' 分</td>' + actionCell + '</tr>';
+    }).join('');
+}
+
+function fillCompScoreSelects(c) {
+    var empSel = document.getElementById('compScoreEmp');
+    var itemSel = document.getElementById('compScoreItem');
+    if (!empSel || !itemSel) return;
+    var emps = loadData('employees', defaultEmployees);
+    var visibleEmps = c.storeId === 'all' ? emps : emps.filter(function(e){ return e.homeStoreId === c.storeId; });
+    // 依員工編號排序
+    if (typeof empNumSortKey === 'function') visibleEmps.sort(function(a,b){ return empNumSortKey(a) - empNumSortKey(b); });
+    empSel.innerHTML = '<option value="">-- 選擇員工 --</option>' + visibleEmps.map(function(e){ return '<option value="' + e.id + '">' + e.name + ' (' + e.num + ')</option>'; }).join('');
+    itemSel.innerHTML = '<option value="">-- 選擇項目 --</option>' + (c.items||[]).map(function(it){
+        var sign = it.points > 0 ? '+' : '';
+        return '<option value="' + it.id + '">' + it.name + ' (' + sign + it.points + '分)</option>';
+    }).join('');
+}
+
+function calcCompScores(c) {
+    var stats = {};
+    (c.scores || []).forEach(function(s){
+        if (!stats[s.empId]) stats[s.empId] = 0;
+        stats[s.empId] += (s.points || 0);
+    });
+    return stats;
+}
+
+function renderCompRanking(c) {
+    var tbody = document.getElementById('compRankBody');
+    var myEl = document.getElementById('myCompScore');
+    if (!tbody) return;
+    var stats = calcCompScores(c);
+    var emps = loadData('employees', defaultEmployees);
+    var stores = loadData('stores', defaultStores);
+    
+    var list = emps.filter(function(e){ return c.storeId === 'all' || e.homeStoreId === c.storeId; })
+        .map(function(e){
+            var st = stores.find(function(s){return s.id===e.homeStoreId;});
+            return { empId: e.id, name: e.name, store: st ? st.name : '—', points: stats[e.id] || 0 };
+        })
+        .filter(function(e){ return e.points !== 0 || isCompManager(); })
+        .sort(function(a,b){ return b.points - a.points; });
+    
+    // 自己的積分卡
+    if (myEl && currentUser) {
+        var myEmp = emps.find(function(e){ return e.id===currentUser.id || e.num===currentUser.id; });
+        var myId = myEmp ? myEmp.id : currentUser.id;
+        var myPoints = stats[myId] || 0;
+        var myRank = list.findIndex(function(x){ return x.empId === myId; }) + 1;
+        myEl.innerHTML = '<div style="font-size:13px; color:#92400e;">我的成績</div>' +
+            '<div style="font-size:32px; font-weight:bold; color:#d97706; margin:4px 0;">⭐ ' + myPoints + ' 分</div>' +
+            '<div style="font-size:13px; color:#78350f;">' + (myRank > 0 ? '🏅 第 ' + myRank + ' 名 / 共 ' + list.length + ' 人' : '（尚未取得分數）') + '</div>';
+    }
+    
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:14px; color:#9ca3af;">📭 尚無排名</td></tr>';
+        return;
+    }
+    var medals = ['🥇','🥈','🥉'];
+    tbody.innerHTML = list.map(function(e, i){
+        var medal = i < 3 ? medals[i] : (i+1) + '.';
+        var ptColor = e.points >= 0 ? '#dc2626' : '#6b7280';
+        var btn = isCompManager() ? '<button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="viewEmpCompDetail(\'' + e.empId + '\')">明細</button>' : '';
+        return '<tr><td style="font-weight:bold;">' + medal + '</td><td>' + e.name + '</td><td>🏬 ' + e.store + '</td><td style="text-align:right; font-weight:bold; color:' + ptColor + ';">⭐ ' + e.points + '</td><td>' + btn + '</td></tr>';
+    }).join('');
+}
+
+function renderMyCompDetail(c) {
+    var tbody = document.getElementById('compMyDetailBody');
+    if (!tbody) return;
+    var emps = loadData('employees', defaultEmployees);
+    var myEmp = currentUser ? emps.find(function(e){ return e.id===currentUser.id || e.num===currentUser.id; }) : null;
+    var myId = myEmp ? myEmp.id : (currentUser ? currentUser.id : '');
+    var myScores = (c.scores || []).filter(function(s){ return s.empId === myId; }).sort(function(a,b){ return (b.at||'').localeCompare(a.at||''); });
+    if (myScores.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:14px; color:#9ca3af;">📭 尚無得分紀錄</td></tr>';
+        return;
+    }
+    var items = c.items || [];
+    tbody.innerHTML = myScores.map(function(s){
+        var it = items.find(function(x){return x.id===s.itemId;});
+        var iname = it ? it.name : '（已刪除）';
+        var dt = (s.at || '').substring(0, 10);
+        var ptColor = s.points >= 0 ? '#16a34a' : '#dc2626';
+        var sign = s.points > 0 ? '+' : '';
+        return '<tr><td>' + dt + '</td><td>' + iname + '</td><td style="text-align:right;">×' + (s.count||1) + '</td><td style="text-align:right; font-weight:bold; color:' + ptColor + ';">' + sign + s.points + '</td><td>' + (s.note || '') + '</td></tr>';
+    }).join('');
+}
+
+function viewEmpCompDetail(empId) {
+    var c = getSelectedComp();
+    if (!c) return;
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e){return e.id===empId;});
+    if (!emp) return;
+    var scores = (c.scores || []).filter(function(s){ return s.empId === empId; }).sort(function(a,b){ return (b.at||'').localeCompare(a.at||''); });
+    var items = c.items || [];
+    var lines = scores.map(function(s){
+        var it = items.find(function(x){return x.id===s.itemId;});
+        var sign = s.points > 0 ? '+' : '';
+        return (s.at||'').substring(0,10) + '　' + (it?it.name:'？') + '　×' + (s.count||1) + '　' + sign + s.points + '分' + (s.note?'　('+s.note+')':'');
+    });
+    var total = scores.reduce(function(sum,s){return sum+(s.points||0);}, 0);
+    var msg = '📋 ' + emp.name + ' 得分明細\n\n' + (lines.join('\n') || '（無）') + '\n\n總計：⭐ ' + total + ' 分';
+    if (isCompManager() && scores.length > 0 && confirm(msg + '\n\n要刪除某筆嗎？按確定→輸入第幾筆')) {
+        var n = prompt('要刪除第幾筆？（1~' + scores.length + '）');
+        var idx = parseInt(n, 10);
+        if (idx >= 1 && idx <= scores.length) {
+            c.scores = c.scores.filter(function(s){ return s.id !== scores[idx-1].id; });
+            var all = getCompetitions();
+            var ci = all.findIndex(function(x){return x.id===c.id;});
+            if (ci >= 0) { all[ci] = c; saveCompetitions(all); }
+            renderCompDetail();
+            showNotif('🗑️ 已刪除');
+        }
+    } else if (lines.length) {
+        alert(msg);
+    } else {
+        alert(msg);
+    }
+}
+
+// ── 新增/編輯競賽 ──
+function openCompCreateModal() {
+    _editingCompId = null;
+    document.getElementById('ccName').value = '';
+    document.getElementById('ccStart').value = new Date().toISOString().substring(0,10);
+    var endD = new Date(); endD.setMonth(endD.getMonth()+1);
+    document.getElementById('ccEnd').value = endD.toISOString().substring(0,10);
+    document.getElementById('ccStore').value = 'all';
+    document.getElementById('ccDesc').value = '';
+    document.getElementById('compCreateModal').classList.remove('hidden');
+}
+function openCompEditModal() {
+    var c = getSelectedComp();
+    if (!c) return;
+    _editingCompId = c.id;
+    document.getElementById('ccName').value = c.name || '';
+    document.getElementById('ccStart').value = c.start || '';
+    document.getElementById('ccEnd').value = c.end || '';
+    document.getElementById('ccStore').value = c.storeId || 'all';
+    document.getElementById('ccDesc').value = c.desc || '';
+    document.getElementById('compCreateModal').classList.remove('hidden');
+}
+function saveCompetition() {
+    var name = document.getElementById('ccName').value.trim();
+    if (!name) return alert('⚠️ 請輸入競賽名稱');
+    var all = getCompetitions();
+    if (_editingCompId) {
+        var i = all.findIndex(function(x){return x.id===_editingCompId;});
+        if (i >= 0) {
+            all[i].name = name;
+            all[i].start = document.getElementById('ccStart').value;
+            all[i].end = document.getElementById('ccEnd').value;
+            all[i].storeId = document.getElementById('ccStore').value;
+            all[i].desc = document.getElementById('ccDesc').value.trim();
+        }
+    } else {
+        all.push({
+            id: 'comp_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+            name: name,
+            start: document.getElementById('ccStart').value,
+            end: document.getElementById('ccEnd').value,
+            storeId: document.getElementById('ccStore').value,
+            desc: document.getElementById('ccDesc').value.trim(),
+            items: [], scores: [],
+            createdBy: (currentUser&&currentUser.name) || '管理員',
+            createdAt: new Date().toISOString()
+        });
+    }
+    saveCompetitions(all);
+    closeModal('compCreateModal');
+    fillCompSelect();
+    if (!_editingCompId) {
+        // 自動選新建立的
+        var sel = document.getElementById('compSelect');
+        if (sel) sel.value = all[all.length-1].id;
+    }
+    renderCompDetail();
+    showNotif('💾 已儲存競賽');
+}
+
+function deleteCompetition() {
+    var c = getSelectedComp();
+    if (!c) return;
+    if (!confirm('確定刪除競賽「' + c.name + '」？\n（所有評分紀錄一併刪除）')) return;
+    var all = getCompetitions().filter(function(x){return x.id !== c.id;});
+    saveCompetitions(all);
+    fillCompSelect();
+    renderCompDetail();
+    showNotif('🗑️ 已刪除');
+}
+
+// ── 評分項目 ──
+function openCompItemModal() {
+    document.getElementById('ciName').value = '';
+    document.getElementById('ciPoints').value = '10';
+    document.getElementById('compItemModal').classList.remove('hidden');
+}
+function saveCompItem() {
+    var name = document.getElementById('ciName').value.trim();
+    var pts = parseInt(document.getElementById('ciPoints').value, 10);
+    if (!name) return alert('⚠️ 請輸入項目名稱');
+    if (isNaN(pts)) return alert('⚠️ 積分必須是數字');
+    var c = getSelectedComp();
+    if (!c) return;
+    if (!c.items) c.items = [];
+    c.items.push({ id: 'item_' + Date.now(), name: name, points: pts });
+    var all = getCompetitions();
+    var i = all.findIndex(function(x){return x.id===c.id;});
+    if (i >= 0) { all[i] = c; saveCompetitions(all); }
+    closeModal('compItemModal');
+    renderCompDetail();
+    showNotif('➕ 已新增項目');
+}
+function deleteCompItem(itemId) {
+    var c = getSelectedComp();
+    if (!c) return;
+    if (!confirm('刪除此項目？\n（已給過的相關分數不變）')) return;
+    c.items = (c.items||[]).filter(function(x){return x.id !== itemId;});
+    var all = getCompetitions();
+    var i = all.findIndex(function(x){return x.id===c.id;});
+    if (i >= 0) { all[i] = c; saveCompetitions(all); }
+    renderCompDetail();
+}
+
+// ── 給員工加分 ──
+function submitCompScore() {
+    var empId = document.getElementById('compScoreEmp').value;
+    var itemId = document.getElementById('compScoreItem').value;
+    var count = parseInt(document.getElementById('compScoreCount').value, 10);
+    var note = document.getElementById('compScoreNote').value.trim();
+    if (!empId) return alert('⚠️ 請選擇員工');
+    if (!itemId) return alert('⚠️ 請選擇評分項目');
+    if (isNaN(count) || count <= 0) return alert('⚠️ 次數必須是正整數');
+    var c = getSelectedComp();
+    if (!c) return;
+    var item = (c.items||[]).find(function(it){return it.id===itemId;});
+    if (!item) return alert('⚠️ 項目不存在');
+    if (!c.scores) c.scores = [];
+    c.scores.push({
+        id: 'score_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+        empId: empId, itemId: itemId,
+        count: count, points: item.points * count,
+        note: note, addedBy: (currentUser&&currentUser.name) || '',
+        at: new Date().toISOString()
+    });
+    var all = getCompetitions();
+    var i = all.findIndex(function(x){return x.id===c.id;});
+    if (i >= 0) { all[i] = c; saveCompetitions(all); }
+    document.getElementById('compScoreCount').value = '1';
+    document.getElementById('compScoreNote').value = '';
+    renderCompDetail();
+    var emp = loadData('employees', defaultEmployees).find(function(e){return e.id===empId;});
+    showNotif('⭐ 已給 ' + (emp?emp.name:'員工') + ' +' + (item.points*count) + ' 分');
+}
+
 
 function initStockCount() {
     var d = document.getElementById('scDate');
