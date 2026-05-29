@@ -3152,12 +3152,8 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <span class="legend-label">班別：</span>
                 <span class="legend-item"><span class="legend-dot dot-normal"></span>正常班</span>
                 <span class="legend-item"><span class="legend-dot dot-business"></span>公出</span>
-                <span class="legend-item"><span class="legend-dot dot-fc-a"></span>FC支援(A)</span>
-                <span class="legend-item"><span class="legend-dot dot-fc-b"></span>FC支援(B)</span>
                 <span class="legend-item"><span class="legend-dot dot-fc-counsel"></span>FC駐店輔導</span>
-                <span class="legend-item"><span class="legend-dot dot-rest-business"></span>休息日公出</span>
                 <span class="legend-item"><span class="legend-dot dot-rest-work"></span>休上班</span>
-                <span class="legend-item"><span class="legend-dot dot-rest-fc"></span>休息日FC支援</span>
             </div>
             <div class="legend-row">
                 <span class="legend-label">假別：</span>
@@ -3184,7 +3180,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
             <div class="sched-section-title">🏬 本店上班（本店員工排班）</div>
             <div class="sched-h-wrap">
                 <table class="sched-h-table">
-                    <thead><tr id="schHHeader"></tr></thead>
+                    <thead id="schHHeader"></thead>
                     <tbody id="schHBody"></tbody>
                 </table>
             </div>
@@ -3195,7 +3191,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
             <div class="sched-section-title">🚐 他店支援（其他門市員工來支援本店）</div>
             <div class="sched-h-wrap">
                 <table class="sched-h-table">
-                    <thead><tr id="schSupportHeader"></tr></thead>
+                    <thead id="schSupportHeader"></thead>
                     <tbody id="schSupportBody"></tbody>
                 </table>
             </div>
@@ -3453,6 +3449,43 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <div style="margin-bottom:10px;"><label style="font-size:12px; color:#6b7280;">項目名稱</label><input type="text" id="ciName" placeholder="例：新客開發、遲到（負分）" style="width:100%; padding:8px; border-radius:8px;"></div>
                 <div style="margin-bottom:14px;"><label style="font-size:12px; color:#6b7280;">每次積分（負數＝扣分）</label><input type="number" id="ciPoints" value="10" style="width:100%; padding:8px; border-radius:8px;"></div>
                 <button class="btn-confirm" style="width:100%;" onclick="saveCompItem()">💾 儲存項目</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🔄 轉入代休假彈窗 -->
+    <div id="compTransferModal" class="modal-overlay hidden">
+        <div class="modal-box" style="max-width:480px;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">🔄 轉入代休假</h3>
+                <button onclick="closeModal('compTransferModal')" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="ctDateLbl" style="background:#ecfdf5; padding:10px; border-radius:8px; margin-bottom:10px; font-size:13px; color:#047857; font-weight:bold;"></div>
+                <div class="alert-box info" style="font-size:11px; margin-bottom:10px;">
+                    💡 將員工的加班/休息日上班「轉換」為代休時數，加班費不計入，員工取得相同時數的特代休假可日後使用。
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 90px; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:12px; color:#6b7280;">員工</label>
+                        <select id="ctEmp" style="width:100%; padding:8px; border-radius:8px;"></select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#6b7280;">時數</label>
+                        <input type="number" id="ctHours" value="8" step="0.5" min="0" max="24" style="width:100%; padding:8px; border-radius:8px;">
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:12px; color:#6b7280;">原因（選填）</label>
+                    <input type="text" id="ctReason" placeholder="例：5/24 休息日上班轉代休" style="width:100%; padding:8px; border-radius:8px;">
+                </div>
+                <button class="btn-confirm" style="width:100%; margin-bottom:10px;" onclick="saveCompTransfer()">💾 新增登錄（同步加入特代休額度）</button>
+                
+                <!-- 當日已登錄列表 -->
+                <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
+                    <div style="font-size:12px; color:#6b7280; margin-bottom:6px; font-weight:bold;">📋 本日已登錄</div>
+                    <div id="ctList" style="font-size:12px;"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -6414,7 +6447,7 @@ function getClockStoreForEmp(emp) {
             var slots = (typeof getDaySlots === 'function') ? getDaySlots(todayShift) : (todayShift.slots || []);
             for (var i = 0; i < slots.length; i++) {
                 var slot = slots[i];
-                if (slot && ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
+                if (slot && ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
                     var ws = stores.find(function(s) { return s.id === slot.workStoreId; });
                     if (ws) { ws._isDispatch = (slot.workStoreId !== emp.homeStoreId); return ws; }
                 }
@@ -8028,7 +8061,7 @@ function leavePayRate(leaveType) {
 }
 
 // 🏛️ 勞基法精算單日費用（含加班 1.34x / 1.67x、休息日、國定假日、各類假別）
-function calcDayLaborCost(slots, hourlyRate) {
+function calcDayLaborCost(slots, emp, date) {
     var r = {
         cost: 0,
         workHours: 0, ot134Hours: 0, ot167Hours: 0,
@@ -8037,9 +8070,20 @@ function calcDayLaborCost(slots, hourlyRate) {
         leaveHours: 0, leaveByType: {}, leaveCost: 0
     };
     if (!slots || !slots.length) return r;
+    
+    // 🆕 依員工類型決定計費方式
+    // 正職：底薪 ÷ 當月天數（有上班即計入）；加班用 月薪/240 為時薪
+    // 工讀：時薪 × 時數
+    var isFulltime = !emp || emp.empType !== 'parttime';
+    var monthly = (emp && emp.monthlySalary) || 0;
+    var hourly = (emp && emp.hourlyRate) || (monthly ? monthly / 240 : 190);
+    var dt = date || new Date();
+    var daysInMonth = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
+    var dailyBase = isFulltime ? (monthly / daysInMonth) : 0;  // 工讀無底薪
+    
     var workTotal = 0, restTotal = 0, holidayTotal = 0;
-    var WORK_TYPES = ['work','business','fcA','fcB','fcCounsel'];
-    var REST_TYPES = ['restWork','restBusiness','restFc'];
+    var WORK_TYPES = ['work','business','fcCounsel'];
+    var REST_TYPES = ['restWork'];
     for (var i = 0; i < slots.length; i++) {
         var s = slots[i];
         if (!s || !s.type) continue;
@@ -8051,32 +8095,52 @@ function calcDayLaborCost(slots, hourlyRate) {
             var lt = s.leaveType || '其他';
             r.leaveByType[lt] = (r.leaveByType[lt] || 0) + lh;
             r.leaveHours += lh;
-            r.leaveCost += lh * hourlyRate * leavePayRate(lt);
+            // 正職：底薪已含整月（半薪/無薪假則扣減；事假=0、病假=0.5）
+            // 工讀：按時薪 × 支付率
+            if (isFulltime) {
+                // 正職假別影響：全薪假不額外加；病假/生理半薪只計 0.5*dailyBase*(hours/8) 扣減為對沖；事假 0 扣
+                // 簡化：請假當天底薪照算，假別僅作工時統計（額度扣抵在別處）
+                // 但若希望事假/病假反映薪資，可由額度管理另行扣
+            } else {
+                r.leaveCost += lh * hourly * leavePayRate(lt);
+            }
         }
     }
-    // 平日：8 小時內 1x、超 8 至 10 = 1.34x、超 10 = 1.67x
+    // 平日：8 小時內、超 8 至 10 = 1.34x、超 10 = 1.67x
     if (workTotal > 0) {
         r.workHours = Math.min(8, workTotal);
         r.ot134Hours = Math.max(0, Math.min(10, workTotal) - 8);
         r.ot167Hours = Math.max(0, workTotal - 10);
-        r.cost += r.workHours * hourlyRate;
-        r.cost += r.ot134Hours * hourlyRate * 1.34;
-        r.cost += r.ot167Hours * hourlyRate * 1.67;
+        if (isFulltime) {
+            // 正職：底薪一日固定，加班部分按時薪倍率
+            r.cost += dailyBase;
+            r.cost += r.ot134Hours * hourly * 1.34;
+            r.cost += r.ot167Hours * hourly * 1.67;
+        } else {
+            // 工讀：時數 × 時薪
+            r.cost += r.workHours * hourly;
+            r.cost += r.ot134Hours * hourly * 1.34;
+            r.cost += r.ot167Hours * hourly * 1.67;
+        }
     }
-    // 休息日上班：前 2 小時 1.34x、3-8 小時 1.67x、9-12 小時 2.67x
+    // 休息日上班：前 2 小時 1.34x、3-8 小時 1.67x、9-12 小時 2.67x（兩者通用）
     if (restTotal > 0) {
         r.restWorkHours = restTotal;
         r.restOT134 = Math.min(2, restTotal);
         r.restOT167 = Math.max(0, Math.min(8, restTotal) - 2);
         r.restOT267 = Math.max(0, restTotal - 8);
-        r.cost += r.restOT134 * hourlyRate * 1.34;
-        r.cost += r.restOT167 * hourlyRate * 1.67;
-        r.cost += r.restOT267 * hourlyRate * 2.67;
+        r.cost += r.restOT134 * hourly * 1.34;
+        r.cost += r.restOT167 * hourly * 1.67;
+        r.cost += r.restOT267 * hourly * 2.67;
     }
-    // 國定假日上班：加倍（勞基法 §39）
+    // 國定假日上班：加倍（勞基法 §39）— 兩者都加倍時薪
     if (holidayTotal > 0) {
         r.holidayWorkHours = holidayTotal;
-        r.cost += holidayTotal * hourlyRate * 2;
+        // 正職國定假日有上班 → 仍含底薪 + 加倍工資；若該日無平日 work，需單獨加底薪
+        if (isFulltime && workTotal === 0) {
+            r.cost += dailyBase;  // 補上當日底薪
+        }
+        r.cost += holidayTotal * hourly * 2;
     }
     r.cost += r.leaveCost;
     return r;
@@ -8271,8 +8335,8 @@ function renderScheduleTable() {
                 homeHtml += renderScheduleCell(emp.id, dateKey, slots, isAdmin, stores, currentSchedStoreId, emp.homeStoreId);
                 
                 // 🏛️ 依勞基法精算（含加班 1.34x/1.67x、休息日、國定假日、假別）
-                var empHourly = (emp.hourlyRate || ((emp.monthlySalary||0)/30/8)) || 190;
-                var dr = calcDayLaborCost(slots, empHourly);
+                // 正職：底薪 ÷ 當月天數；工讀：時薪 × 時數
+                var dr = calcDayLaborCost(slots, emp, dates[di]);
                 // 工時統計（不含請假）
                 var workTotalH = dr.workHours + dr.ot134Hours + dr.ot167Hours + dr.restWorkHours + dr.holidayWorkHours;
                 weekHours += workTotalH;
@@ -8281,10 +8345,24 @@ function renderScheduleTable() {
             }
             homeHtml += '</tr>';
         }
-        // 🆕 轉入代休假列（顯示已從本週工時轉入的代休時數，先放佔位）
-        homeHtml += '<tr class="sch-leave-transfer-row"><td class="sch-leave-transfer-lbl">🔄 轉入代休假</td>';
+        // 🆕 轉入代休假列（點擊輸入時數，自動加入員工代休額度）
+        var compTransfers = loadData('compTransfers', []);
+        var canEditComp = currentUser && ['admin','manager','deputy'].indexOf(currentUser.role) !== -1;
+        homeHtml += '<tr class="sch-leave-transfer-row"><td class="sch-leave-transfer-lbl" title="點日期格輸入代休時數">🔄 轉入代休假</td>';
         for (var dt2 = 0; dt2 < dates.length; dt2++) {
-            homeHtml += '<td class="sch-leave-transfer-cell">—</td>';
+            var dKeyT = formatDate(dates[dt2]);
+            var dayTransfers = compTransfers.filter(function(t){
+                if (t.date !== dKeyT) return false;
+                // 限定本店員工
+                var te = homeEmployees.find(function(he){return he.id===t.empId;});
+                return !!te;
+            });
+            var totalH = dayTransfers.reduce(function(s,t){return s+(parseFloat(t.hours)||0);}, 0);
+            var cellContent = totalH > 0 
+                ? '<strong style="color:#047857;">' + totalH.toFixed(1) + 'h</strong>'
+                : (canEditComp ? '<span style="color:#6ee7b7; font-size:11px;">➕ 登錄</span>' : '—');
+            var clickAttr = canEditComp ? ' onclick="openCompTransferModal(\'' + dKeyT + '\')" style="cursor:pointer;"' : '';
+            homeHtml += '<td class="sch-leave-transfer-cell"' + clickAttr + '>' + cellContent + '</td>';
         }
         homeHtml += '</tr>';
         // 🆕 本店上班費用 (A) 列
@@ -8321,7 +8399,7 @@ function renderScheduleTable() {
             var oslots = getDaySlots(os);
             for (var sk = 0; sk < oslots.length; sk++) {
                 if (oslots[sk].workStoreId === currentSchedStoreId &&
-                    ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(oslots[sk].type) !== -1) {
+                    ['work','business','fcCounsel','restWork','holidayWork'].indexOf(oslots[sk].type) !== -1) {
                     supportRecords[oemp.id] = oemp;
                     break;
                 }
@@ -8347,7 +8425,7 @@ function renderScheduleTable() {
                 var sslots = getDaySlots(sraw);
                 // 只顯示派駐到本店的 slot
                 var displaySlots = sslots.map(function(slot) {
-                    if (slot.workStoreId === currentSchedStoreId && ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1) {
+                    if (slot.workStoreId === currentSchedStoreId && ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1) {
                         return slot;
                     }
                     return emptySlot();
@@ -8511,9 +8589,8 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
         }
     } else {
         var typeNames = {
-            'work':'正常班', 'business':'公出', 'fcA':'FC支援(A)', 'fcB':'FC支援(B)', 'fcCounsel':'FC駐店輔導',
-            'restWork':'休上班', 'restBusiness':'休息日公出', 'restFc':'休息日FC支援',
-            'holidayWork':'國上班',
+            'work':'正常班', 'business':'公出', 'fcCounsel':'FC駐店輔導',
+            'restWork':'休上班', 'holidayWork':'國上班',
             'rest':'休息日', 'holiday':'例假日', 'national':'國定假日', 'leave':'請假'
         };
         
@@ -8524,7 +8601,7 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
             html += '<div class="slot-mini ' + slot.type + '">';
             html += '<div class="mini-type">' + typeNames[slot.type] + '</div>';
             
-            var needTime = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1;
+            var needTime = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1;
             if (needTime && slot.start && slot.end) {
                 html += '<div class="mini-time">' + slot.start + '-' + slot.end + '</div>';
                 
@@ -8691,12 +8768,8 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         'empty':'(未排班)',
         'work':'正常班',
         'business':'公出',
-        'fcA':'FC支援(A)',
-        'fcB':'FC支援(B)',
         'fcCounsel':'FC駐店輔導',
         'restWork':'休上班',
-        'restBusiness':'休息日公出',
-        'restFc':'休息日FC支援',
         'holidayWork':'國上班',
         'rest':'休息日',
         'holiday':'例假日',
@@ -8715,7 +8788,7 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
     });
     html += '</select></div>';
     
-    var needTime = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1;
+    var needTime = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1;
     if (needTime) {
         // 時間
         html += '<div class="form-row"><label>上班：</label><input type="time" value="' + (slot.start || '08:00') + '" onchange="modalUpdateSlot(' + slotIndex + ',\'start\',this.value)"></div>';
@@ -8779,7 +8852,7 @@ function modalChangeSlotType(slotIndex, newType) {
     }
     
     var current = existing.slots[slotIndex] || emptySlot();
-    var needTime = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(newType) !== -1;
+    var needTime = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(newType) !== -1;
     
     existing.slots[slotIndex] = {
         type: newType,
@@ -18442,6 +18515,8 @@ var BACKUP_KEYS = [
     'customAccountPermissions',
     'clockRecords',
     'overtimeApprovals',
+    'leaveQuotas',
+    'compTransfers',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
@@ -20326,7 +20401,7 @@ function calcEmpMonthStats(empId, yearMonth) {
             var slot = slots[i];
             if (!slot || slot.type === 'empty') continue;
             
-            if (['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end && slot.start !== '-') {
+            if (['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end && slot.start !== '-') {
                 var h = calculateHours(slot.start, slot.end);
                 totalHours += h;
                 if (slot.type === 'restWork' || slot.type === 'holidayWork') {
@@ -21171,7 +21246,7 @@ function getMyClockStore() {
             for (var i = 0; i < slots.length; i++) {
                 var slot = slots[i];
                 // 只看上班類型且有指定工作門市
-                if (slot && ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
+                if (slot && ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.workStoreId) {
                     var workStore = stores.find(function(s) { return s.id === slot.workStoreId; });
                     if (workStore) {
                         workStore._isDispatch = (slot.workStoreId !== myEmp.homeStoreId);
@@ -21642,6 +21717,124 @@ function saveCompetitions(arr) {
 // ============================================================
 // 💰 月度結算（依勞基法精算）
 // ============================================================
+// ============================================================
+// 🔄 轉入代休假（補休登錄）
+// ============================================================
+var _ctCurrentDate = null;
+
+function openCompTransferModal(dateKey) {
+    if (!currentUser || ['admin','manager','deputy'].indexOf(currentUser.role) === -1) {
+        return alert('⚠️ 只有店長/管理員可登錄代休');
+    }
+    _ctCurrentDate = dateKey;
+    // 顯示日期
+    var dt = new Date(dateKey);
+    var dowName = ['日','一','二','三','四','五','六'][dt.getDay()];
+    document.getElementById('ctDateLbl').textContent = '📅 ' + dateKey + '（星期' + dowName + '）';
+    
+    // 員工下拉（本店）
+    var emps = loadData('employees', defaultEmployees).filter(function(e){
+        return getEmpHomeStore(e) === currentSchedStoreId;
+    });
+    if (typeof empNumSortKey === 'function') emps.sort(function(a,b){ return empNumSortKey(a) - empNumSortKey(b); });
+    var empSel = document.getElementById('ctEmp');
+    empSel.innerHTML = '<option value="">-- 選擇員工 --</option>' + 
+        emps.map(function(e){ return '<option value="' + e.id + '">' + e.name + ' (' + e.num + ')</option>'; }).join('');
+    document.getElementById('ctHours').value = '8';
+    document.getElementById('ctReason').value = '';
+    
+    renderCompTransferList();
+    document.getElementById('compTransferModal').classList.remove('hidden');
+}
+
+function renderCompTransferList() {
+    var list = loadData('compTransfers', []).filter(function(t){ return t.date === _ctCurrentDate; });
+    var emps = loadData('employees', defaultEmployees);
+    var el = document.getElementById('ctList');
+    if (!el) return;
+    if (list.length === 0) {
+        el.innerHTML = '<div style="color:#9ca3af; text-align:center; padding:10px;">（尚無登錄）</div>';
+        return;
+    }
+    el.innerHTML = list.map(function(t){
+        var emp = emps.find(function(e){return e.id===t.empId;});
+        var name = emp ? emp.name : '?';
+        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:#f0fdf4; border-radius:6px; margin-bottom:4px;">' +
+            '<div><strong>' + name + '</strong>　<span style="color:#047857;">+' + t.hours + 'h</span>' + 
+            (t.reason ? '<div style="font-size:10px; color:#6b7280;">' + t.reason + '</div>' : '') + '</div>' +
+            '<button class="btn-danger" style="padding:3px 8px; font-size:11px;" onclick="deleteCompTransfer(\'' + t.id + '\')">🗑️</button>' +
+            '</div>';
+    }).join('');
+}
+
+function saveCompTransfer() {
+    var empId = document.getElementById('ctEmp').value;
+    var hours = parseFloat(document.getElementById('ctHours').value);
+    var reason = document.getElementById('ctReason').value.trim();
+    if (!empId) return alert('⚠️ 請選擇員工');
+    if (isNaN(hours) || hours <= 0) return alert('⚠️ 請輸入正確時數');
+    
+    var arr = loadData('compTransfers', []);
+    arr.push({
+        id: 'ct_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+        date: _ctCurrentDate,
+        empId: empId,
+        hours: hours,
+        reason: reason,
+        storeId: currentSchedStoreId,
+        addedBy: (currentUser && currentUser.name) || '管理員',
+        addedAt: new Date().toISOString()
+    });
+    saveData('compTransfers', arr);
+    
+    // 同步加入員工的「特代休」假別額度
+    addCompLeaveToQuota(empId, hours);
+    
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    
+    // 重置輸入並重新渲染列表
+    document.getElementById('ctEmp').value = '';
+    document.getElementById('ctHours').value = '8';
+    document.getElementById('ctReason').value = '';
+    renderCompTransferList();
+    
+    // 重新渲染排班表
+    if (typeof renderScheduleTable === 'function') renderScheduleTable();
+    
+    var emp = loadData('employees', defaultEmployees).find(function(e){return e.id===empId;});
+    showNotif('✅ 已登錄 ' + (emp?emp.name:'') + ' +' + hours + 'h 特代休');
+}
+
+function deleteCompTransfer(id) {
+    if (!confirm('確定刪除此筆代休登錄？\n（員工特代休額度會相應扣除）')) return;
+    var arr = loadData('compTransfers', []);
+    var rec = arr.find(function(t){return t.id===id;});
+    if (rec) {
+        // 扣回額度
+        addCompLeaveToQuota(rec.empId, -rec.hours);
+    }
+    arr = arr.filter(function(t){return t.id !== id;});
+    saveData('compTransfers', arr);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderCompTransferList();
+    if (typeof renderScheduleTable === 'function') renderScheduleTable();
+    showNotif('🗑️ 已刪除');
+}
+
+// 把代休時數加入員工的「特代休」假別額度
+function addCompLeaveToQuota(empId, hours) {
+    try {
+        var quotas = loadData('leaveQuotas', {});
+        if (!quotas[empId]) quotas[empId] = {};
+        var key = '特代休';
+        var curHours = parseFloat(quotas[empId][key]) || 0;
+        var newHours = curHours + hours;
+        if (newHours < 0) newHours = 0;
+        quotas[empId][key] = newHours;
+        saveData('leaveQuotas', quotas);
+    } catch(e){ console.warn('addCompLeaveToQuota err', e); }
+}
+
 function initMonthlySettle() {
     var m = document.getElementById('msMonth');
     if (m && !m.value) {
@@ -21701,7 +21894,7 @@ function renderMonthlySettle() {
             var raw = shifts[dKey] && shifts[dKey][emp.id];
             if (!raw) continue;
             var slots = getDaySlots(raw);
-            var r = calcDayLaborCost(slots, empHourly);
+            var r = calcDayLaborCost(slots, emp, new Date(dx));
             sum.work += r.workHours;
             sum.ot134 += r.ot134Hours + r.restOT134;
             sum.ot167 += r.ot167Hours + r.restOT167 + r.restOT267;
@@ -21771,7 +21964,7 @@ function viewMonthlyDetail(empId) {
         var raw = shifts[dKey] && shifts[dKey][emp.id];
         if (!raw) continue;
         var slots = getDaySlots(raw);
-        var r = calcDayLaborCost(slots, empHourly);
+        var r = calcDayLaborCost(slots, emp, new Date(dx));
         var hasAny = (r.workHours+r.ot134Hours+r.ot167Hours+r.restWorkHours+r.holidayWorkHours+r.leaveHours) > 0;
         if (!hasAny) continue;
         var fmt = function(n){ return n > 0 ? n.toFixed(1) : '—'; };
@@ -23102,7 +23295,7 @@ function printSchedule() {
                 html += '<div>國定假日</div>';
             } else if (slot.type === 'leave') {
                 html += '<div>請假</div>';
-            } else if (['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end) {
+            } else if (['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1 && slot.start && slot.end) {
                 var hrs = calculateHours(slot.start, slot.end);
                 totalHrs += hrs;
                 
@@ -23153,7 +23346,7 @@ function printSchedule() {
                 if (!slot || slot.type === 'empty') continue;
                 
                 var slotStoreId = slot.workStoreId || (emp.homeStoreId || stores[0].id);
-                var isWorkSlot = ['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(slot.type) !== -1;
+                var isWorkSlot = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1;
                 var isOffSlot = ['rest','holiday','national','leave'].indexOf(slot.type) !== -1;
                 
                 if (isWorkSlot && slotStoreId === targetStoreId) {
@@ -23264,7 +23457,7 @@ function printSchedule() {
                 if (!dslot || dslot.type === 'empty') continue;
                 var dStoreId = dslot.workStoreId;
                 if (!dStoreId || dStoreId === currentSchedStoreId) continue;
-                if (['work','business','fcA','fcB','fcCounsel','restWork','restBusiness','restFc','holidayWork'].indexOf(dslot.type) === -1) continue;
+                if (['work','business','fcCounsel','restWork','holidayWork'].indexOf(dslot.type) === -1) continue;
                 
                 if (!dispatchByStore[dStoreId]) {
                     dispatchByStore[dStoreId] = { days: [], total: 0 };
