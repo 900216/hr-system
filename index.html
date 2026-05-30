@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans-serif; background: #f0f0f0; }
@@ -2427,21 +2428,42 @@ body.view-mobile.menu-drawer-open .menu-backdrop { display: block; animation: fa
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 body.view-mobile .system-menu {
-    position: fixed !important; left: 0; right: 0; bottom: 0; z-index: 9600 !important;
-    max-height: 75vh; overflow-y: auto;
-    border-radius: 22px 22px 0 0 !important;
+    position: fixed !important; left: 0; right: 0; top: 0; bottom: 0; z-index: 9600 !important;
+    max-height: 100vh; height: 100vh; height: 100dvh; overflow-y: auto;
+    border-radius: 0 !important;
     box-shadow: 0 -10px 40px rgba(0,0,0,0.3) !important;
-    transform: translateY(110%); transition: transform .3s cubic-bezier(0.18,0.89,0.32,1.05);
-    padding: 16px 12px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    transform: translateY(100%); transition: transform .35s cubic-bezier(0.18,0.89,0.32,1.05);
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(100px + env(safe-area-inset-bottom, 0px)) !important;
 }
 body.view-mobile.menu-drawer-open .system-menu { transform: translateY(0); }
-/* 抽屜頂部把手 + 標題 */
+/* 全螢幕選單頂部標題列 + 關閉鈕 */
 body.view-mobile .system-menu::before {
     content: '☰ 完整選單'; display: block; text-align: center;
-    color: #fde68a; font-weight: 800; font-size: 14px;
-    padding: 0 0 12px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15);
-    position: relative;
+    color: #fde68a; font-weight: 800; font-size: 18px;
+    padding: 16px 0 14px; margin: -10px -16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    position: sticky; top: 0; z-index: 5;
+    background: linear-gradient(to bottom, #4b5563, #4b5563ee);
+    backdrop-filter: blur(8px);
 }
+/* 右上角關閉按鈕（實體button可點擊）*/
+body.view-mobile .system-menu .menu-close-btn {
+    position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); right: 16px;
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.15); color: #fde68a;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
+    font-size: 20px; font-weight: bold; cursor: pointer;
+    z-index: 9700; padding: 0; line-height: 1;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+    transition: all .2s ease;
+}
+body.view-mobile .system-menu .menu-close-btn:active {
+    transform: scale(0.92);
+    background: rgba(245,158,11,0.4);
+}
+body:not(.view-mobile) .menu-close-btn { display: none; }
+/* 🔇 全螢幕選單開啟時，隱藏右上角同步浮窗（避免跟 ✕ 鈕重疊）*/
+body.view-mobile.menu-drawer-open .sync-indicator { display: none !important; }
 /* 手機版選單項：直式排列、卡片化 */
 body.view-mobile .system-menu .menu-item {
     display: block; width: 100%; box-sizing: border-box; margin: 8px 0 !important;
@@ -2932,6 +2954,10 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
     </div>
     
     <div class="system-menu" id="systemMenu">
+        <div class="menu-drawer-header">
+            <span class="menu-drawer-title">☰ 完整選單</span>
+            <button class="menu-close-btn" onclick="closeMenuDrawer()" aria-label="關閉選單">✕ 關閉</button>
+        </div>
         <div class="menu-item active" id="menu-work" onclick="showWorkList()">📋 工作清單</div>
         <div class="menu-item" id="menu-pet" onclick="goToPage('petGame','menu-pet')">🐾 寵物樂園</div>
         <div class="menu-item" id="menu-compete" onclick="goToPage('storeCompete','menu-compete')">🏆 門市競賽</div>
@@ -2962,6 +2988,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <div class="submenu-item" onclick="goToPage('leaveAllocation','menu-employee')">🌴 假別額度管理</div>
                 <div class="submenu-item" onclick="goToPage('payroll','menu-employee')">💰 薪資管理</div>
                 <div class="submenu-item" onclick="goToPage('mySalary','menu-employee')">📄 我的薪資</div>
+                <div class="submenu-item" onclick="goToPage('companyAnnual','menu-employee')">🏢 全公司年度報表</div>
                 <div class="submenu-item" onclick="goToPage('insuranceAdd','menu-employee')">➕ 加保作業</div>
                 <div class="submenu-item" onclick="goToPage('insuranceRemove','menu-employee')">➖ 退保作業</div>
                 <div class="submenu-item" onclick="goToPage('insuranceQuery','menu-employee')">🔍 加退保查詢</div>
@@ -3815,6 +3842,36 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <div class="panel-body">
                     <div class="alert-box info">💡 點選下方任一月份薪資單可查看詳細內容並列印</div>
                     <div id="mySalaryList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🏢 全公司年度報表（管理員 / 店長） -->
+    <div id="page-companyAnnual" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 👥 員工資料 &gt; <strong>🏢 全公司年度報表</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header">
+                    <h3>🏢 全公司年度薪資報表</h3>
+                </div>
+                <div class="panel-body">
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                        <span style="font-weight:bold;">📅 年度：</span>
+                        <input type="number" id="carYear" value="" min="2020" max="2099" style="width:100px; padding:6px;" onchange="renderCompanyAnnualReport()">
+                        <button class="btn-primary" onclick="renderCompanyAnnualReport()">🔍 重新查詢</button>
+                        <button class="btn-secondary" onclick="downloadCompanyAnnualReportPdf()">💾 下載 PDF</button>
+                        <button class="btn-secondary" onclick="window.print()">🖨️ 列印</button>
+                    </div>
+                    <div class="alert-box info" style="font-size:12px;">💡 彙整全公司所有員工該年度已發放薪資單；點任一員工的「📥 PDF」可單獨匯出該員工年度扣繳憑單。</div>
+                    <div id="carPrintArea">
+                        <h4 style="margin:12px 0 8px;">📊 整體摘要</h4>
+                        <div id="carSummary"></div>
+                        <h4 style="margin:18px 0 8px;">🏬 各門市彙總</h4>
+                        <div id="carByStore"></div>
+                        <h4 style="margin:18px 0 8px;">👥 員工明細</h4>
+                        <div id="carRows"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -5851,6 +5908,10 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
             </td></tr>
             <tr id="empfMonthlyRow"><td class="label-col">月薪：</td><td>NT$ <input type="number" id="empfMonthlySalary" value="28000" style="width:130px;"></td></tr>
             <tr id="empfHourlyRow" class="hidden"><td class="label-col">時薪：</td><td>NT$ <input type="number" id="empfHourlyRate" value="183" style="width:130px;"></td></tr>
+            <tr><td class="label-col" style="background:#fef3c7;">🏛️ 勞保投保：</td><td>NT$ <input type="number" id="empfLaborInsAmt" value="0" placeholder="例：45800" style="width:130px;" oninput="updateInsPreview()"> <span style="font-size:11px;color:#6b7280;">員工自付≈ <span id="empfLaborInsPreview">0</span>/月</span></td></tr>
+            <tr><td class="label-col" style="background:#fef3c7;">🏥 健保投保：</td><td>NT$ <input type="number" id="empfHealthInsAmt" value="0" placeholder="例：45800" style="width:130px;" oninput="updateInsPreview()"> <span style="font-size:11px;color:#6b7280;">員工自付≈ <span id="empfHealthInsPreview">0</span>/月</span></td></tr>
+            <tr><td class="label-col" style="background:#ede9fe;">👨‍👩‍👧 撫養親屬：</td><td><input type="number" id="empfDependents" value="0" min="0" max="3" style="width:80px;" oninput="updateInsPreview()"> 人 <span style="font-size:11px;color:#6b7280;">（健保眷屬最多 3 人計費，每人加 1 倍健保自付）</span></td></tr>
+            <tr><td class="label-col" style="background:#dbeafe;">🏦 勞退自提：</td><td><input type="number" id="empfPensionSelfPct" value="0" min="0" max="6" step="0.5" style="width:80px;" oninput="updateInsPreview()"> % <span style="font-size:11px;color:#6b7280;">（雇主強制 6%，員工 0~6% 自願；員工自提≈ <span id="empfPensionPreview">0</span>/月）</span></td></tr>
             <tr><td class="label-col">職位：</td><td>
                 <select id="empfPosition">
                     <option>時薪人員</option>
@@ -6140,7 +6201,9 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
             <strong style="font-size:15px;">📄 薪資明細表</strong>
             <div>
                 <button class="btn-confirm" onclick="printSalarySlip()">🖨️ 列印</button>
-                <button class="btn-primary" style="margin-left:6px;" onclick="downloadSalarySlipHTML()">💾 下載 HTML</button>
+                <button class="btn-primary" style="margin-left:6px;" onclick="downloadSalarySlipHTML()">💾 HTML</button>
+                <button class="btn-primary" style="margin-left:6px; background:linear-gradient(to bottom,#ec4899,#db2777);" onclick="downloadCurrentSlipPdf()">📥 PDF</button>
+                <button class="btn-primary" style="margin-left:6px; background:linear-gradient(to bottom,#3b82f6,#1d4ed8);" onclick="emailCurrentSlip()">📧 寄送</button>
                 <button class="btn-secondary" style="margin-left:6px;" onclick="closeModal('payrollViewModal')">關閉</button>
             </div>
         </div>
@@ -7520,6 +7583,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'cloudSync') initCloudSyncPage();
     else if (pageName === 'payroll') { setCurrentMonth('payrollMonth'); renderPayroll(); }
     else if (pageName === 'mySalary') renderMySalary();
+    else if (pageName === 'companyAnnual') initCompanyAnnualReport();
     else if (pageName === 'storeManagement') renderStoreList();
     else if (pageName === 'vendorManagement') initVendorManagement();
     else if (pageName === 'returnCampaign') initReturnCampaign();
@@ -8060,6 +8124,193 @@ function leavePayRate(leaveType) {
     return 1.0;
 }
 
+// 🏛️ 勞健保員工自付額自動計算（依公告費率）
+// 投保金額儲存於 employeesFullInfo[empId].laborInsAmount / .healthInsAmount
+// 撫養親屬：dependentsCount（健保最多 3 人計費）
+// 公告費率（可調整）：
+//   勞保普通事故 11.5% × 員工負擔 20% = 投保金額 × 2.3%
+//   就業保險     1.0% × 員工負擔 20% = 投保金額 × 0.2%
+//   健保         5.17% × 員工負擔 30% = 投保金額 × 1.551%
+//   健保眷屬     每人 = 健保自付額 × 1（最多 3 人）
+function calcEmpInsurance(emp, info) {
+    if (!emp) return { laborInsAmt:0, healthInsAmt:0, laborIns:0, empIns:0, healthInsSelf:0, healthInsDependents:0, healthIns:0, dependentsCount:0, total:0 };
+    if (!info) {
+        try { info = (loadData('employeesFullInfo', {}) || {})[emp.id] || {}; } catch(e){ info = {}; }
+    }
+    var sys = {};
+    try { sys = loadData('sysParams', {}) || {}; } catch(e){}
+    var rLabor = parseFloat(sys.laborInsRate) || 0.023;
+    var rEmp = parseFloat(sys.empInsRate) || 0.002;
+    var rHealth = parseFloat(sys.healthInsRate) || 0.01551;
+    var maxDep = parseInt(sys.healthInsMaxDependents) || 3;
+    
+    var laborAmt = parseFloat(info.laborInsAmount) || 0;
+    var healthAmt = parseFloat(info.healthInsAmount) || 0;
+    var depCount = Math.min(Math.max(0, parseInt(info.dependentsCount) || 0), maxDep);
+    
+    if (laborAmt === 0 || healthAmt === 0) {
+        var fallback = emp.empType === 'parttime' ? 28590 : 45800;
+        if (laborAmt === 0) laborAmt = fallback;
+        if (healthAmt === 0) healthAmt = fallback;
+    }
+    
+    var laborIns = Math.round(laborAmt * rLabor);
+    var empIns = Math.round(laborAmt * rEmp);
+    var healthInsSelf = Math.round(healthAmt * rHealth);
+    var healthInsDependents = healthInsSelf * depCount;
+    var healthIns = healthInsSelf + healthInsDependents;
+    return {
+        laborInsAmt: laborAmt,
+        healthInsAmt: healthAmt,
+        dependentsCount: depCount,
+        laborIns: laborIns,
+        empIns: empIns,
+        healthInsSelf: healthInsSelf,
+        healthInsDependents: healthInsDependents,
+        healthIns: healthIns,
+        total: laborIns + empIns + healthIns
+    };
+}
+
+// 🎯 員工編輯彈窗即時預覽自付額
+function updateInsPreview() {
+    var labor = parseFloat((document.getElementById('empfLaborInsAmt')||{}).value) || 0;
+    var health = parseFloat((document.getElementById('empfHealthInsAmt')||{}).value) || 0;
+    var pensionPct = parseFloat((document.getElementById('empfPensionSelfPct')||{}).value) || 0;
+    var depCount = Math.min(Math.max(0, parseInt((document.getElementById('empfDependents')||{}).value) || 0), 3);
+    var laborSelf = Math.round(labor * (0.023 + 0.002));   // 勞保 + 就保
+    var healthSelfOnly = Math.round(health * 0.01551);     // 健保本人
+    var healthSelf = healthSelfOnly * (1 + depCount);      // 含眷屬
+    var pensionSelf = Math.round(labor * (pensionPct/100));
+    var lp = document.getElementById('empfLaborInsPreview');
+    var hp = document.getElementById('empfHealthInsPreview');
+    var pp = document.getElementById('empfPensionPreview');
+    if (lp) lp.textContent = laborSelf.toLocaleString();
+    if (hp) {
+        hp.innerHTML = healthSelf.toLocaleString() +
+            (depCount > 0 ? ' <span style="color:#9333ea;">(本人 ' + healthSelfOnly + ' + 眷屬 ' + depCount + '人 × ' + healthSelfOnly + ')</span>' : '');
+    }
+    if (pp) pp.textContent = pensionSelf.toLocaleString();
+}
+
+// 💰 所得稅自動試算（薪資所得扣繳辦法）
+// 簡化規則：月薪 ≤ 88,501 → 不扣繳；> 88,501 → 按 5% 扣繳
+// 可由 sysParams.incomeTaxThreshold / incomeTaxRate 覆寫
+function calcIncomeTax(monthlyTaxable) {
+    if (!monthlyTaxable || monthlyTaxable <= 0) return 0;
+    var sys = {};
+    try { sys = loadData('sysParams', {}) || {}; } catch(e){}
+    var threshold = parseFloat(sys.incomeTaxThreshold) || 88501;
+    var rate = parseFloat(sys.incomeTaxRate) || 0.05;
+    if (monthlyTaxable <= threshold) return 0;
+    return Math.round(monthlyTaxable * rate);
+}
+
+// 🏦 勞退提繳（雇主強制 6% + 員工自願 0~6%）
+function calcPensionContrib(emp, info) {
+    if (!emp) return { employerPension:0, employeePension:0, total:0, basis:0, employeePct:0 };
+    if (!info) {
+        try { info = (loadData('employeesFullInfo', {}) || {})[emp.id] || {}; } catch(e){ info = {}; }
+    }
+    var sys = {};
+    try { sys = loadData('sysParams', {}) || {}; } catch(e){}
+    var employerRate = parseFloat(sys.pensionEmployerRate) || 0.06;
+    var basis = parseFloat(info.laborInsAmount) || 0;
+    if (basis === 0) basis = emp.empType === 'parttime' ? 28590 : 45800;
+    var empPct = parseFloat(info.pensionSelfPct);
+    if (isNaN(empPct) || empPct < 0) empPct = 0;
+    if (empPct > 6) empPct = 6;
+    return {
+        employerPension: Math.round(basis * employerRate),
+        employeePension: Math.round(basis * (empPct/100)),
+        total: Math.round(basis * employerRate) + Math.round(basis * (empPct/100)),
+        basis: basis,
+        employeePct: empPct
+    };
+}
+
+// 📋 勞健保/勞退異動歷史追蹤
+function trackInsuranceChange(empId, oldInfo, newInfo) {
+    if (!empId) return;
+    var fields = [
+        { key: 'laborInsAmount', label: '勞保投保金額' },
+        { key: 'healthInsAmount', label: '健保投保金額' },
+        { key: 'pensionSelfPct', label: '勞退自願提繳%' },
+        { key: 'dependentsCount', label: '撫養親屬人數' }
+    ];
+    var changes = [];
+    for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        var oldV = parseFloat((oldInfo||{})[f.key]) || 0;
+        var newV = parseFloat((newInfo||{})[f.key]) || 0;
+        if (oldV !== newV) {
+            changes.push({ field: f.key, label: f.label, oldVal: oldV, newVal: newV, diff: newV - oldV });
+        }
+    }
+    if (changes.length === 0) return;
+    var logs = loadData('insuranceChangeLog', []);
+    logs.push({
+        id: 'icl_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+        empId: empId,
+        at: new Date().toISOString(),
+        by: (currentUser && currentUser.name) || '管理員',
+        changes: changes
+    });
+    if (logs.length > 500) logs = logs.slice(logs.length - 500);
+    saveData('insuranceChangeLog', logs);
+}
+
+// 🔍 查看員工的勞健保/勞退異動歷史
+function viewInsuranceHistory(empId) {
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e){ return e.id === empId; });
+    if (!emp) return alert('⚠️ 員工不存在');
+    var logs = loadData('insuranceChangeLog', []).filter(function(l){ return l.empId === empId; });
+    logs.sort(function(a,b){ return (b.at||'').localeCompare(a.at||''); });
+    
+    var modalId = 'insHistModal';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    
+    var html = '<div id="' + modalId + '" class="modal-overlay" style="z-index:10001;">' +
+        '<div class="modal-box" style="max-width:600px;">' +
+        '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<h3 style="margin:0;">📋 ' + emp.name + ' 勞健保/勞退 異動歷史</h3>' +
+            '<button onclick="document.getElementById(\'' + modalId + '\').remove()" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        '<div class="alert-box info" style="font-size:11px; margin-bottom:10px;">' +
+            '💡 異動時間、操作者、新舊金額完整記錄，可作為加退保證明。' +
+        '</div>';
+    if (logs.length === 0) {
+        html += '<div style="text-align:center; padding:20px; color:#9ca3af;">📭 尚無異動記錄</div>';
+    } else {
+        html += '<div style="max-height:400px; overflow-y:auto;">';
+        for (var i = 0; i < logs.length; i++) {
+            var l = logs[i];
+            var dt = new Date(l.at).toLocaleString('zh-TW');
+            html += '<div style="background:#fffdf6; border:1px solid #f0e3cc; border-radius:8px; padding:10px; margin-bottom:8px;">' +
+                '<div style="font-size:12px; color:#6b7280;">📅 ' + dt + '　｜　👤 ' + l.by + '</div>';
+            for (var j = 0; j < l.changes.length; j++) {
+                var ch = l.changes[j];
+                var arrow = ch.diff > 0 ? '↗️' : (ch.diff < 0 ? '↘️' : '→');
+                var diffColor = ch.diff > 0 ? '#dc2626' : (ch.diff < 0 ? '#16a34a' : '#6b7280');
+                html += '<div style="margin-top:4px; font-size:13px;">' +
+                    '<strong>' + ch.label + '：</strong>' +
+                    '<span style="color:#6b7280;">' + (ch.oldVal||0).toLocaleString() + '</span>' +
+                    ' ' + arrow + ' ' +
+                    '<span style="color:' + diffColor + '; font-weight:bold;">' + (ch.newVal||0).toLocaleString() + '</span>' +
+                    ' <span style="font-size:11px; color:' + diffColor + ';">(' + (ch.diff>0?'+':'') + ch.diff.toLocaleString() + ')</span>' +
+                '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+    html += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
 // 🏛️ 勞基法精算單日費用（含加班 1.34x / 1.67x、休息日、國定假日、各類假別）
 function calcDayLaborCost(slots, emp, date) {
     var r = {
@@ -8138,14 +8389,17 @@ function calcDayLaborCost(slots, emp, date) {
             r.cost += r.restOT267 * hourly * 2.67;
         }
     }
-    // 國定假日上班：加倍（勞基法 §39）— 兩者都加倍時薪
+    // 國定假日上班：加倍（勞基法 §39）
+    // 正職：時數已自動轉代休 → 不重複給現金加倍，只補當日底薪
+    // 工讀：時數 × 時薪 × 2 給現金
     if (holidayTotal > 0) {
         r.holidayWorkHours = holidayTotal;
-        // 正職國定假日有上班 → 仍含底薪 + 加倍工資；若該日無平日 work，需單獨加底薪
-        if (isFulltime && workTotal === 0) {
-            r.cost += dailyBase;  // 補上當日底薪
+        if (isFulltime) {
+            // 正職：若該日無平日 work，需單獨加底薪；加倍部分已透過代休給予
+            if (workTotal === 0) r.cost += dailyBase;
+        } else {
+            r.cost += holidayTotal * hourly * 2;
         }
-        r.cost += holidayTotal * hourly * 2;
     }
     r.cost += r.leaveCost;
     return r;
@@ -8177,7 +8431,7 @@ function syncAllAutoCompTransfers() {
                 var date = new Date(dateKey);
                 if (isNaN(date.getTime())) return;
                 var r = calcDayLaborCost(slots, emp, date);
-                var newOT = r.ot134Hours + r.ot167Hours + r.restOT134 + r.restOT167 + r.restOT267;
+                var newOT = r.ot134Hours + r.ot167Hours + r.restOT134 + r.restOT167 + r.restOT267 + r.holidayWorkHours;
                 newOT = Math.round(newOT * 10) / 10;  // 保留 1 位小數
                 
                 var oldIdx = transfers.findIndex(function(t){ 
@@ -8446,8 +8700,9 @@ function renderScheduleTable() {
             }
             homeHtml += '</tr>';
         }
-        // 🆕 轉入代休假列（點擊輸入時數，自動加入員工代休額度）
-        var compTransfers = loadData('compTransfers', []);
+        // 🆕 轉入代休假列（顯示自動轉入 + 手動登錄）
+        // 👉 直接用迴圈累積的 _ctArr，看得到本次剛自動轉入的記錄（localStorage 尚未存）
+        var compTransfers = _ctArr;
         var canEditComp = currentUser && ['admin','manager','deputy'].indexOf(currentUser.role) !== -1;
         homeHtml += '<tr class="sch-leave-transfer-row"><td class="sch-leave-transfer-lbl" title="點日期格輸入代休時數">🔄 轉入代休假</td>';
         for (var dt2 = 0; dt2 < dates.length; dt2++) {
@@ -8459,9 +8714,15 @@ function renderScheduleTable() {
                 return !!te;
             });
             var totalH = dayTransfers.reduce(function(s,t){return s+(parseFloat(t.hours)||0);}, 0);
-            var cellContent = totalH > 0 
-                ? '<strong style="color:#047857;">' + totalH.toFixed(1) + 'h</strong>'
-                : (canEditComp ? '<span style="color:#6ee7b7; font-size:11px;">➕ 登錄</span>' : '—');
+            // 是否含自動轉入（包含三種旗標的歷史記錄）
+            var hasAuto = dayTransfers.some(function(t){return t.autoFromOT || t.source==='auto' || t.auto;});
+            var autoBadge = hasAuto ? '<span style="font-size:9px; color:#7c3aed; margin-left:3px;">🤖</span>' : '';
+            var cellContent;
+            if (totalH > 0) {
+                cellContent = '<strong style="color:#047857;">' + totalH.toFixed(1) + 'h</strong>' + autoBadge;
+            } else {
+                cellContent = canEditComp ? '<span style="color:#6ee7b7; font-size:11px;">➕ 登錄</span>' : '—';
+            }
             var clickAttr = canEditComp ? ' onclick="openCompTransferModal(\'' + dKeyT + '\')" style="cursor:pointer;"' : '';
             homeHtml += '<td class="sch-leave-transfer-cell"' + clickAttr + '>' + cellContent + '</td>';
         }
@@ -17810,9 +18071,11 @@ function renderEmployeeBasicList() {
         if (currentUser && currentUser.role === 'admin') {
             actBtn = '<button class="btn-edit" onclick="openEditEmployeeModal(\'' + emp.id + '\')">編輯</button> '
                    + '<button class="btn-primary" style="background:linear-gradient(to bottom,#a78bfa,#7c3aed);" onclick="openLeaveBalanceModal(\'' + emp.id + '\')">🏖️ 假別</button> '
+                   + '<button class="btn-secondary" style="padding:4px 8px; font-size:11px; background:#fef3c7; color:#92400e; border:1px solid #fde68a;" onclick="viewInsuranceHistory(\'' + emp.id + '\')">📋 異動</button> '
                    + '<button class="btn-danger" onclick="deleteEmployeeFromBasic(\'' + emp.id + '\')">刪除</button>';
         } else if (canEdit) {
-            actBtn = '<button class="btn-primary" style="background:linear-gradient(to bottom,#a78bfa,#7c3aed);" onclick="openLeaveBalanceModal(\'' + emp.id + '\')">🏖️ 假別</button>';
+            actBtn = '<button class="btn-primary" style="background:linear-gradient(to bottom,#a78bfa,#7c3aed);" onclick="openLeaveBalanceModal(\'' + emp.id + '\')">🏖️ 假別</button> '
+                   + '<button class="btn-secondary" style="padding:4px 8px; font-size:11px; background:#fef3c7; color:#92400e;" onclick="viewInsuranceHistory(\'' + emp.id + '\')">📋 異動</button>';
         } else {
             actBtn = '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;">查看</button>';
         }
@@ -17840,6 +18103,11 @@ function openEmployeeFullModal() {
     radios[0].checked = true;
     document.getElementById('empfMonthlySalary').value = 28000;
     document.getElementById('empfHourlyRate').value = 183;
+    document.getElementById('empfLaborInsAmt').value = 0;
+    document.getElementById('empfHealthInsAmt').value = 0;
+    document.getElementById('empfDependents').value = 0;
+    document.getElementById('empfPensionSelfPct').value = 0;
+    updateInsPreview();
     toggleSalaryFields('fulltime');
     renderEmpfPermissions('', '時薪人員', 'fulltime');  // 🆕 新員工權限（依預設職位）
     document.getElementById('empFullModal').classList.remove('hidden');
@@ -17894,6 +18162,12 @@ function openEditEmployeeModal(id) {
     }
     document.getElementById('empfMonthlySalary').value = emp.monthlySalary || 28000;
     document.getElementById('empfHourlyRate').value = emp.hourlyRate || 183;
+    // 🏛️ 載入勞健保投保金額
+    document.getElementById('empfLaborInsAmt').value = info.laborInsAmount || 0;
+    document.getElementById('empfHealthInsAmt').value = info.healthInsAmount || 0;
+    document.getElementById('empfDependents').value = info.dependentsCount || 0;
+    document.getElementById('empfPensionSelfPct').value = info.pensionSelfPct || 0;
+    updateInsPreview();
     toggleSalaryFields(empType);
     renderEmpfPermissions(emp.num, info.position || '時薪人員', empType);  // 🆕 載入此員工權限
     document.getElementById('empFullModal').classList.remove('hidden');
@@ -17988,6 +18262,7 @@ function saveEmployeeFull() {
     
     var employees = loadData('employees', defaultEmployees);
     var fullInfo = loadData('employeesFullInfo', {});
+    var oldInfo = (id && fullInfo[id]) ? fullInfo[id] : {};
     
     var info = {
         idNo: document.getElementById('empfIdNo').value,
@@ -17995,7 +18270,14 @@ function saveEmployeeFull() {
         hireDate: document.getElementById('empfHireDate').value.replace(/-/g,'/'),
         status: document.getElementById('empfStatus').value,
         phone: document.getElementById('empfPhone').value,
-        email: document.getElementById('empfEmail').value
+        email: document.getElementById('empfEmail').value,
+        // 🏛️ 勞健保投保金額（用於自動計算員工自付額）
+        laborInsAmount: parseInt(document.getElementById('empfLaborInsAmt').value) || 0,
+        healthInsAmount: parseInt(document.getElementById('empfHealthInsAmt').value) || 0,
+        // 👨‍👩‍👧 撫養親屬人數（健保眷屬計費，最多 3 人）
+        dependentsCount: Math.min(Math.max(0, parseInt(document.getElementById('empfDependents').value) || 0), 3),
+        // 🏦 勞退自願提繳 %（0~6）
+        pensionSelfPct: parseFloat(document.getElementById('empfPensionSelfPct').value) || 0
     };
     
     if (id) {
@@ -18010,6 +18292,8 @@ function saveEmployeeFull() {
             employees[idx].homeStoreId = homeStoreId;
         }
         fullInfo[id] = info;
+        // 🆕 比對異動，寫入勞健保/勞退異動歷史
+        trackInsuranceChange(id, oldInfo, info);
         showNotif('✅ 員工資料已更新');
     } else {
         // 新增
@@ -18707,6 +18991,8 @@ var BACKUP_KEYS = [
     'overtimeApprovals',
     'leaveQuotas',
     'compTransfers',
+    'insuranceChangeLog',
+    'salarySlipEmailLog',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
@@ -20741,7 +21027,7 @@ function openPayrollEditor(empId, yearMonth) {
         hourlyWage: stats.empType === 'parttime' ? stats.basicPay : 0,
         holidayAllowance: 0,
         pensionTaxFree: 0,
-        // 代扣
+        // 代扣 — 依員工投保金額自動計算
         healthIns: 0,
         laborIns: 0,
         empIns: 0,
@@ -20776,6 +21062,25 @@ function openPayrollEditor(empId, yearMonth) {
         netSalary: 0,
         message: ''
     };
+    
+    // 🏛️ 自動計算勞健保員工自付額（基於投保金額 + 公告費率）
+    // 若新建薪資單（slip 不存在），自動填入；若既有 slip 有值則保留
+    if (!slip) {
+        var ins = calcEmpInsurance(emp);
+        defaultSlip.laborIns = ins.laborIns;
+        defaultSlip.empIns = ins.empIns;
+        defaultSlip.healthIns = ins.healthIns;
+        // 🏦 勞退提繳：雇主 6%（companyPension）+ 員工自願（pensionSelf）
+        var pen = calcPensionContrib(emp);
+        defaultSlip.companyPension = pen.employerPension;
+        defaultSlip.pensionSelf = pen.employeePension;
+        defaultSlip.pensionRate = pen.employeePct;
+        // 💰 所得稅試算：取應稅薪資（基本+加班+假日津貼）試算月扣繳
+        var taxable = (defaultSlip.hourlyWage||0) + (defaultSlip.specialLeaveWage||0) + (defaultSlip.holidayAllowance||0) + (defaultSlip.overtimeWage||0);
+        // 正職以月薪換算
+        if (emp.empType !== 'parttime') taxable = Math.max(taxable, emp.monthlySalary||0);
+        defaultSlip.incomeTax = calcIncomeTax(taxable);
+    }
     
     // 顯示員工資訊
     document.getElementById('payrollEditInfo').innerHTML = 
@@ -20968,6 +21273,21 @@ function openPayrollView(empId, yearMonth) {
     
     document.getElementById('payrollViewContent').innerHTML = renderSalarySlipHTML(slip, emp);
     document.getElementById('payrollViewModal').classList.remove('hidden');
+    // 記住目前檢視中的薪資單，供 PDF / 寄送 按鈕使用
+    window._currentSlipEmpId = empId;
+    window._currentSlipYearMonth = yearMonth;
+}
+
+// 📥 從檢視彈窗下載當前薪資單 PDF
+function downloadCurrentSlipPdf() {
+    if (!window._currentSlipEmpId) return alert('⚠️ 沒有開啟中的薪資單');
+    downloadSlipAsPdf(window._currentSlipEmpId, window._currentSlipYearMonth);
+}
+
+// 📧 從檢視彈窗寄送當前薪資單
+function emailCurrentSlip() {
+    if (!window._currentSlipEmpId) return alert('⚠️ 沒有開啟中的薪資單');
+    emailSalarySlip(window._currentSlipEmpId, window._currentSlipYearMonth);
 }
 
 function renderSalarySlipHTML(slip, emp) {
@@ -21240,6 +21560,14 @@ function renderMySalary() {
     // admin 可看所有員工
     if (currentUser.role === 'admin' || currentUser.role === 'manager') {
         var html = '<div class="alert-box" style="background:#fef3c7; color:#78350f;">👑 您是管理員，可查看所有員工的薪資單</div>';
+        // 🆕 批次寄送本月薪資單
+        var nowYM = new Date().toISOString().slice(0,7);
+        html += '<div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe); padding:12px; border-radius:8px; margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' +
+            '<span style="font-weight:bold; color:#1e40af;">📧 批次寄送薪資單：</span>' +
+            '<input type="month" id="batchEmailYM" value="' + nowYM + '" style="padding:5px 8px; border-radius:6px;">' +
+            '<button class="btn-primary" style="padding:6px 14px;" onclick="batchEmailSalarySlips(document.getElementById(\'batchEmailYM\').value)">📨 寄給全部員工</button>' +
+            '<span style="font-size:11px; color:#6b7280;">（會逐封開啟系統郵件 App，需在郵件 App 點寄送）</span>' +
+        '</div>';
         html += '<table class="work-table">';
         html += '<thead><tr><th>員工</th><th>類型</th><th>本月薪資單</th></tr></thead><tbody>';
         for (var i = 0; i < employees.length; i++) {
@@ -21280,18 +21608,640 @@ function renderMyEmpSlips(empId) {
         return '<div style="color:#9ca3af;padding:10px;">📭 尚無已發放薪資單</div>';
     }
     
-    var html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+    // 列出有資料的年度
+    var years = {};
+    for (var k = 0; k < mySlips.length; k++) {
+        var yy = (mySlips[k].yearMonth || '').split('-')[0];
+        if (yy) years[yy] = true;
+    }
+    var yearKeys = Object.keys(years).sort(function(a,b){return b.localeCompare(a);});
+    
+    // 年度扣繳憑單列印區
+    var html = '<div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe); padding:12px; border-radius:8px; margin-bottom:12px;">';
+    html += '<div style="font-weight:bold; color:#1e40af; margin-bottom:8px;">📋 年度所得扣繳憑單</div>';
+    html += '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">';
+    html += '<select id="annualYearSel_' + empId + '" style="padding:6px 10px; border-radius:6px;">';
+    for (var yi = 0; yi < yearKeys.length; yi++) {
+        html += '<option value="' + yearKeys[yi] + '">' + yearKeys[yi] + ' 年度</option>';
+    }
+    html += '</select>';
+    html += '<button class="btn-primary" style="padding:6px 14px;" onclick="printAnnualWithholding(\'' + empId + '\', document.getElementById(\'annualYearSel_' + empId + '\').value)">🖨️ 列印年度扣繳憑單</button>';
+    html += '<button class="btn-secondary" style="padding:6px 14px;" onclick="viewAnnualWithholdingSummary(\'' + empId + '\', document.getElementById(\'annualYearSel_' + empId + '\').value)">📊 預覽彙總</button>';
+    html += '</div></div>';
+    
+    html += '<div style="display:flex; flex-direction:column; gap:8px;">';
     for (var i = 0; i < mySlips.length; i++) {
         var s = mySlips[i];
         var ym = s.yearMonth.split('-');
         var display = ym[0] + ' 年 ' + ym[1] + ' 月';
-        html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px;">';
+        html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; flex-wrap:wrap; gap:6px;">';
         html += '<div><strong>' + display + '</strong> ｜ 實發金額：<strong style="color:#059669;">$' + (s.netSalary || 0).toLocaleString() + '</strong></div>';
-        html += '<button class="btn-primary" onclick="openPayrollView(\'' + s.empId + '\',\'' + s.yearMonth + '\')">📄 檢視 / 列印</button>';
+        html += '<div style="display:flex; gap:4px; flex-wrap:wrap;">' +
+            '<button class="btn-primary" style="padding:5px 10px; font-size:12px;" onclick="openPayrollView(\'' + s.empId + '\',\'' + s.yearMonth + '\')">📄 檢視</button>' +
+            '<button class="btn-secondary" style="padding:5px 10px; font-size:12px; background:#dbeafe; color:#1e40af;" onclick="emailSalarySlip(\'' + s.empId + '\',\'' + s.yearMonth + '\')">📧 寄送</button>' +
+            '<button class="btn-secondary" style="padding:5px 10px; font-size:12px; background:#fce7f3; color:#9d174d;" onclick="downloadSlipAsPdf(\'' + s.empId + '\',\'' + s.yearMonth + '\')">💾 PDF</button>' +
+            '</div>';
         html += '</div>';
     }
     html += '</div>';
     return html;
+}
+
+// 📋 計算員工該年度薪資扣繳彙總（依已發放薪資單）
+function calcAnnualWithholding(empId, year) {
+    var slips = loadData('salarySlips', {});
+    var total = {
+        empId: empId, year: year, slipCount: 0,
+        grossPay: 0,        // 給付總額
+        incomeTax: 0,       // 扣繳稅額
+        healthIns: 0,       // 健保扣繳
+        laborIns: 0,        // 勞保扣繳
+        empIns: 0,          // 就保扣繳
+        pensionSelf: 0,     // 自提退休金
+        companyPension: 0,  // 公司提繳退休金
+        netSalary: 0,       // 實發合計
+        months: []
+    };
+    Object.keys(slips).forEach(function(k){
+        var s = slips[k];
+        if (s.empId !== empId || s.status !== 'issued') return;
+        var ym = (s.yearMonth || '').split('-');
+        if (ym[0] !== String(year)) return;
+        // 應稅給付：基本薪資 + 加班 + 假日 + 兼職 + 福利
+        var gross = (parseFloat(s.hourlyWage)||0) + (parseFloat(s.specialLeaveWage)||0) +
+                    (parseFloat(s.holidayAllowance)||0) + (parseFloat(s.overtimeWage)||0) +
+                    (parseFloat(s.ptAllowance)||0) + (parseFloat(s.welfareAmount)||0) +
+                    (parseFloat(s.pensionTaxFree)||0);
+        total.grossPay += gross;
+        total.incomeTax += parseFloat(s.incomeTax)||0;
+        total.healthIns += parseFloat(s.healthIns)||0;
+        total.laborIns += parseFloat(s.laborIns)||0;
+        total.empIns += parseFloat(s.empIns)||0;
+        total.pensionSelf += parseFloat(s.pensionSelf)||0;
+        total.companyPension += parseFloat(s.companyPension)||0;
+        total.netSalary += parseFloat(s.netSalary)||0;
+        total.slipCount++;
+        total.months.push({ ym: s.yearMonth, gross: gross, tax: parseFloat(s.incomeTax)||0, net: parseFloat(s.netSalary)||0 });
+    });
+    total.months.sort(function(a,b){ return a.ym.localeCompare(b.ym); });
+    return total;
+}
+
+// 📊 預覽年度彙總（彈窗顯示）
+function viewAnnualWithholdingSummary(empId, year) {
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e){ return e.id === empId; });
+    if (!emp) return alert('⚠️ 員工不存在');
+    var sum = calcAnnualWithholding(empId, year);
+    if (sum.slipCount === 0) return alert('⚠️ ' + year + ' 年度尚無已發放薪資單');
+    
+    var modalId = 'annualSumModal';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    
+    var monthsHtml = '';
+    for (var i = 0; i < sum.months.length; i++) {
+        var m = sum.months[i];
+        monthsHtml += '<tr><td>' + m.ym + '</td>' +
+            '<td style="text-align:right;">$' + Math.round(m.gross).toLocaleString() + '</td>' +
+            '<td style="text-align:right; color:#dc2626;">$' + Math.round(m.tax).toLocaleString() + '</td>' +
+            '<td style="text-align:right; color:#059669; font-weight:bold;">$' + Math.round(m.net).toLocaleString() + '</td></tr>';
+    }
+    
+    var html = '<div id="' + modalId + '" class="modal-overlay" style="z-index:10001;">' +
+        '<div class="modal-box" style="max-width:680px;">' +
+        '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<h3 style="margin:0;">📊 ' + emp.name + ' — ' + year + ' 年度薪資彙總</h3>' +
+            '<button onclick="document.getElementById(\'' + modalId + '\').remove()" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px;">' +
+            '<div style="background:#dbeafe; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#1e40af;">已發單月數</div>' +
+                '<div style="font-size:20px; font-weight:bold; color:#1d4ed8;">' + sum.slipCount + ' 個月</div>' +
+            '</div>' +
+            '<div style="background:#dcfce7; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#166534;">給付總額</div>' +
+                '<div style="font-size:18px; font-weight:bold; color:#059669;">$' + Math.round(sum.grossPay).toLocaleString() + '</div>' +
+            '</div>' +
+            '<div style="background:#fee2e2; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#991b1b;">扣繳稅額</div>' +
+                '<div style="font-size:18px; font-weight:bold; color:#dc2626;">$' + Math.round(sum.incomeTax).toLocaleString() + '</div>' +
+            '</div>' +
+            '<div style="background:#fef3c7; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#92400e;">實發合計</div>' +
+                '<div style="font-size:18px; font-weight:bold; color:#d97706;">$' + Math.round(sum.netSalary).toLocaleString() + '</div>' +
+            '</div>' +
+        '</div>' +
+        '<table class="work-table" style="width:100%; font-size:12px;">' +
+            '<thead><tr><th>年月</th><th style="text-align:right;">給付</th><th style="text-align:right;">所得稅</th><th style="text-align:right;">實發</th></tr></thead>' +
+            '<tbody>' + monthsHtml + '</tbody>' +
+        '</table>' +
+        '<div style="margin-top:12px; padding:10px; background:#f9fafb; border-radius:8px; font-size:12px;">' +
+            '<div>🏛️ 健保扣繳合計：$' + Math.round(sum.healthIns).toLocaleString() +
+            '　🛡️ 勞保扣繳合計：$' + Math.round(sum.laborIns).toLocaleString() +
+            '　🛡️ 就保扣繳合計：$' + Math.round(sum.empIns).toLocaleString() + '</div>' +
+            '<div style="margin-top:4px;">🏦 自提退休金合計：$' + Math.round(sum.pensionSelf).toLocaleString() +
+            '　🏢 公司提繳合計：$' + Math.round(sum.companyPension).toLocaleString() + '</div>' +
+        '</div>' +
+        '<div style="text-align:center; margin-top:14px;">' +
+            '<button class="btn-primary" onclick="printAnnualWithholding(\'' + empId + '\', \'' + year + '\')">🖨️ 列印扣繳憑單</button>' +
+        '</div>' +
+        '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 🖨️ 列印年度所得扣繳憑單（標準格式）
+function printAnnualWithholding(empId, year) {
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e){ return e.id === empId; });
+    if (!emp) return alert('⚠️ 員工不存在');
+    var fullInfo = loadData('employeesFullInfo', {});
+    var info = fullInfo[empId] || {};
+    var sum = calcAnnualWithholding(empId, year);
+    if (sum.slipCount === 0) return alert('⚠️ ' + year + ' 年度尚無已發放薪資單');
+    
+    var sysParams = loadData('sysParams', {});
+    var companyName = sysParams.company || 'RC 金門醫院';
+    
+    var stores = loadData('stores', defaultStores);
+    var store = stores.find(function(s){ return s.id === emp.homeStoreId; });
+    var storeName = store ? store.name : '—';
+    
+    var w = window.open('', '_blank', 'width=800,height=900');
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + year + '年度所得扣繳憑單 - ' + emp.name + '</title>' +
+        '<style>' +
+        '* { box-sizing:border-box; }' +
+        'body { font-family:"Microsoft JhengHei","PingFang TC",sans-serif; padding:28px; max-width:780px; margin:0 auto; color:#111; }' +
+        '.hd { text-align:center; border-bottom:2px solid #111; padding-bottom:12px; margin-bottom:18px; }' +
+        '.hd h1 { font-size:22px; margin:4px 0; }' +
+        '.hd .sub { font-size:13px; color:#444; }' +
+        '.box { border:1px solid #888; padding:12px; margin-bottom:12px; }' +
+        '.box-title { font-weight:bold; background:#fef3c7; padding:6px 10px; margin:-12px -12px 10px; border-bottom:1px solid #888; }' +
+        '.grid { display:grid; grid-template-columns:120px 1fr 120px 1fr; gap:6px; font-size:13px; }' +
+        '.grid .label { background:#f3f4f6; padding:6px 8px; border-radius:4px; font-weight:bold; }' +
+        '.grid .val { padding:6px 8px; border-bottom:1px solid #ddd; }' +
+        'table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }' +
+        'th, td { border:1px solid #888; padding:5px 8px; text-align:center; }' +
+        'th { background:#fef3c7; }' +
+        '.amt { text-align:right; }' +
+        '.total-row { background:#fffbeb; font-weight:bold; }' +
+        '.notes { font-size:11px; color:#444; line-height:1.6; margin-top:14px; padding:10px; background:#f9fafb; border-radius:6px; }' +
+        '.sign { margin-top:30px; display:flex; justify-content:space-between; font-size:13px; }' +
+        '.sign .col { text-align:center; flex:1; }' +
+        '.sign .line { border-top:1px solid #111; margin-top:40px; padding-top:4px; }' +
+        '@media print { body { padding:14px; } .no-print { display:none; } }' +
+        '</style></head><body>' +
+        '<div class="hd">' +
+            '<div style="font-size:13px;">中華民國</div>' +
+            '<h1>' + year + ' 年度各類所得扣繳暨免扣繳憑單</h1>' +
+            '<div class="sub">薪資所得（格式：50）</div>' +
+        '</div>' +
+        // 扣繳單位
+        '<div class="box">' +
+            '<div class="box-title">🏢 扣繳義務人（雇主）資料</div>' +
+            '<div class="grid">' +
+                '<div class="label">單位名稱</div><div class="val">' + companyName + '</div>' +
+                '<div class="label">門市</div><div class="val">' + storeName + '</div>' +
+            '</div>' +
+        '</div>' +
+        // 所得人
+        '<div class="box">' +
+            '<div class="box-title">👤 所得人資料</div>' +
+            '<div class="grid">' +
+                '<div class="label">姓名</div><div class="val">' + emp.name + '</div>' +
+                '<div class="label">員工編號</div><div class="val">' + emp.num + '</div>' +
+                '<div class="label">身分證字號</div><div class="val">' + (info.idNo || '—') + '</div>' +
+                '<div class="label">職稱</div><div class="val">' + (info.position || '—') + '</div>' +
+                '<div class="label">到職日</div><div class="val">' + (info.hireDate || '—') + '</div>' +
+                '<div class="label">員工類型</div><div class="val">' + (emp.empType === 'parttime' ? '工讀' : '正職') + '</div>' +
+            '</div>' +
+        '</div>' +
+        // 給付總額與扣繳
+        '<div class="box">' +
+            '<div class="box-title">💰 ' + year + ' 年度給付總額與扣繳明細</div>' +
+            '<table>' +
+                '<thead><tr><th>項目</th><th class="amt">金額（新台幣）</th></tr></thead>' +
+                '<tbody>' +
+                '<tr><td>給付總額（含薪資、加班費、各項津貼）</td><td class="amt">$ ' + Math.round(sum.grossPay).toLocaleString() + '</td></tr>' +
+                '<tr><td>所得稅扣繳合計</td><td class="amt">$ ' + Math.round(sum.incomeTax).toLocaleString() + '</td></tr>' +
+                '<tr><td>健保保險費扣繳合計（含眷屬）</td><td class="amt">$ ' + Math.round(sum.healthIns).toLocaleString() + '</td></tr>' +
+                '<tr><td>勞保保險費扣繳合計</td><td class="amt">$ ' + Math.round(sum.laborIns).toLocaleString() + '</td></tr>' +
+                '<tr><td>就業保險費扣繳合計</td><td class="amt">$ ' + Math.round(sum.empIns).toLocaleString() + '</td></tr>' +
+                '<tr><td>勞退自提（不計入應稅所得）</td><td class="amt">$ ' + Math.round(sum.pensionSelf).toLocaleString() + '</td></tr>' +
+                '<tr class="total-row"><td>淨給付實領合計</td><td class="amt">$ ' + Math.round(sum.netSalary).toLocaleString() + '</td></tr>' +
+                '</tbody>' +
+            '</table>' +
+        '</div>' +
+        // 月份明細
+        '<div class="box">' +
+            '<div class="box-title">📅 各月明細（共 ' + sum.slipCount + ' 個月）</div>' +
+            '<table>' +
+                '<thead><tr><th>年月</th><th class="amt">給付額</th><th class="amt">所得稅</th><th class="amt">實發</th></tr></thead>' +
+                '<tbody>';
+    for (var i = 0; i < sum.months.length; i++) {
+        var m = sum.months[i];
+        html += '<tr><td>' + m.ym + '</td>' +
+            '<td class="amt">$ ' + Math.round(m.gross).toLocaleString() + '</td>' +
+            '<td class="amt">$ ' + Math.round(m.tax).toLocaleString() + '</td>' +
+            '<td class="amt">$ ' + Math.round(m.net).toLocaleString() + '</td></tr>';
+    }
+    html += '<tr class="total-row"><td>合計</td>' +
+        '<td class="amt">$ ' + Math.round(sum.grossPay).toLocaleString() + '</td>' +
+        '<td class="amt">$ ' + Math.round(sum.incomeTax).toLocaleString() + '</td>' +
+        '<td class="amt">$ ' + Math.round(sum.netSalary).toLocaleString() + '</td></tr>';
+    html += '</tbody></table></div>' +
+        '<div class="notes">' +
+            '📌 本憑單為依據本公司薪資系統 ' + year + ' 年度發放紀錄彙總列印，供員工辦理綜合所得稅申報之參考。<br>' +
+            '📌 實際申報請以財政部國稅局核發之扣繳憑單正本為準。<br>' +
+            '📌 列印時間：' + new Date().toLocaleString('zh-TW') +
+        '</div>' +
+        '<div class="sign">' +
+            '<div class="col"><div class="line">扣繳義務人簽章</div></div>' +
+            '<div class="col"><div class="line">會計簽章</div></div>' +
+            '<div class="col"><div class="line">所得人簽收</div></div>' +
+        '</div>' +
+        '<div class="no-print" style="text-align:center; margin-top:20px;">' +
+            '<button onclick="window.print()" style="padding:10px 20px; font-size:14px; background:#f59e0b; color:white; border:none; border-radius:6px; cursor:pointer;">🖨️ 列印</button>' +
+            ' <button onclick="window.close()" style="padding:10px 20px; font-size:14px; background:#9ca3af; color:white; border:none; border-radius:6px; cursor:pointer; margin-left:8px;">關閉</button>' +
+        '</div>' +
+        '</body></html>';
+    w.document.write(html);
+    w.document.close();
+}
+
+
+// ============================================================
+// 📧 寄送薪資單 + 💾 PDF 下載 + 🏢 全公司年度報表
+// ============================================================
+
+// 💾 將指定的 DOM 元素下載為 PDF
+function downloadElementAsPdf(elem, filename) {
+    if (!elem) return alert('⚠️ 找不到內容');
+    if (typeof html2pdf === 'undefined') {
+        return alert('⚠️ PDF 函式庫尚未載入，請稍候或檢查網路');
+    }
+    var opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename || 'document.pdf',
+        image: { type: 'jpeg', quality: 0.96 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    showNotif('📄 PDF 產生中…');
+    html2pdf().set(opt).from(elem).save().then(function(){
+        showNotif('✅ PDF 已下載');
+    }).catch(function(e){
+        console.warn('PDF err', e);
+        alert('⚠️ PDF 產生失敗：' + (e && e.message ? e.message : e));
+    });
+}
+
+// 💾 下載個別薪資單 PDF（從薪資單檢視頁觸發）
+function downloadSlipAsPdf(empId, yearMonth) {
+    var emp = loadData('employees', defaultEmployees).find(function(e){return e.id===empId;});
+    if (!emp) return alert('⚠️ 員工不存在');
+    // 開啟薪資單檢視（若未開）
+    if (typeof openPayrollView === 'function') openPayrollView(empId, yearMonth);
+    // 短暫等待 DOM 渲染
+    setTimeout(function(){
+        var el = document.getElementById('slipPrintArea') || document.querySelector('.salary-slip-view') || document.querySelector('#salaryViewModal .modal-box');
+        if (!el) return alert('⚠️ 找不到薪資單內容');
+        downloadElementAsPdf(el, '薪資單_' + emp.name + '_' + yearMonth + '.pdf');
+    }, 350);
+}
+
+// 📧 寄送薪資單到員工 e-mail
+function emailSalarySlip(empId, yearMonth) {
+    var emp = loadData('employees', defaultEmployees).find(function(e){return e.id===empId;});
+    if (!emp) return alert('⚠️ 員工不存在');
+    var fullInfo = loadData('employeesFullInfo', {});
+    var info = fullInfo[empId] || {};
+    var email = info.email;
+    if (!email) {
+        if (confirm('⚠️ 此員工尚未設定 e-mail，要先開啟員工資料補上嗎？')) {
+            if (typeof openEditEmployeeModal === 'function') openEditEmployeeModal(empId);
+        }
+        return;
+    }
+    var slips = loadData('salarySlips', {});
+    var key = empId + '_' + yearMonth;
+    var slip = slips[key];
+    if (!slip) return alert('⚠️ 該月薪資單不存在');
+    
+    var ym = yearMonth.split('-');
+    var subject = '【' + (loadData('sysParams', {}).company || '公司') + '】' + ym[0] + '年 ' + ym[1] + '月 薪資單 — ' + emp.name;
+    var body =
+'親愛的 ' + emp.name + ' 您好：\n\n' +
+'以下是您 ' + ym[0] + '年 ' + ym[1] + '月 的薪資明細：\n' +
+'━━━━━━━━━━━━━━━━━━━━━━\n' +
+'📌 員工編號：' + emp.num + '\n' +
+'📌 員工類型：' + (emp.empType === 'parttime' ? '工讀' : '正職') + '\n\n' +
+'💰 應稅所得\n' +
+'  基本薪資：$ ' + (slip.hourlyWage||0).toLocaleString() + '\n' +
+'  特休工資：$ ' + (slip.specialLeaveWage||0).toLocaleString() + '\n' +
+'  假日津貼：$ ' + (slip.holidayAllowance||0).toLocaleString() + '\n' +
+'  加班費：  $ ' + (slip.overtimeWage||0).toLocaleString() + '\n\n' +
+'📉 代扣項目\n' +
+'  健保費：  $ ' + (slip.healthIns||0).toLocaleString() + '\n' +
+'  勞保費：  $ ' + (slip.laborIns||0).toLocaleString() + '\n' +
+'  就業保險：$ ' + (slip.empIns||0).toLocaleString() + '\n' +
+'  所得稅：  $ ' + (slip.incomeTax||0).toLocaleString() + '\n' +
+'  自提退休金：$ ' + (slip.pensionSelf||0).toLocaleString() + '\n\n' +
+'🏦 公司提繳退休金（不計入薪資）：$ ' + (slip.companyPension||0).toLocaleString() + '\n\n' +
+'━━━━━━━━━━━━━━━━━━━━━━\n' +
+'💵 實發金額：$ ' + (slip.netSalary||0).toLocaleString() + '\n' +
+'━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+'⚠️ 如有疑問請於 3 個工作天內回覆此信，或聯絡人事單位。\n\n' +
+'此致\n' + (loadData('sysParams', {}).company || '公司') + ' 敬上\n' +
+'寄發時間：' + new Date().toLocaleString('zh-TW');
+    
+    var mailto = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    // 記錄寄送歷史
+    var sentLog = loadData('salarySlipEmailLog', []);
+    sentLog.push({
+        id: 'sel_' + Date.now(),
+        empId: empId, yearMonth: yearMonth, email: email,
+        sentBy: (currentUser && currentUser.name) || '管理員',
+        sentAt: new Date().toISOString()
+    });
+    if (sentLog.length > 1000) sentLog = sentLog.slice(sentLog.length - 1000);
+    saveData('salarySlipEmailLog', sentLog);
+    showNotif('📧 開啟郵件 App 中…');
+    window.location.href = mailto;
+}
+
+// 📧 批次寄送本月所有員工的薪資單
+function batchEmailSalarySlips(yearMonth) {
+    if (!yearMonth) {
+        yearMonth = prompt('請輸入要批次寄送的年月（格式 YYYY-MM）：');
+        if (!yearMonth) return;
+    }
+    var slips = loadData('salarySlips', {});
+    var employees = loadData('employees', defaultEmployees);
+    var fullInfo = loadData('employeesFullInfo', {});
+    var emails = [];
+    var missing = [];
+    Object.keys(slips).forEach(function(k){
+        var s = slips[k];
+        if (s.yearMonth !== yearMonth || s.status !== 'issued') return;
+        var emp = employees.find(function(e){return e.id===s.empId;});
+        if (!emp) return;
+        var info = fullInfo[s.empId] || {};
+        if (info.email) emails.push({ emp: emp, email: info.email, slip: s });
+        else missing.push(emp.name);
+    });
+    
+    if (emails.length === 0) return alert('⚠️ 此月份沒有可寄送的薪資單');
+    var msg = '📧 將寄送 ' + emails.length + ' 封薪資單給：\n\n' +
+        emails.map(function(x){return '• ' + x.emp.name + ' → ' + x.email;}).join('\n');
+    if (missing.length > 0) msg += '\n\n⚠️ 以下員工缺 e-mail（將跳過）：\n' + missing.map(function(n){return '• ' + n;}).join('\n');
+    msg += '\n\n確定要逐一開啟郵件 App？（請逐封按送出）';
+    if (!confirm(msg)) return;
+    
+    // 逐一開啟 mailto（用 setTimeout 排隊避免被瀏覽器擋）
+    var i = 0;
+    function sendNext() {
+        if (i >= emails.length) {
+            showNotif('✅ 已開啟 ' + emails.length + ' 封郵件視窗');
+            return;
+        }
+        emailSalarySlip(emails[i].emp.id, yearMonth);
+        i++;
+        setTimeout(sendNext, 1200);
+    }
+    sendNext();
+}
+
+// 💾 下載年度扣繳憑單 PDF
+function downloadAnnualAsPdf(empId, year) {
+    var emp = loadData('employees', defaultEmployees).find(function(e){return e.id===empId;});
+    if (!emp) return alert('⚠️ 員工不存在');
+    // 先呼叫列印函數產生內容
+    if (typeof printAnnualWithholding === 'function') {
+        // 改寫：直接產生隱藏元素，html2pdf 抓
+        var sum = calcAnnualWithholding(empId, year);
+        if (sum.slipCount === 0) return alert('⚠️ ' + year + ' 年度尚無已發放薪資單');
+        var sysParams = loadData('sysParams', {});
+        var companyName = sysParams.company || 'RC 金門醫院';
+        var fullInfo = loadData('employeesFullInfo', {});
+        var info = fullInfo[empId] || {};
+        var stores = loadData('stores', defaultStores);
+        var store = stores.find(function(s){ return s.id === emp.homeStoreId; });
+        var storeName = store ? store.name : '—';
+        
+        var hideDiv = document.createElement('div');
+        hideDiv.style.cssText = 'position:fixed; left:-9999px; top:0; width:780px; background:white; padding:28px; font-family:"Microsoft JhengHei",sans-serif;';
+        var monthsRows = '';
+        for (var i = 0; i < sum.months.length; i++) {
+            var m = sum.months[i];
+            monthsRows += '<tr><td style="border:1px solid #888;padding:4px 6px;text-align:center;">' + m.ym + '</td>' +
+                '<td style="border:1px solid #888;padding:4px 6px;text-align:right;">$' + Math.round(m.gross).toLocaleString() + '</td>' +
+                '<td style="border:1px solid #888;padding:4px 6px;text-align:right;">$' + Math.round(m.tax).toLocaleString() + '</td>' +
+                '<td style="border:1px solid #888;padding:4px 6px;text-align:right;">$' + Math.round(m.net).toLocaleString() + '</td></tr>';
+        }
+        hideDiv.innerHTML =
+            '<div style="text-align:center; border-bottom:2px solid #111; padding-bottom:10px; margin-bottom:14px;">' +
+                '<div style="font-size:12px;">中華民國</div>' +
+                '<h1 style="font-size:20px; margin:4px 0;">' + year + ' 年度各類所得扣繳暨免扣繳憑單</h1>' +
+                '<div style="font-size:13px; color:#444;">薪資所得（格式：50）</div>' +
+            '</div>' +
+            '<div style="border:1px solid #888; padding:10px; margin-bottom:10px;">' +
+                '<div style="background:#fef3c7; padding:5px 8px; margin:-10px -10px 8px; font-weight:bold; border-bottom:1px solid #888;">🏢 扣繳義務人（雇主）</div>' +
+                '<div style="font-size:13px;">單位名稱：<strong>' + companyName + '</strong> ｜ 門市：<strong>' + storeName + '</strong></div>' +
+            '</div>' +
+            '<div style="border:1px solid #888; padding:10px; margin-bottom:10px;">' +
+                '<div style="background:#fef3c7; padding:5px 8px; margin:-10px -10px 8px; font-weight:bold; border-bottom:1px solid #888;">👤 所得人資料</div>' +
+                '<div style="font-size:13px; line-height:1.8;">' +
+                '姓名：<strong>' + emp.name + '</strong> ｜ 員工編號：' + emp.num + '<br>' +
+                '身分證字號：' + (info.idNo || '—') + ' ｜ 職稱：' + (info.position || '—') + '<br>' +
+                '到職日：' + (info.hireDate || '—') + ' ｜ 員工類型：' + (emp.empType === 'parttime' ? '工讀' : '正職') +
+                '</div>' +
+            '</div>' +
+            '<div style="border:1px solid #888; padding:10px; margin-bottom:10px;">' +
+                '<div style="background:#fef3c7; padding:5px 8px; margin:-10px -10px 8px; font-weight:bold; border-bottom:1px solid #888;">💰 ' + year + ' 年度給付總額與扣繳明細</div>' +
+                '<table style="width:100%; border-collapse:collapse; font-size:12px;">' +
+                '<tr><td style="border:1px solid #888;padding:5px 8px;">給付總額（含薪資、加班費、各項津貼）</td><td style="border:1px solid #888;padding:5px 8px;text-align:right;">$ ' + Math.round(sum.grossPay).toLocaleString() + '</td></tr>' +
+                '<tr><td style="border:1px solid #888;padding:5px 8px;">所得稅扣繳合計</td><td style="border:1px solid #888;padding:5px 8px;text-align:right;">$ ' + Math.round(sum.incomeTax).toLocaleString() + '</td></tr>' +
+                '<tr><td style="border:1px solid #888;padding:5px 8px;">健保保險費扣繳合計（含眷屬）</td><td style="border:1px solid #888;padding:5px 8px;text-align:right;">$ ' + Math.round(sum.healthIns).toLocaleString() + '</td></tr>' +
+                '<tr><td style="border:1px solid #888;padding:5px 8px;">勞保保險費扣繳合計</td><td style="border:1px solid #888;padding:5px 8px;text-align:right;">$ ' + Math.round(sum.laborIns).toLocaleString() + '</td></tr>' +
+                '<tr><td style="border:1px solid #888;padding:5px 8px;">就業保險費扣繳合計</td><td style="border:1px solid #888;padding:5px 8px;text-align:right;">$ ' + Math.round(sum.empIns).toLocaleString() + '</td></tr>' +
+                '<tr style="background:#fffbeb;font-weight:bold;"><td style="border:1px solid #888;padding:5px 8px;">淨給付實領合計</td><td style="border:1px solid #888;padding:5px 8px;text-align:right;">$ ' + Math.round(sum.netSalary).toLocaleString() + '</td></tr>' +
+                '</table>' +
+            '</div>' +
+            '<div style="border:1px solid #888; padding:10px; margin-bottom:10px;">' +
+                '<div style="background:#fef3c7; padding:5px 8px; margin:-10px -10px 8px; font-weight:bold; border-bottom:1px solid #888;">📅 各月明細</div>' +
+                '<table style="width:100%; border-collapse:collapse; font-size:11px;">' +
+                '<thead><tr style="background:#fef3c7;"><th style="border:1px solid #888;padding:4px;">年月</th><th style="border:1px solid #888;padding:4px;">給付額</th><th style="border:1px solid #888;padding:4px;">所得稅</th><th style="border:1px solid #888;padding:4px;">實發</th></tr></thead>' +
+                '<tbody>' + monthsRows + '</tbody>' +
+                '</table>' +
+            '</div>' +
+            '<div style="font-size:10px; color:#444; padding:8px; background:#f9fafb; border-radius:4px;">' +
+                '📌 本憑單為本公司薪資系統 ' + year + ' 年度發放紀錄彙總；申報請以財政部國稅局核發之扣繳憑單正本為準。<br>' +
+                '📌 列印時間：' + new Date().toLocaleString('zh-TW') +
+            '</div>';
+        document.body.appendChild(hideDiv);
+        downloadElementAsPdf(hideDiv, '年度扣繳憑單_' + emp.name + '_' + year + '.pdf');
+        setTimeout(function(){ document.body.removeChild(hideDiv); }, 4000);
+    }
+}
+
+// 🏢 全公司年度報表（彙總所有員工）
+function generateCompanyAnnualReport(year) {
+    var emps = loadData('employees', defaultEmployees);
+    var stores = loadData('stores', defaultStores);
+    var fullInfo = loadData('employeesFullInfo', {});
+    
+    var report = {
+        year: year,
+        totalEmployees: 0,
+        fulltime: 0,
+        parttime: 0,
+        totalGrossPay: 0,
+        totalIncomeTax: 0,
+        totalHealthIns: 0,
+        totalLaborIns: 0,
+        totalEmpIns: 0,
+        totalPensionSelf: 0,
+        totalCompanyPension: 0,
+        totalNetSalary: 0,
+        rows: [],
+        byStore: {}
+    };
+    
+    for (var i = 0; i < emps.length; i++) {
+        var emp = emps[i];
+        var sum = calcAnnualWithholding(emp.id, year);
+        if (sum.slipCount === 0) continue;
+        report.totalEmployees++;
+        if (emp.empType === 'parttime') report.parttime++; else report.fulltime++;
+        report.totalGrossPay += sum.grossPay;
+        report.totalIncomeTax += sum.incomeTax;
+        report.totalHealthIns += sum.healthIns;
+        report.totalLaborIns += sum.laborIns;
+        report.totalEmpIns += sum.empIns;
+        report.totalPensionSelf += sum.pensionSelf;
+        report.totalCompanyPension += sum.companyPension;
+        report.totalNetSalary += sum.netSalary;
+        var store = stores.find(function(s){return s.id===emp.homeStoreId;});
+        var storeName = store ? store.name : '未指定';
+        if (!report.byStore[storeName]) report.byStore[storeName] = { count:0, gross:0, net:0, tax:0 };
+        report.byStore[storeName].count++;
+        report.byStore[storeName].gross += sum.grossPay;
+        report.byStore[storeName].net += sum.netSalary;
+        report.byStore[storeName].tax += sum.incomeTax;
+        report.rows.push({
+            emp: emp, store: storeName, slipCount: sum.slipCount,
+            gross: sum.grossPay, tax: sum.incomeTax,
+            healthIns: sum.healthIns, laborIns: sum.laborIns,
+            net: sum.netSalary
+        });
+    }
+    // 依實發金額排序
+    report.rows.sort(function(a,b){return b.net - a.net;});
+    return report;
+}
+
+function renderCompanyAnnualReport() {
+    var yearInput = document.getElementById('carYear');
+    if (!yearInput) return;
+    var year = yearInput.value || String(new Date().getFullYear());
+    var rpt = generateCompanyAnnualReport(year);
+    
+    var summary = document.getElementById('carSummary');
+    var byStore = document.getElementById('carByStore');
+    var rows = document.getElementById('carRows');
+    
+    if (rpt.totalEmployees === 0) {
+        if (summary) summary.innerHTML = '<div class="alert-box">📭 ' + year + ' 年度尚無已發放的薪資單</div>';
+        if (byStore) byStore.innerHTML = '';
+        if (rows) rows.innerHTML = '';
+        return;
+    }
+    
+    if (summary) {
+        summary.innerHTML =
+            '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">' +
+                '<div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe); padding:12px; border-radius:10px; text-align:center;">' +
+                    '<div style="font-size:11px; color:#1e40af;">員工數（有發單）</div>' +
+                    '<div style="font-size:24px; font-weight:bold; color:#1d4ed8;">' + rpt.totalEmployees + '</div>' +
+                    '<div style="font-size:10px; color:#6b7280;">正職 ' + rpt.fulltime + ' ｜ 工讀 ' + rpt.parttime + '</div>' +
+                '</div>' +
+                '<div style="background:linear-gradient(135deg,#dcfce7,#bbf7d0); padding:12px; border-radius:10px; text-align:center;">' +
+                    '<div style="font-size:11px; color:#166534;">給付總額</div>' +
+                    '<div style="font-size:20px; font-weight:bold; color:#059669;">$' + Math.round(rpt.totalGrossPay).toLocaleString() + '</div>' +
+                '</div>' +
+                '<div style="background:linear-gradient(135deg,#fee2e2,#fecaca); padding:12px; border-radius:10px; text-align:center;">' +
+                    '<div style="font-size:11px; color:#991b1b;">扣繳稅額合計</div>' +
+                    '<div style="font-size:20px; font-weight:bold; color:#dc2626;">$' + Math.round(rpt.totalIncomeTax).toLocaleString() + '</div>' +
+                '</div>' +
+                '<div style="background:linear-gradient(135deg,#fef3c7,#fde68a); padding:12px; border-radius:10px; text-align:center;">' +
+                    '<div style="font-size:11px; color:#92400e;">實發合計</div>' +
+                    '<div style="font-size:20px; font-weight:bold; color:#d97706;">$' + Math.round(rpt.totalNetSalary).toLocaleString() + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div style="margin-top:10px; padding:10px; background:#f9fafb; border-radius:8px; font-size:12px;">' +
+                '🏛️ 健保扣繳：$' + Math.round(rpt.totalHealthIns).toLocaleString() + 
+                '　🛡️ 勞保扣繳：$' + Math.round(rpt.totalLaborIns).toLocaleString() +
+                '　🛡️ 就保扣繳：$' + Math.round(rpt.totalEmpIns).toLocaleString() +
+                '　🏦 公司提繳退休金：$' + Math.round(rpt.totalCompanyPension).toLocaleString() +
+            '</div>';
+    }
+    
+    // 按門市分組
+    if (byStore) {
+        var storeKeys = Object.keys(rpt.byStore);
+        var storeHtml = '<table class="work-table" style="width:100%;"><thead><tr><th>🏬 門市</th><th>員工數</th><th style="text-align:right;">給付總額</th><th style="text-align:right;">所得稅</th><th style="text-align:right;">實發</th></tr></thead><tbody>';
+        for (var k = 0; k < storeKeys.length; k++) {
+            var sk = storeKeys[k];
+            var sd = rpt.byStore[sk];
+            storeHtml += '<tr><td><strong>' + sk + '</strong></td><td>' + sd.count + ' 人</td>' +
+                '<td style="text-align:right;">$' + Math.round(sd.gross).toLocaleString() + '</td>' +
+                '<td style="text-align:right;color:#dc2626;">$' + Math.round(sd.tax).toLocaleString() + '</td>' +
+                '<td style="text-align:right;font-weight:bold;color:#059669;">$' + Math.round(sd.net).toLocaleString() + '</td></tr>';
+        }
+        storeHtml += '</tbody></table>';
+        byStore.innerHTML = storeHtml;
+    }
+    
+    // 員工明細
+    if (rows) {
+        var rowsHtml = '<table class="work-table" style="width:100%; font-size:12px;"><thead><tr><th>員工</th><th>門市</th><th>類型</th><th>月數</th><th style="text-align:right;">給付</th><th style="text-align:right;">所得稅</th><th style="text-align:right;">健保</th><th style="text-align:right;">勞保</th><th style="text-align:right;">實發</th><th>操作</th></tr></thead><tbody>';
+        for (var r = 0; r < rpt.rows.length; r++) {
+            var row = rpt.rows[r];
+            rowsHtml += '<tr><td><strong>' + row.emp.name + '</strong><br><small>' + row.emp.num + '</small></td>' +
+                '<td>' + row.store + '</td>' +
+                '<td>' + (row.emp.empType === 'parttime' ? '工讀' : '正職') + '</td>' +
+                '<td style="text-align:center;">' + row.slipCount + '</td>' +
+                '<td style="text-align:right;">$' + Math.round(row.gross).toLocaleString() + '</td>' +
+                '<td style="text-align:right;color:#dc2626;">$' + Math.round(row.tax).toLocaleString() + '</td>' +
+                '<td style="text-align:right;">$' + Math.round(row.healthIns).toLocaleString() + '</td>' +
+                '<td style="text-align:right;">$' + Math.round(row.laborIns).toLocaleString() + '</td>' +
+                '<td style="text-align:right;font-weight:bold;color:#059669;">$' + Math.round(row.net).toLocaleString() + '</td>' +
+                '<td><button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="downloadAnnualAsPdf(\'' + row.emp.id + '\',\'' + year + '\')">📥 PDF</button></td>' +
+                '</tr>';
+        }
+        rowsHtml += '</tbody></table>';
+        rows.innerHTML = rowsHtml;
+    }
+}
+
+function initCompanyAnnualReport() {
+    if (!currentUser || ['admin','manager'].indexOf(currentUser.role) === -1) {
+        var p = document.getElementById('page-companyAnnual');
+        if (p) p.innerHTML = '<div class="alert-box" style="background:#fee2e2; color:#991b1b; margin:20px;">⛔ 此頁面僅限管理員 / 店長存取</div>';
+        return;
+    }
+    var yi = document.getElementById('carYear');
+    if (yi && !yi.value) yi.value = String(new Date().getFullYear());
+    renderCompanyAnnualReport();
+}
+
+function downloadCompanyAnnualReportPdf() {
+    var year = (document.getElementById('carYear')||{value:''}).value || String(new Date().getFullYear());
+    var area = document.getElementById('carPrintArea');
+    if (!area) return alert('⚠️ 找不到報表');
+    downloadElementAsPdf(area, '全公司年度報表_' + year + '.pdf');
 }
 
 
@@ -22111,52 +23061,63 @@ function viewCompTransferHistory(empId) {
 }
 
 // 🤖 自動將正職超時上班轉入代休（idempotent — 同一天反覆呼叫結果一致）
+// 涵蓋：平日加班（超過 8h）、休息日上班（全部時數）、國定假日上班（全部時數，勞基法 §39）
 // 回傳：{ hours, changed, quotaDiff } — 不直接寫入 storage，由呼叫方批次儲存
 function autoConvertFulltimeOT(emp, dateKey, slots, compTransfers) {
     var result = { hours: 0, changed: false, quotaDiff: 0 };
     if (!emp || emp.empType === 'parttime') return result;  // 只處理正職
     if (!compTransfers) return result;
     
-    // 算平日工時（僅 work / business / fcCounsel，不含 restWork / holidayWork）
-    var workTotal = 0;
+    // 算各類超時時數
+    var workTotal = 0, restTotal = 0, holidayTotal = 0;
     var WORK_TYPES = ['work','business','fcCounsel'];
+    var REST_TYPES = ['restWork'];
     for (var i = 0; i < (slots||[]).length; i++) {
         var s = slots[i];
-        if (s && WORK_TYPES.indexOf(s.type) !== -1 && s.start && s.start !== '-') {
-            workTotal += calculateHours(s.start, s.end);
-        }
+        if (!s || !s.type || !s.start || s.start === '-') continue;
+        if (WORK_TYPES.indexOf(s.type) !== -1) workTotal += calculateHours(s.start, s.end);
+        else if (REST_TYPES.indexOf(s.type) !== -1) restTotal += calculateHours(s.start, s.end);
+        else if (s.type === 'holidayWork') holidayTotal += calculateHours(s.start, s.end);
     }
-    var otHours = Math.round(Math.max(0, workTotal - 8) * 10) / 10;
-    result.hours = otHours;
+    // 平日加班 + 休息日上班全部時數 + 國定假日上班全部時數
+    var weekdayOT = Math.max(0, workTotal - 8);
+    var totalOT = Math.round((weekdayOT + restTotal + holidayTotal) * 10) / 10;
+    result.hours = totalOT;
     
-    // 找既有「自動」轉入紀錄
+    // 找既有「自動」轉入紀錄（支援所有歷史旗標）
     var existingIdx = -1;
     for (var ci = 0; ci < compTransfers.length; ci++) {
         var t = compTransfers[ci];
-        if (t.empId === emp.id && t.date === dateKey && t.source === 'auto') {
+        if (t.empId === emp.id && t.date === dateKey && (t.source === 'auto' || t.autoFromOT || t.auto)) {
             existingIdx = ci;
             break;
         }
     }
     var existing = existingIdx >= 0 ? compTransfers[existingIdx] : null;
     
-    if (otHours > 0) {
-        var reasonText = '正職加班自動轉代休（當日 ' + workTotal.toFixed(1) + 'h，超出 8h）';
+    if (totalOT > 0) {
+        var detailParts = [];
+        if (weekdayOT > 0) detailParts.push('平日加班 ' + weekdayOT.toFixed(1) + 'h');
+        if (restTotal > 0) detailParts.push('休息日上班 ' + restTotal.toFixed(1) + 'h');
+        if (holidayTotal > 0) detailParts.push('國定假日上班 ' + holidayTotal.toFixed(1) + 'h（§39）');
+        var reasonText = '⚙️ 正職超時自動轉代休（' + detailParts.join(' + ') + '）';
         if (!existing) {
             compTransfers.push({
                 id: 'ct_auto_' + emp.id + '_' + dateKey,
-                date: dateKey, empId: emp.id, hours: otHours,
-                reason: reasonText, source: 'auto',
+                date: dateKey, empId: emp.id, hours: totalOT,
+                reason: reasonText,
+                source: 'auto', autoFromOT: true, auto: true,  // 三旗標都打，未來查詢相容
                 storeId: emp.homeStoreId || '',
                 addedBy: '系統自動',
                 addedAt: new Date().toISOString()
             });
-            result.quotaDiff = otHours;
+            result.quotaDiff = totalOT;
             result.changed = true;
-        } else if (Math.abs(existing.hours - otHours) > 0.05) {
-            result.quotaDiff = otHours - existing.hours;
-            existing.hours = otHours;
+        } else if (Math.abs(existing.hours - totalOT) > 0.05) {
+            result.quotaDiff = totalOT - existing.hours;
+            existing.hours = totalOT;
             existing.reason = reasonText;
+            existing.source = 'auto'; existing.autoFromOT = true; existing.auto = true;
             existing.addedAt = new Date().toISOString();
             result.changed = true;
         }
