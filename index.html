@@ -3725,7 +3725,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 </select>
                 <span id="empCountInfo" style="font-size:12px; color:#6b7280;"></span>
             </div>
-            <table class="work-table"><thead><tr><th>編號</th><th>姓名</th><th>🏬 門市</th><th>職位</th><th>類型</th><th>到職日</th><th>狀態</th><th>操作</th></tr></thead>
+            <table class="work-table"><thead><tr><th>編號</th><th>姓名</th><th>🏬 門市</th><th>職位</th><th>類型</th><th>到職日</th><th>🔄 累積代休</th><th>狀態</th><th>操作</th></tr></thead>
             <tbody id="empBasicList"></tbody></table>
         </div></div></div>
     </div>
@@ -8112,10 +8112,9 @@ function calcDayLaborCost(slots, emp, date) {
         r.ot134Hours = Math.max(0, Math.min(10, workTotal) - 8);
         r.ot167Hours = Math.max(0, workTotal - 10);
         if (isFulltime) {
-            // 正職：底薪一日固定，加班部分按時薪倍率
+            // 🤖 正職：底薪固定，加班時數自動轉代休（不領現金加班費）
             r.cost += dailyBase;
-            r.cost += r.ot134Hours * hourly * 1.34;
-            r.cost += r.ot167Hours * hourly * 1.67;
+            // OT 部分已轉代休 → 不計費用
         } else {
             // 工讀：時數 × 時薪
             r.cost += r.workHours * hourly;
@@ -8123,15 +8122,21 @@ function calcDayLaborCost(slots, emp, date) {
             r.cost += r.ot167Hours * hourly * 1.67;
         }
     }
-    // 休息日上班：前 2 小時 1.34x、3-8 小時 1.67x、9-12 小時 2.67x（兩者通用）
+    // 休息日上班：前 2 小時 1.34x、3-8 小時 1.67x、9-12 小時 2.67x
     if (restTotal > 0) {
         r.restWorkHours = restTotal;
         r.restOT134 = Math.min(2, restTotal);
         r.restOT167 = Math.max(0, Math.min(8, restTotal) - 2);
         r.restOT267 = Math.max(0, restTotal - 8);
-        r.cost += r.restOT134 * hourly * 1.34;
-        r.cost += r.restOT167 * hourly * 1.67;
-        r.cost += r.restOT267 * hourly * 2.67;
+        if (isFulltime) {
+            // 🤖 正職：休息日上班時數自動轉代休（不計入當日費用）
+            // 時數已記在 r.restOT* — 由 syncAllAutoCompTransfers 統一加入額度
+        } else {
+            // 工讀：休息日上班加班費
+            r.cost += r.restOT134 * hourly * 1.34;
+            r.cost += r.restOT167 * hourly * 1.67;
+            r.cost += r.restOT267 * hourly * 2.67;
+        }
     }
     // 國定假日上班：加倍（勞基法 §39）— 兩者都加倍時薪
     if (holidayTotal > 0) {
@@ -8144,6 +8149,86 @@ function calcDayLaborCost(slots, emp, date) {
     }
     r.cost += r.leaveCost;
     return r;
+}
+
+// 🔄 自動同步正職員工的加班轉特代休
+// 對每位正職員工的所有排班日，自動建立/更新代休轉入記錄
+function syncAllAutoCompTransfers() {
+    try {
+        var employees = loadData('employees', defaultEmployees);
+        var shifts = loadData('shifts', {});
+        var transfers = loadData('compTransfers', []);
+        var quotas = loadData('leaveQuotas', {});
+        var changed = false;
+        
+        employees.forEach(function(emp){
+            // 只處理正職
+            if (emp.empType !== 'fulltime' && emp.empType) return;
+            if (!emp.empType) {
+                // 預設視為正職（沒指定類型者）
+            }
+            if (!quotas[emp.id]) quotas[emp.id] = {};
+            if (typeof quotas[emp.id]['特代休'] !== 'number') quotas[emp.id]['特代休'] = 0;
+            
+            Object.keys(shifts).forEach(function(dateKey){
+                if (!shifts[dateKey] || !shifts[dateKey][emp.id]) return;
+                var raw = shifts[dateKey][emp.id];
+                var slots = getDaySlots(raw);
+                var date = new Date(dateKey);
+                if (isNaN(date.getTime())) return;
+                var r = calcDayLaborCost(slots, emp, date);
+                var newOT = r.ot134Hours + r.ot167Hours + r.restOT134 + r.restOT167 + r.restOT267;
+                newOT = Math.round(newOT * 10) / 10;  // 保留 1 位小數
+                
+                var oldIdx = transfers.findIndex(function(t){ 
+                    return t.empId === emp.id && t.date === dateKey && t.autoFromOT; 
+                });
+                var oldOT = oldIdx >= 0 ? (parseFloat(transfers[oldIdx].hours) || 0) : 0;
+                var delta = newOT - oldOT;
+                
+                if (newOT > 0) {
+                    if (oldIdx >= 0) {
+                        if (Math.abs(delta) > 0.01) {
+                            transfers[oldIdx].hours = newOT;
+                            transfers[oldIdx].addedAt = new Date().toISOString();
+                            quotas[emp.id]['特代休'] = (quotas[emp.id]['特代休'] || 0) + delta;
+                            if (quotas[emp.id]['特代休'] < 0) quotas[emp.id]['特代休'] = 0;
+                            changed = true;
+                        }
+                    } else {
+                        transfers.push({
+                            id: 'ct_auto_' + emp.id + '_' + dateKey.replace(/-/g,''),
+                            date: dateKey,
+                            empId: emp.id,
+                            hours: newOT,
+                            reason: '⚙️ 系統自動 - 加班轉特代休',
+                            autoFromOT: true,
+                            storeId: emp.homeStoreId,
+                            addedBy: '系統',
+                            addedAt: new Date().toISOString()
+                        });
+                        quotas[emp.id]['特代休'] = (quotas[emp.id]['特代休'] || 0) + newOT;
+                        changed = true;
+                    }
+                } else if (oldIdx >= 0) {
+                    // 沒有 OT 了，移除舊自動記錄並扣回額度
+                    quotas[emp.id]['特代休'] = (quotas[emp.id]['特代休'] || 0) - oldOT;
+                    if (quotas[emp.id]['特代休'] < 0) quotas[emp.id]['特代休'] = 0;
+                    transfers.splice(oldIdx, 1);
+                    changed = true;
+                }
+            });
+        });
+        
+        if (changed) {
+            saveData('compTransfers', transfers);
+            saveData('leaveQuotas', quotas);
+        }
+        return changed;
+    } catch(e) {
+        console.warn('syncAllAutoCompTransfers err:', e);
+        return false;
+    }
 }
 
 // 全域：目前選擇的門市（瀏覽中）
@@ -8199,6 +8284,9 @@ function empNumSortKey(emp) {
 }
 
 function renderScheduleTable() {
+    // 🤖 自動同步正職加班轉代休（每次渲染前執行一次）
+    syncAllAutoCompTransfers();
+    
     var dates = getWeekDates(currentWeekStart);
     var employees = loadData('employees', defaultEmployees);
     var shifts = loadData('shifts', {});
@@ -8320,6 +8408,12 @@ function renderScheduleTable() {
     var homeHtml = '';
     var weekHours = 0;
     
+    // 🤖 預載 compTransfers / leaveQuotas，迴圈中累積變動，最後一次儲存
+    var _ctArr = loadData('compTransfers', []);
+    var _ctChanged = false;
+    var _quotas = loadData('leaveQuotas', {});
+    var _quotaDelta = {};  // { empId: diff }
+    
     if (homeEmployees.length === 0) {
         homeHtml = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#9ca3af;">📭 本店尚無員工，請點上方「➕ 新增員工」</td></tr>';
     } else {
@@ -8333,6 +8427,13 @@ function renderScheduleTable() {
                 var rawShift = shifts[dateKey] && shifts[dateKey][emp.id];
                 var slots = getDaySlots(rawShift);
                 homeHtml += renderScheduleCell(emp.id, dateKey, slots, isAdmin, stores, currentSchedStoreId, emp.homeStoreId);
+                
+                // 🤖 正職加班自動轉代休
+                var autoR = autoConvertFulltimeOT(emp, dateKey, slots, _ctArr);
+                if (autoR.changed) {
+                    _ctChanged = true;
+                    _quotaDelta[emp.id] = (_quotaDelta[emp.id] || 0) + autoR.quotaDiff;
+                }
                 
                 // 🏛️ 依勞基法精算（含加班 1.34x/1.67x、休息日、國定假日、假別）
                 // 正職：底薪 ÷ 當月天數；工讀：時薪 × 時數
@@ -8373,6 +8474,23 @@ function renderScheduleTable() {
         homeHtml += '</tr>';
     }
     document.getElementById('schHBody').innerHTML = homeHtml;
+    
+    // 🤖 批次儲存自動轉代休的變動
+    if (_ctChanged) {
+        saveData('compTransfers', _ctArr);
+        for (var qid in _quotaDelta) {
+            if (Math.abs(_quotaDelta[qid]) > 0.01) {
+                if (!_quotas[qid]) _quotas[qid] = {};
+                var cur = parseFloat(_quotas[qid]['特代休']) || 0;
+                var nv = cur + _quotaDelta[qid];
+                if (nv < 0) nv = 0;
+                _quotas[qid]['特代休'] = nv;
+            }
+        }
+        saveData('leaveQuotas', _quotas);
+        // 雲端同步
+        if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(ex){} }
+    }
     
     // 🆕 填入表頭的「實際工時」儲存格
     var actualCells = document.querySelectorAll('#schHHeader .sch-actual-cell .sch-actual-val');
@@ -8567,8 +8685,63 @@ function renderEmpInfoCell(emp, stores) {
     html += '<span class="emp-num">' + emp.num + '</span><br>';
     html += '<span class="emp-type ' + typeClass + '">' + typeLabel + '</span>';
     html += '<span class="emp-home">🏬 ' + homeName + '</span>';
+    // 🤖 正職顯示代休餘額（可點擊查看明細）
+    if (emp.empType !== 'parttime') {
+        var quotas = loadData('leaveQuotas', {});
+        var compBal = (quotas[emp.id] && parseFloat(quotas[emp.id]['特代休'])) || 0;
+        if (compBal > 0) {
+            html += '<div class="emp-comp-bal" onclick="viewEmpCompHistory(\'' + emp.id + '\'); event.stopPropagation();" title="點擊查看代休明細" style="cursor:pointer; margin-top:4px; background:#d1fae5; color:#047857; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:bold; display:inline-block;">🔄 代休 ' + compBal.toFixed(1) + 'h</div>';
+        }
+    }
     html += '</td>';
     return html;
+}
+
+// 🔄 查看員工代休累積明細
+function viewEmpCompHistory(empId) {
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e){return e.id===empId;});
+    if (!emp) return;
+    var transfers = loadData('compTransfers', []).filter(function(t){return t.empId===empId;});
+    transfers.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    
+    var quotas = loadData('leaveQuotas', {});
+    var balance = (quotas[empId] && parseFloat(quotas[empId]['特代休'])) || 0;
+    
+    var html = '<div style="background:linear-gradient(135deg,#d1fae5,#a7f3d0); padding:14px; border-radius:10px; margin-bottom:12px; text-align:center;">';
+    html += '<div style="font-size:12px; color:#065f46;">' + emp.name + '（' + emp.num + '）目前特代休額度</div>';
+    html += '<div style="font-size:28px; font-weight:bold; color:#047857; margin-top:4px;">🔄 ' + balance.toFixed(1) + ' 小時</div>';
+    html += '<div style="font-size:11px; color:#065f46; margin-top:4px;">約 ' + (balance/8).toFixed(2) + ' 天</div>';
+    html += '</div>';
+    
+    if (transfers.length === 0) {
+        html += '<div style="color:#9ca3af; text-align:center; padding:20px;">📭 尚無代休累積紀錄</div>';
+    } else {
+        html += '<table class="work-table" style="width:100%; font-size:12px;"><thead><tr><th>日期</th><th>來源</th><th style="text-align:right;">時數</th><th>原因</th></tr></thead><tbody>';
+        for (var i = 0; i < transfers.length; i++) {
+            var t = transfers[i];
+            var srcBadge = t.autoFromOT 
+                ? '<span class="status-tag" style="background:#dbeafe;color:#1e40af;font-size:10px;">🤖 自動</span>'
+                : '<span class="status-tag" style="background:#fef3c7;color:#92400e;font-size:10px;">✏️ 手動</span>';
+            html += '<tr><td>' + t.date + '</td><td>' + srcBadge + '</td>' +
+                    '<td style="text-align:right; color:#047857; font-weight:bold;">+' + (parseFloat(t.hours)||0).toFixed(1) + 'h</td>' +
+                    '<td style="font-size:11px;">' + (t.reason||'—') + '</td></tr>';
+        }
+        html += '</tbody></table>';
+    }
+    
+    // 重用 msDetailPanel 顯示（或建立簡易彈窗）
+    var modal = document.getElementById('empCompHistoryModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'empCompHistoryModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = '<div class="modal-box" style="max-width:560px;"><div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;"><h3 id="empCompHistoryTitle" style="margin:0;">🔄 代休累積明細</h3><button onclick="closeModal(\'empCompHistoryModal\')" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button></div><div class="modal-body" id="empCompHistoryBody"></div></div>';
+        document.body.appendChild(modal);
+    }
+    document.getElementById('empCompHistoryTitle').textContent = '🔄 ' + emp.name + ' 代休明細';
+    document.getElementById('empCompHistoryBody').innerHTML = html;
+    modal.classList.remove('hidden');
 }
 
 // 渲染單一儲存格（包含 2 個 slot）
@@ -17591,9 +17764,13 @@ function renderEmployeeBasicList() {
     }
     
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#9ca3af;">📭 此門市/搜尋條件下尚無員工</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af;">📭 此門市/搜尋條件下尚無員工</td></tr>';
         return;
     }
+    
+    // 🔄 載入代休額度資料
+    var quotas = loadData('leaveQuotas', {});
+    var transfers = loadData('compTransfers', []);
     
     var html = '';
     for (var i = 0; i < filtered.length; i++) {
@@ -17615,6 +17792,19 @@ function renderEmployeeBasicList() {
             ? '<span class="status-tag" style="background:#fed7aa;color:#9a3412;">工讀</span>'
             : '<span class="status-tag" style="background:#dcfce7;color:#166534;">正職</span>';
         
+        // 🔄 累積代休（從 leaveQuotas 取得，並計算總轉入時數）
+        var compH = (quotas[emp.id] && parseFloat(quotas[emp.id]['特代休'])) || 0;
+        var empTransfers = transfers.filter(function(t){ return t.empId === emp.id; });
+        var totalConverted = empTransfers.reduce(function(sum,t){ return sum + (parseFloat(t.hours)||0); }, 0);
+        var autoCnt = empTransfers.filter(function(t){return t.autoFromOT||t.source==='auto'||t.auto;}).length;
+        var compCell;
+        if (compH > 0 || totalConverted > 0) {
+            var autoBadge = autoCnt > 0 ? ' <span style="font-size:9px; color:#7c3aed; background:#ede9fe; padding:1px 4px; border-radius:3px;">🤖×' + autoCnt + '</span>' : '';
+            compCell = '<button class="btn-secondary" style="padding:3px 8px; font-size:12px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;" onclick="viewCompTransferHistory(\'' + emp.id + '\')">⏱️ ' + compH.toFixed(1) + 'h' + autoBadge + '</button>';
+        } else {
+            compCell = '<span style="color:#9ca3af; font-size:11px;">—</span>';
+        }
+        
         var canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager');
         var actBtn = '';
         if (currentUser && currentUser.role === 'admin') {
@@ -17626,7 +17816,7 @@ function renderEmployeeBasicList() {
         } else {
             actBtn = '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;">查看</button>';
         }
-        html += '<tr><td>' + emp.num + '</td><td><strong>' + emp.name + '</strong></td><td>' + storeHtml + '</td><td>' + (info.position || '時薪人員') + '</td><td>' + typeHtml + '</td><td>' + (info.hireDate || '-') + '</td><td>' + statusHtml + '</td><td>' + actBtn + '</td></tr>';
+        html += '<tr><td>' + emp.num + '</td><td><strong>' + emp.name + '</strong></td><td>' + storeHtml + '</td><td>' + (info.position || '時薪人員') + '</td><td>' + typeHtml + '</td><td>' + (info.hireDate || '-') + '</td><td>' + compCell + '</td><td>' + statusHtml + '</td><td>' + actBtn + '</td></tr>';
     }
     tbody.innerHTML = html;
 }
@@ -21756,13 +21946,26 @@ function renderCompTransferList() {
         el.innerHTML = '<div style="color:#9ca3af; text-align:center; padding:10px;">（尚無登錄）</div>';
         return;
     }
+    // 自動記錄排前面
+    list.sort(function(a,b){
+        if (a.autoFromOT && !b.autoFromOT) return -1;
+        if (!a.autoFromOT && b.autoFromOT) return 1;
+        return 0;
+    });
     el.innerHTML = list.map(function(t){
         var emp = emps.find(function(e){return e.id===t.empId;});
         var name = emp ? emp.name : '?';
-        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:#f0fdf4; border-radius:6px; margin-bottom:4px;">' +
-            '<div><strong>' + name + '</strong>　<span style="color:#047857;">+' + t.hours + 'h</span>' + 
+        var bg = t.autoFromOT ? '#fef3c7' : '#f0fdf4';
+        var tag = t.autoFromOT 
+            ? '<span style="background:#f59e0b; color:white; padding:1px 6px; border-radius:6px; font-size:9px; margin-left:4px;">🤖 自動</span>' 
+            : '';
+        var btn = t.autoFromOT
+            ? '<span style="font-size:10px; color:#6b7280;">系統管理</span>'
+            : '<button class="btn-danger" style="padding:3px 8px; font-size:11px;" onclick="deleteCompTransfer(\'' + t.id + '\')">🗑️</button>';
+        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:' + bg + '; border-radius:6px; margin-bottom:4px;">' +
+            '<div><strong>' + name + '</strong>' + tag + '　<span style="color:#047857;">+' + t.hours + 'h</span>' + 
             (t.reason ? '<div style="font-size:10px; color:#6b7280;">' + t.reason + '</div>' : '') + '</div>' +
-            '<button class="btn-danger" style="padding:3px 8px; font-size:11px;" onclick="deleteCompTransfer(\'' + t.id + '\')">🗑️</button>' +
+            btn +
             '</div>';
     }).join('');
 }
@@ -21833,6 +22036,137 @@ function addCompLeaveToQuota(empId, hours) {
         quotas[empId][key] = newHours;
         saveData('leaveQuotas', quotas);
     } catch(e){ console.warn('addCompLeaveToQuota err', e); }
+}
+
+// 🔄 查看員工代休轉入歷史
+function viewCompTransferHistory(empId) {
+    var emps = loadData('employees', defaultEmployees);
+    var emp = emps.find(function(e){ return e.id === empId; });
+    if (!emp) return alert('⚠️ 員工不存在');
+    var quotas = loadData('leaveQuotas', {});
+    var currentBalance = (quotas[empId] && parseFloat(quotas[empId]['特代休'])) || 0;
+    var transfers = loadData('compTransfers', []).filter(function(t){ return t.empId === empId; });
+    // 依日期由新到舊
+    transfers.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    
+    var totalIn = transfers.reduce(function(s,t){ return s + (parseFloat(t.hours)||0); }, 0);
+    var used = Math.max(0, totalIn - currentBalance);  // 已使用
+    
+    // 建構彈窗內容
+    var modalId = 'compHistModal';
+    var existingModal = document.getElementById(modalId);
+    if (existingModal) existingModal.remove();
+    
+    var html = '<div id="' + modalId + '" class="modal-overlay" style="z-index:10001;">' +
+        '<div class="modal-box" style="max-width:560px;">' +
+        '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<h3 style="margin:0;">🔄 ' + emp.name + ' 代休轉入歷史</h3>' +
+            '<button onclick="document.getElementById(\'' + modalId + '\').remove()" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        // 統計卡
+        '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;">' +
+            '<div style="background:#ecfdf5; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#047857;">累積轉入</div>' +
+                '<div style="font-size:20px; font-weight:bold; color:#059669;">' + totalIn.toFixed(1) + 'h</div>' +
+            '</div>' +
+            '<div style="background:#fef3c7; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#92400e;">已使用</div>' +
+                '<div style="font-size:20px; font-weight:bold; color:#d97706;">' + used.toFixed(1) + 'h</div>' +
+            '</div>' +
+            '<div style="background:#dbeafe; padding:10px; border-radius:8px; text-align:center;">' +
+                '<div style="font-size:11px; color:#1e40af;">目前餘額</div>' +
+                '<div style="font-size:20px; font-weight:bold; color:#1d4ed8;">' + currentBalance.toFixed(1) + 'h</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="alert-box info" style="font-size:11px; margin-bottom:10px;">' +
+            '💡 正職員工的加班時數會自動轉入「特代休」假別額度，可於請假時消耗。' +
+        '</div>';
+    
+    if (transfers.length === 0) {
+        html += '<div style="text-align:center; padding:20px; color:#9ca3af;">📭 尚無代休轉入記錄</div>';
+    } else {
+        html += '<div style="font-size:12px; color:#6b7280; margin-bottom:6px; font-weight:bold;">📋 轉入明細（共 ' + transfers.length + ' 筆）</div>' +
+            '<div style="max-height:300px; overflow-y:auto;">' +
+            '<table class="work-table" style="width:100%; font-size:12px;">' +
+            '<thead><tr><th>日期</th><th>時數</th><th>來源</th><th>原因</th></tr></thead><tbody>';
+        for (var i = 0; i < transfers.length; i++) {
+            var t = transfers[i];
+            var isAuto = t.autoFromOT || t.source === 'auto' || t.auto;
+            var srcBadge = isAuto 
+                ? '<span style="background:#ede9fe; color:#7c3aed; padding:2px 6px; border-radius:3px; font-size:10px;">🤖 自動</span>'
+                : '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:3px; font-size:10px;">✋ 手動</span>';
+            html += '<tr>' +
+                '<td>' + (t.date || '—') + '</td>' +
+                '<td style="text-align:right; font-weight:bold; color:#059669;">+' + (parseFloat(t.hours)||0).toFixed(1) + 'h</td>' +
+                '<td>' + srcBadge + '</td>' +
+                '<td style="font-size:11px; color:#374151;">' + (t.reason || '—') + '</td>' +
+                '</tr>';
+        }
+        html += '</tbody></table></div>';
+    }
+    
+    html += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 🤖 自動將正職超時上班轉入代休（idempotent — 同一天反覆呼叫結果一致）
+// 回傳：{ hours, changed, quotaDiff } — 不直接寫入 storage，由呼叫方批次儲存
+function autoConvertFulltimeOT(emp, dateKey, slots, compTransfers) {
+    var result = { hours: 0, changed: false, quotaDiff: 0 };
+    if (!emp || emp.empType === 'parttime') return result;  // 只處理正職
+    if (!compTransfers) return result;
+    
+    // 算平日工時（僅 work / business / fcCounsel，不含 restWork / holidayWork）
+    var workTotal = 0;
+    var WORK_TYPES = ['work','business','fcCounsel'];
+    for (var i = 0; i < (slots||[]).length; i++) {
+        var s = slots[i];
+        if (s && WORK_TYPES.indexOf(s.type) !== -1 && s.start && s.start !== '-') {
+            workTotal += calculateHours(s.start, s.end);
+        }
+    }
+    var otHours = Math.round(Math.max(0, workTotal - 8) * 10) / 10;
+    result.hours = otHours;
+    
+    // 找既有「自動」轉入紀錄
+    var existingIdx = -1;
+    for (var ci = 0; ci < compTransfers.length; ci++) {
+        var t = compTransfers[ci];
+        if (t.empId === emp.id && t.date === dateKey && t.source === 'auto') {
+            existingIdx = ci;
+            break;
+        }
+    }
+    var existing = existingIdx >= 0 ? compTransfers[existingIdx] : null;
+    
+    if (otHours > 0) {
+        var reasonText = '正職加班自動轉代休（當日 ' + workTotal.toFixed(1) + 'h，超出 8h）';
+        if (!existing) {
+            compTransfers.push({
+                id: 'ct_auto_' + emp.id + '_' + dateKey,
+                date: dateKey, empId: emp.id, hours: otHours,
+                reason: reasonText, source: 'auto',
+                storeId: emp.homeStoreId || '',
+                addedBy: '系統自動',
+                addedAt: new Date().toISOString()
+            });
+            result.quotaDiff = otHours;
+            result.changed = true;
+        } else if (Math.abs(existing.hours - otHours) > 0.05) {
+            result.quotaDiff = otHours - existing.hours;
+            existing.hours = otHours;
+            existing.reason = reasonText;
+            existing.addedAt = new Date().toISOString();
+            result.changed = true;
+        }
+    } else if (existing) {
+        // 工時降回 8h 內或被刪 → 移除自動紀錄
+        result.quotaDiff = -existing.hours;
+        compTransfers.splice(existingIdx, 1);
+        result.changed = true;
+    }
+    return result;
 }
 
 function initMonthlySettle() {
