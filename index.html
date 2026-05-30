@@ -9,6 +9,7 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" crossorigin="anonymous"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans-serif; background: #f0f0f0; }
@@ -5569,6 +5570,45 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                         <button onclick="cloudPush(false)" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬆️ 強制上傳</button>
                         <button onclick="cloudPull(false).then(function(){setTimeout(function(){location.reload();},1500);})" style="padding:8px 14px; background:#0ea5e9; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬇️ 強制下載</button>
                     </div>
+                </div>
+                
+                <!-- 📂 Google 雲端模式（資料量大時推薦）-->
+                <div style="background:linear-gradient(135deg,#ede9fe,#c4b5fd); padding:16px; border-radius:10px; margin-bottom:16px; border:3px solid #7c3aed;">
+                    <h3 style="margin:0 0 10px 0; color:#5b21b6; display:flex; align-items:center; gap:6px;">
+                        📂 Google 雲端模式 <span style="background:#7c3aed; color:white; font-size:11px; padding:2px 8px; border-radius:10px;">大空間</span>
+                    </h3>
+                    <div style="background:white; padding:10px 12px; border-radius:6px; font-size:13px; margin-bottom:10px; line-height:1.7;">
+                        ✅ <strong>資料存在你自己的 Google 雲端</strong>，最大 10MB+<br>
+                        ✅ <strong>100% 屬於你</strong>，可隨時下載 / 刪除<br>
+                        ✅ <strong>免費、永不到期</strong>，只要你有 Google 帳號<br>
+                        ✅ 適合資料量大、Pantry 裝不下時
+                    </div>
+                    <div style="background:#faf5ff; padding:10px; border-radius:6px; font-size:12px; margin-bottom:10px; color:#5b21b6;">
+                        <strong>📝 一次性設定（約 3 分鐘）：</strong><br>
+                        1️⃣ 點下方「📋 複製腳本」按鈕（藍色）<br>
+                        2️⃣ 點「🚀 開啟 Apps Script」（黃色）→ 用 Google 登入<br>
+                        3️⃣ 點「新增專案」→ 把剛剛複製的腳本**全部貼上**（先全選刪除預設的）<br>
+                        4️⃣ 點上方💾儲存 → 點「部署 ▸ 新增部署」<br>
+                        5️⃣ 類型選「網頁應用程式」、執行身分「我」、存取權「任何人」→ 點「部署」<br>
+                        6️⃣ 第一次會要求授權 → 「允許」<br>
+                        7️⃣ 複製顯示的「網頁應用程式網址」→ 貼到下方欄位 → 點「連接」
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <input type="text" id="gas_url" placeholder="貼上 Apps Script Web App 網址" style="flex:1; min-width:260px; padding:10px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:12px;">
+                        <button class="btn-confirm" style="padding:10px 20px; font-weight:bold;" onclick="gasConnect()">🔗 連接</button>
+                    </div>
+                    <div id="gasStatus" style="margin-top:8px; font-size:13px;"></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                        <button onclick="copyGasScript()" style="padding:8px 14px; background:#3b82f6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">📋 複製腳本</button>
+                        <button onclick="window.open('https://script.google.com','_blank')" style="padding:8px 14px; background:#f59e0b; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🚀 開啟 Apps Script</button>
+                        <button onclick="gasTest()" style="padding:8px 14px; background:#0ea5e9; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔍 測試連線</button>
+                        <button onclick="gasForcePush()" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬆️ 強制上傳</button>
+                        <button onclick="gasForcePull()" style="padding:8px 14px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬇️ 強制下載</button>
+                    </div>
+                    <details style="margin-top:10px;">
+                        <summary style="cursor:pointer; color:#5b21b6; font-size:12px;">▸ 查看 / 手動複製腳本內容</summary>
+                        <textarea id="gasScriptArea" readonly style="width:100%; height:200px; margin-top:8px; padding:10px; font-family:monospace; font-size:11px; border:1px solid #999; border-radius:4px; background:#1f2937; color:#fef3c7;"></textarea>
+                    </details>
                 </div>
                 
                 <details style="margin-bottom:16px;">
@@ -19077,6 +19117,42 @@ function pantryGetId() { return localStorage.getItem('_cs_pantryId') || DEFAULT_
 function pantryEnabled() { return !!pantryGetId(); }
 function pantryUrl() { return PANTRY_BASE_URL + '/' + pantryGetId() + '/basket/' + PANTRY_BASKET_NAME; }
 
+// 🗜️ LZ-string 壓縮工具：把資料縮到 1/3 大小，相容舊格式
+function _lzAvailable() { return typeof LZString !== 'undefined'; }
+
+// 壓縮一個物件成「Pantry friendly」結構：若壓縮後較小則用壓縮版，否則用原物件
+function lzPackForCloud(dataObj) {
+    if (!_lzAvailable()) return dataObj;
+    try {
+        var raw = JSON.stringify(dataObj);
+        var compressed = LZString.compressToBase64(raw);
+        // 壓縮版的開銷
+        if (compressed && compressed.length * 1.05 < raw.length) {
+            return {
+                _compressed: true,
+                _algo: 'lz-b64',
+                _origSize: raw.length,
+                _compSize: compressed.length,
+                _payload: compressed
+            };
+        }
+    } catch(e) {}
+    return dataObj;
+}
+
+// 解壓 Pantry 取回的資料：若有 _compressed 旗標就解壓，否則原物件返回（相容舊格式）
+function lzUnpackFromCloud(data) {
+    if (data && data._compressed === true && data._payload && _lzAvailable()) {
+        try {
+            var raw = LZString.decompressFromBase64(data._payload);
+            if (raw) return JSON.parse(raw);
+        } catch(e) {
+            console.warn('解壓失敗', e);
+        }
+    }
+    return data;
+}
+
 function pullFromPantry(silent) {
     var id = pantryGetId();
     if (!id) return Promise.reject(new Error('NO_PANTRY'));
@@ -19084,8 +19160,11 @@ function pullFromPantry(silent) {
         if (r.status === 400 || r.status === 404) throw new Error('PANTRY_NOT_FOUND');
         if (!r.ok) throw new Error('HTTP_' + r.status);
         return r.json();
-    }).then(function(data) {
-        if (!data || typeof data !== 'object') throw new Error('NO_DATA');
+    }).then(function(rawData) {
+        if (!rawData || typeof rawData !== 'object') throw new Error('NO_DATA');
+        // 🗜️ 自動解壓（若雲端是壓縮格式）
+        var data = lzUnpackFromCloud(rawData);
+        if (!data || typeof data !== 'object') throw new Error('UNPACK_FAILED');
         var applied = 0;
         for (var k in data) {
             if (BACKUP_KEYS.indexOf(k) >= 0) {
@@ -19107,27 +19186,240 @@ function pushToPantry(silent) {
         var v = localStorage.getItem(k);
         if (v !== null) { try { data[k] = JSON.parse(v); } catch(e) { data[k] = v; } }
     }
+    // 🗜️ 自動壓縮（若 LZString 可用且能縮小）
+    var packed = lzPackForCloud(data);
+    var bodyStr = JSON.stringify(packed);
+    var sizeKB = (bodyStr.length / 1024).toFixed(1);
+    var compInfo = '';
+    if (packed._compressed) {
+        var ratio = Math.round((1 - packed._compSize / packed._origSize) * 100);
+        compInfo = '（壓縮率 ' + ratio + '%）';
+        addSyncLog('🗜️ 壓縮上傳：' + (packed._origSize/1024).toFixed(1) + 'KB → ' + sizeKB + 'KB ' + compInfo, 'info');
+    }
     // POST 會建立或完整覆蓋 basket 內容
     return ezFetch(pantryUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: bodyStr
     }, 15000).then(function(r) {
-        if (!r.ok) throw new Error('HTTP_' + r.status);
+        if (!r.ok) {
+            if (r.status === 400) throw new Error('HTTP_400 (資料 ' + sizeKB + 'KB' + (packed._compressed ? '，壓縮後仍超限' : '，可改用壓縮模式') + ')');
+            throw new Error('HTTP_' + r.status);
+        }
         localStorage.setItem('_cs_lastPush', Date.now().toString());
-        if (!silent) showNotif('☁️ 已上傳至雲端');
+        if (!silent) showNotif('☁️ 已上傳至雲端 ' + compInfo);
         return true;
     });
 }
 
+// ============================================================
+// 📂 Google Apps Script 同步（自己的 Google 雲端，免費大空間）
+// ============================================================
+
+// 給使用者複製到 Apps Script 編輯器的腳本內容
+var GAS_SCRIPT_TEMPLATE =
+'// === HR 系統雲端同步腳本（自動生成，請勿修改）===\n' +
+'// 部署時：類型「網頁應用程式」、執行身分「我」、存取權「任何人」\n' +
+'\n' +
+'const FILE_NAME = "hr-system-sync.json";\n' +
+'\n' +
+'function getOrCreateFile() {\n' +
+'  const files = DriveApp.getFilesByName(FILE_NAME);\n' +
+'  if (files.hasNext()) return files.next();\n' +
+'  return DriveApp.createFile(FILE_NAME, "{}", "application/json");\n' +
+'}\n' +
+'\n' +
+'function doGet(e) {\n' +
+'  try {\n' +
+'    const f = getOrCreateFile();\n' +
+'    const txt = f.getBlob().getDataAsString() || "{}";\n' +
+'    return ContentService.createTextOutput(txt)\n' +
+'      .setMimeType(ContentService.MimeType.JSON);\n' +
+'  } catch (err) {\n' +
+'    return ContentService.createTextOutput(JSON.stringify({_error: String(err)}))\n' +
+'      .setMimeType(ContentService.MimeType.JSON);\n' +
+'  }\n' +
+'}\n' +
+'\n' +
+'function doPost(e) {\n' +
+'  try {\n' +
+'    const body = (e && e.postData && e.postData.contents) || "{}";\n' +
+'    const f = getOrCreateFile();\n' +
+'    f.setContent(body);\n' +
+'    return ContentService.createTextOutput(JSON.stringify({\n' +
+'      _ok: true, _size: body.length, _at: new Date().toISOString()\n' +
+'    })).setMimeType(ContentService.MimeType.JSON);\n' +
+'  } catch (err) {\n' +
+'    return ContentService.createTextOutput(JSON.stringify({_error: String(err)}))\n' +
+'      .setMimeType(ContentService.MimeType.JSON);\n' +
+'  }\n' +
+'}\n';
+
+function gasGetUrl() { return localStorage.getItem('_gas_url') || ''; }
+function gasSetUrl(u) { if (u) localStorage.setItem('_gas_url', u); else localStorage.removeItem('_gas_url'); }
+function gasEnabled() { return !!gasGetUrl(); }
+
+// 📋 複製腳本到剪貼簿
+function copyGasScript() {
+    var area = document.getElementById('gasScriptArea');
+    if (area) area.value = GAS_SCRIPT_TEMPLATE;
+    try {
+        navigator.clipboard.writeText(GAS_SCRIPT_TEMPLATE).then(function(){
+            showNotif('📋 腳本已複製！貼到 Apps Script 編輯器');
+        }, function(){
+            // fallback：選取文字框讓使用者手動 Cmd/Ctrl+C
+            if (area) { area.focus(); area.select(); }
+            showNotif('💡 請手動複製文字框內容');
+        });
+    } catch(e) {
+        if (area) { area.focus(); area.select(); }
+        showNotif('💡 請手動複製文字框內容');
+    }
+}
+
+// 🔗 連接 Apps Script
+function gasConnect() {
+    var url = (document.getElementById('gas_url')||{value:''}).value.trim();
+    var statusEl = document.getElementById('gasStatus');
+    var setS = function(m, c) { if (statusEl) { statusEl.textContent = m; statusEl.style.color = c || '#374151'; } };
+    if (!url) { setS('⚠️ 請貼上 Apps Script 網址', '#dc2626'); return; }
+    if (url.indexOf('script.google.com') === -1) {
+        setS('⚠️ 網址應該是 script.google.com 開頭', '#dc2626');
+        return;
+    }
+    setS('🔄 測試連線中...', '#2563eb');
+    gasSetUrl(url);
+    
+    // 測試 GET
+    ezFetch(url, { method: 'GET' }, 15000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.text();
+    }).then(function(text) {
+        setS('✅ 連接成功！可以開始同步', '#059669');
+        showNotif('✅ Google 雲端已連接');
+    }).catch(function(err) {
+        setS('❌ 連線失敗：' + (err.message || err) + '。請檢查腳本是否已部署為「任何人可存取」', '#dc2626');
+    });
+}
+
+// 🔍 測試連線
+function gasTest() {
+    var statusEl = document.getElementById('gasStatus');
+    var setS = function(m, c) { if (statusEl) { statusEl.textContent = m; statusEl.style.color = c || '#374151'; } };
+    var url = gasGetUrl();
+    if (!url) { setS('⚠️ 尚未設定 Apps Script 網址', '#dc2626'); return; }
+    setS('🔍 測試中...', '#2563eb');
+    ezFetch(url, { method: 'GET' }, 15000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.text();
+    }).then(function(text) {
+        var size = (text.length / 1024).toFixed(1);
+        setS('✅ 連線正常 ｜ 雲端目前資料：' + size + ' KB', '#059669');
+    }).catch(function(err) {
+        setS('❌ 失敗：' + (err.message || err), '#dc2626');
+    });
+}
+
+// ⬆️ 推送到 Google
+function pushToGAS(silent) {
+    var url = gasGetUrl();
+    if (!url) return Promise.reject(new Error('NO_GAS'));
+    var data = {};
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var k = BACKUP_KEYS[i];
+        var v = localStorage.getItem(k);
+        if (v !== null) { try { data[k] = JSON.parse(v); } catch(e) { data[k] = v; } }
+    }
+    // 🗜️ 壓縮（同 Pantry 處理）
+    var packed = lzPackForCloud(data);
+    var bodyStr = JSON.stringify(packed);
+    var sizeKB = (bodyStr.length/1024).toFixed(1);
+    var compInfo = '';
+    if (packed._compressed) {
+        var ratio = Math.round((1 - packed._compSize / packed._origSize) * 100);
+        compInfo = '（壓縮 ' + ratio + '%）';
+        if (typeof addSyncLog === 'function') addSyncLog('🗜️ Google 壓縮上傳：' + (packed._origSize/1024).toFixed(1) + 'KB → ' + sizeKB + 'KB ' + compInfo, 'info');
+    }
+    // Apps Script 用 text/plain 避免 CORS preflight
+    return ezFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: bodyStr
+    }, 25000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.text();
+    }).then(function(){
+        localStorage.setItem('_cs_lastPush', Date.now().toString());
+        if (!silent) showNotif('☁️ 已上傳到 Google ' + compInfo);
+        if (typeof addSyncLog === 'function') addSyncLog('Google 推送成功（' + sizeKB + 'KB' + compInfo + '）', 'success');
+        return true;
+    });
+}
+
+// ⬇️ 從 Google 下載
+function pullFromGAS(silent) {
+    var url = gasGetUrl();
+    if (!url) return Promise.reject(new Error('NO_GAS'));
+    return ezFetch(url, { method: 'GET' }, 25000).then(function(r) {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.text();
+    }).then(function(text) {
+        var rawData;
+        try { rawData = JSON.parse(text); } catch(e) { throw new Error('JSON_PARSE_ERR'); }
+        if (!rawData || typeof rawData !== 'object') throw new Error('NO_DATA');
+        if (rawData._error) throw new Error('GAS:' + rawData._error);
+        // 🗜️ 自動解壓
+        var data = lzUnpackFromCloud(rawData);
+        var applied = 0;
+        for (var k in data) {
+            if (BACKUP_KEYS.indexOf(k) >= 0) {
+                try { localStorage.setItem(k, JSON.stringify(data[k])); applied++; } catch(e) {}
+            }
+        }
+        localStorage.setItem('_cs_lastPull', Date.now().toString());
+        if (!silent) showNotif('☁️ 已從 Google 同步（' + applied + ' 項）');
+        if (typeof addSyncLog === 'function') addSyncLog('Google 拉取成功（' + applied + ' 項）', 'success');
+        return applied;
+    });
+}
+
+function gasForcePush() {
+    var statusEl = document.getElementById('gasStatus');
+    var setS = function(m, c) { if (statusEl) { statusEl.textContent = m; statusEl.style.color = c || '#374151'; } };
+    if (!gasEnabled()) { setS('❌ 尚未連接 Google', '#dc2626'); return; }
+    setS('⬆️ 上傳中...', '#2563eb');
+    pushToGAS(true).then(function() {
+        setS('✅ 已上傳！其他裝置點「⬇️ 強制下載」即可同步', '#059669');
+        showNotif('⬆️ 已上傳 Google 雲端');
+    }).catch(function(err) {
+        setS('❌ 上傳失敗：' + (err.message || err), '#dc2626');
+    });
+}
+
+function gasForcePull() {
+    var statusEl = document.getElementById('gasStatus');
+    var setS = function(m, c) { if (statusEl) { statusEl.textContent = m; statusEl.style.color = c || '#374151'; } };
+    if (!gasEnabled()) { setS('❌ 尚未連接 Google', '#dc2626'); return; }
+    if (!confirm('⚠️ 將用雲端資料覆蓋本機目前資料，確定？')) return;
+    setS('⬇️ 下載中...', '#2563eb');
+    pullFromGAS(false).then(function(n) {
+        setS('✅ 已下載 ' + n + ' 項！3 秒後重新整理畫面', '#059669');
+        setTimeout(function() { location.reload(); }, 3000);
+    }).catch(function(err) {
+        setS('❌ 下載失敗：' + (err.message || err), '#dc2626');
+    });
+}
+
 function cloudPull(silent) {
+    if (gasEnabled()) return pullFromGAS(silent);
     if (pantryEnabled()) return pullFromPantry(silent);
     if (fbEnabled()) return pullFromFirebase(silent);
     if (typeof pullFromGistNoAuth === 'function') return pullFromGistNoAuth(silent);
     return Promise.reject(new Error('NO_SYNC'));
 }
-// 統一雲端推送：Pantry > Firebase > Gist
+// 統一雲端推送：Google > Pantry > Firebase > Gist
 function cloudPush(silent) {
+    if (gasEnabled()) return pushToGAS(silent);
     if (pantryEnabled()) return pushToPantry(silent);
     if (fbEnabled()) return pushToFirebase(silent);
     if (typeof manualPushToCloud === 'function') { manualPushToCloud(silent); return Promise.resolve(); }
@@ -19319,9 +19611,29 @@ function checkDataSize() {
     var status = totalBytes/1024 > LIMIT_KB ? '❌ 超過上限！' :
                  totalBytes/1024 > 1000 ? '⚠️ 接近上限' : '✅ 正常';
     
+    // 🗜️ 壓縮預估
+    var compressLine = '';
+    if (typeof LZString !== 'undefined') {
+        try {
+            // 用真實資料估壓縮率
+            var sampleData = {};
+            for (var sk = 0; sk < BACKUP_KEYS.length; sk++) {
+                var skKey = BACKUP_KEYS[sk];
+                var skVal = localStorage.getItem(skKey);
+                if (skVal !== null) sampleData[skKey] = skVal;
+            }
+            var sampleRaw = JSON.stringify(sampleData);
+            var sampleComp = LZString.compressToBase64(sampleRaw);
+            var compKB = (sampleComp.length / 1024).toFixed(1);
+            var ratio = Math.round((1 - sampleComp.length / sampleRaw.length) * 100);
+            compressLine = '🗜️ 壓縮後預估：' + compKB + ' KB（省 ' + ratio + '%）\n';
+        } catch(e){}
+    }
+    
     var msg = '📏 本機資料大小檢查\n' +
         '━━━━━━━━━━━━━━━━━━━━\n' +
         '總大小：' + totalKB + ' KB / 1300 KB (' + pct + '%)\n' +
+        compressLine +
         '狀態：' + status + '\n\n' +
         'Top 10 大資料：\n';
     for (var j = 0; j < Math.min(10, items.length); j++) {
@@ -20114,6 +20426,16 @@ function initCloudSyncPage() {
         if (pantryStatusEl) { pantryStatusEl.textContent = '✅ 已連接 Pantry，跨裝置同步運作中'; pantryStatusEl.style.color = '#059669'; }
     }
     
+    // 📂 顯示 Google Apps Script 狀態 + 預載腳本
+    var gasUrlEl = document.getElementById('gas_url');
+    var gasStatusEl = document.getElementById('gasStatus');
+    var gasScriptArea = document.getElementById('gasScriptArea');
+    if (gasScriptArea) gasScriptArea.value = GAS_SCRIPT_TEMPLATE;
+    if (gasUrlEl && gasGetUrl()) {
+        gasUrlEl.value = gasGetUrl();
+        if (gasStatusEl) { gasStatusEl.textContent = '✅ 已連接 Google 雲端，跨裝置同步運作中（優先使用）'; gasStatusEl.style.color = '#059669'; }
+    }
+    
     // 更新 Token 狀態
     ghUpdateTokenStatus();
     
@@ -20269,10 +20591,17 @@ function manualPushToCloud(silent) {
         if (v !== null) snapshot._data[key] = v;
     }
     
-    // 🩺 自動瘦身：Pantry 限制 1.4MB / basket，超過就裁切日誌類資料
-    var payloadStr = JSON.stringify(snapshot);
+    // 🗜️ 先嘗試壓縮（LZ-string，相容自動偵測）
+    var packedSnap = lzPackForCloud(snapshot);
+    var payloadStr = JSON.stringify(packedSnap);
     var sizeKB = Math.round(payloadStr.length / 1024);
-    var LIMIT_KB = 1300;  // 保守抓 1.3MB 留緩衝
+    var LIMIT_KB = 1300;
+    var compInfo = '';
+    if (packedSnap._compressed) {
+        var ratio = Math.round((1 - packedSnap._compSize / packedSnap._origSize) * 100);
+        compInfo = '（已壓縮 ' + ratio + '%）';
+        addSyncLog('🗜️ 自動壓縮：' + (packedSnap._origSize/1024).toFixed(1) + 'KB → ' + sizeKB + 'KB ' + compInfo, 'info');
+    }
     
     if (sizeKB > LIMIT_KB) {
         addSyncLog('⚠️ 資料 ' + sizeKB + 'KB 超過上限，自動瘦身中…', 'error');
@@ -20297,15 +20626,17 @@ function manualPushToCloud(silent) {
                 } catch(e){}
             }
         }
-        payloadStr = JSON.stringify(snapshot);
+        // 重新壓縮
+        packedSnap = lzPackForCloud(snapshot);
+        payloadStr = JSON.stringify(packedSnap);
         sizeKB = Math.round(payloadStr.length / 1024);
         addSyncLog('✂️ 瘦身後：' + sizeKB + 'KB', 'info');
         
         // 仍超過 → 給使用者明確錯誤
         if (sizeKB > LIMIT_KB) {
             var msg = '❌ 資料超過 Pantry 雲端上限\n\n' +
-                '目前大小：' + sizeKB + ' KB\n' +
-                '上限：    ' + LIMIT_KB + ' KB\n\n' +
+                '目前大小（已壓縮）：' + sizeKB + ' KB\n' +
+                '上限：               ' + LIMIT_KB + ' KB\n\n' +
                 '建議：\n' +
                 '① 清理舊月份的排班資料\n' +
                 '② 刪除舊薪資單\n' +
@@ -20315,7 +20646,7 @@ function manualPushToCloud(silent) {
             return;
         }
     }
-    addSyncLog('📤 推送中（' + sizeKB + 'KB）…', 'info');
+    addSyncLog('📤 推送中（' + sizeKB + 'KB' + compInfo + '）…', 'info');
     
     ezFetch(endpoint.url, {
         method: 'POST',
@@ -20332,8 +20663,8 @@ function manualPushToCloud(silent) {
     }).then(function() {
         localStorage.setItem('_cs_lastPush', String(snapshot._timestamp));
         localStorage.setItem('_cs_lastKnownTs', String(snapshot._timestamp));
-        addSyncLog('推送成功（' + Object.keys(snapshot._data).length + ' 項 / ' + sizeKB + 'KB）', 'success');
-        if (!silent) showNotif('✅ 推送成功！');
+        addSyncLog('推送成功（' + Object.keys(snapshot._data).length + ' 項 / ' + sizeKB + 'KB' + compInfo + '）', 'success');
+        if (!silent) showNotif('✅ 推送成功！' + compInfo);
         updateSyncUI();
     }).catch(function(err) {
         addSyncLog('❌ 推送失敗：' + err.message, 'error');
@@ -20419,9 +20750,11 @@ function manualPullFromCloud(silent) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
         })
-        .then(function(data) {
-            if (!data) return;
-            if (!data._data) {
+        .then(function(rawData) {
+            if (!rawData) return;
+            // 🗜️ 自動解壓（若 push 時用了壓縮，這裡會自動展開）
+            var data = lzUnpackFromCloud(rawData);
+            if (!data || !data._data) {
                 addSyncLog('⚠️ 雲端資料格式不符', 'error');
                 return;
             }
@@ -20444,7 +20777,8 @@ function manualPullFromCloud(silent) {
             localStorage.setItem('_cs_lastPull', String(Date.now()));
             localStorage.setItem('_cs_lastKnownTs', String(data._timestamp));
             
-            addSyncLog('拉取成功（套用 ' + applied + ' 項）', 'success');
+            var fmtNote = rawData._compressed ? '（已解壓）' : '';
+            addSyncLog('拉取成功' + fmtNote + '（套用 ' + applied + ' 項）', 'success');
             if (!silent || applied > 0) showNotif('☁️ 已套用雲端資料（' + applied + ' 項）');
             
             updateSyncUI();
