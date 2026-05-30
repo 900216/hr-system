@@ -5604,6 +5604,8 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                         <button onclick="gasTest()" style="padding:8px 14px; background:#0ea5e9; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔍 測試連線</button>
                         <button onclick="gasForcePush()" style="padding:8px 14px; background:#8b5cf6; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬆️ 強制上傳</button>
                         <button onclick="gasForcePull()" style="padding:8px 14px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">⬇️ 強制下載</button>
+                        <button onclick="shareGasSyncLink()" style="padding:8px 14px; background:#ec4899; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">📲 分享連結給員工</button>
+                        <button onclick="embedGasUrlIntoSystem()" style="padding:8px 14px; background:#dc2626; color:white; border:0; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">💾 寫入系統（永久內建）</button>
                     </div>
                     <details style="margin-top:10px;">
                         <summary style="cursor:pointer; color:#5b21b6; font-size:12px;">▸ 查看 / 手動複製腳本內容</summary>
@@ -19113,6 +19115,14 @@ function pushToFirebase(silent) {
 // 🥫 Pantry 同步（最簡單：只需 Pantry ID，免 Token、免規則）
 var DEFAULT_PANTRY_ID = 'fa1fe25c-fd0a-4ba7-9cde-a67743c9ed74';  // ← 已內建，全員自動同步
 
+// 📂 Google Apps Script 同步（你的 Google 雲端，免費大空間）
+// 設定方式：到「線上同步」頁，連接 Apps Script 後點「💾 寫入系統」自動更新此行
+var DEFAULT_GAS_URL = "";  // ← 寫入系統後此處會自動填入網址
+
+function gasGetUrl() { return localStorage.getItem('_gas_url') || DEFAULT_GAS_URL || ''; }
+function gasSetUrl(u) { if (u) localStorage.setItem('_gas_url', u); else localStorage.removeItem('_gas_url'); }
+function gasEnabled() { return !!gasGetUrl(); }
+
 function pantryGetId() { return localStorage.getItem('_cs_pantryId') || DEFAULT_PANTRY_ID || ''; }
 function pantryEnabled() { return !!pantryGetId(); }
 function pantryUrl() { return PANTRY_BASE_URL + '/' + pantryGetId() + '/basket/' + PANTRY_BASKET_NAME; }
@@ -19255,9 +19265,90 @@ var GAS_SCRIPT_TEMPLATE =
 '  }\n' +
 '}\n';
 
-function gasGetUrl() { return localStorage.getItem('_gas_url') || ''; }
-function gasSetUrl(u) { if (u) localStorage.setItem('_gas_url', u); else localStorage.removeItem('_gas_url'); }
-function gasEnabled() { return !!gasGetUrl(); }
+// 💾 把 Google 雲端網址寫入 HTML 原始碼，下載修改版供管理員上傳到 GitHub
+// 之後任何裝置開啟網站，都會自動連到此雲端，員工零設定
+function embedGasUrlIntoSystem() {
+    var url = gasGetUrl();
+    if (!url) {
+        alert('⚠️ 請先在上方欄位設定並連接 Google 雲端網址');
+        return;
+    }
+    if (url.indexOf('script.google.com') === -1) {
+        alert('⚠️ 網址格式不對（應為 script.google.com 開頭）');
+        return;
+    }
+    
+    var msg = '🛠️ 即將產生「已內建雲端網址」的新版 index.html\n\n' +
+        '網址：' + url + '\n\n' +
+        '✅ 後續：\n' +
+        '① 系統會下載修改後的 index.html\n' +
+        '② 你上傳到 GitHub（取代原檔案）\n' +
+        '③ 任何裝置開啟網站，自動連此雲端、自動同步\n' +
+        '④ 員工完全不用設定，零步驟！\n\n' +
+        '是否繼續？';
+    if (!confirm(msg)) return;
+    
+    showNotif('📥 取得目前版本中...');
+    // 用 fetch 抓 GitHub Pages 上現有的 index.html（最新版）
+    fetch(window.location.pathname + '?_=' + Date.now())
+        .then(function(r){
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+        })
+        .then(function(html) {
+            // 找 DEFAULT_GAS_URL 並替換
+            var pattern = /var\s+DEFAULT_GAS_URL\s*=\s*"[^"]*"\s*;/;
+            if (!pattern.test(html)) {
+                // 試試單引號版本
+                pattern = /var\s+DEFAULT_GAS_URL\s*=\s*'[^']*'\s*;/;
+                if (!pattern.test(html)) {
+                    alert('⚠️ 在 HTML 找不到 DEFAULT_GAS_URL 變數，可能版本不符。\n\n請確認你的 index.html 是最新版（含此功能）。');
+                    return;
+                }
+            }
+            var safeUrl = url.replace(/"/g, '\\"');
+            var newHtml = html.replace(pattern, 'var DEFAULT_GAS_URL = "' + safeUrl + '";');
+            
+            // 確認替換成功
+            if (newHtml === html) {
+                alert('⚠️ 替換失敗，未變更 HTML');
+                return;
+            }
+            
+            // 觸發下載
+            var blob = new Blob([newHtml], { type: 'text/html;charset=utf-8' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'index.html';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function(){
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            }, 100);
+            
+            showNotif('✅ 已產生內建雲端的 index.html');
+            
+            // 操作教學
+            setTimeout(function(){
+                var instructions = '✅ 修改版 index.html 已下載！\n\n' +
+                    '🚀 GitHub 上傳步驟：\n' +
+                    '① 開瀏覽器到 github.com/900216/hr-system1\n' +
+                    '② 點 index.html → 垃圾桶刪除 → Commit\n' +
+                    '③ 點 Add file → Upload files\n' +
+                    '④ 把剛才下載的 index.html 拖入\n' +
+                    '⑤ Commit changes\n' +
+                    '⑥ 等 1-3 分鐘 Actions 跑完綠勾\n' +
+                    '⑦ 清快取 → 重新開網站\n\n' +
+                    '📌 之後：任何裝置（包括新員工的）開啟網站，\n' +
+                    '   都會自動連到你的 Google 雲端，自動下載資料！';
+                alert(instructions);
+            }, 500);
+        })
+        .catch(function(err) {
+            alert('⚠️ 取得 HTML 失敗：' + (err.message || err) + '\n\n你可以改用「📲 分享連結給員工」方式。');
+        });
+}
 
 // 📋 複製腳本到剪貼簿
 function copyGasScript() {
@@ -19408,6 +19499,145 @@ function gasForcePull() {
     }).catch(function(err) {
         setS('❌ 下載失敗：' + (err.message || err), '#dc2626');
     });
+}
+
+// 📲 產生分享連結（含 QR Code），新員工點連結即自動設定雲端同步
+function shareGasSyncLink() {
+    var url = gasGetUrl();
+    if (!url) {
+        alert('⚠️ 請先在上方欄位設定並連接 Google 雲端網址');
+        return;
+    }
+    var encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(url))));
+    var baseUrl = window.location.origin + window.location.pathname;
+    var shareUrl = baseUrl + '?syncgas=' + encoded;
+    var qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(shareUrl);
+    
+    var modalId = 'gasShareModal';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    
+    var html = '<div id="' + modalId + '" class="modal-overlay" style="z-index:10001;">' +
+        '<div class="modal-box" style="max-width:520px;">' +
+        '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<h3 style="margin:0;">📲 分享同步連結給員工</h3>' +
+            '<button onclick="document.getElementById(\'' + modalId + '\').remove()" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        '<div class="alert-box info" style="background:#dbeafe; color:#1e40af;">' +
+            '💡 把下面的連結（或 QR Code）傳給新員工。<br>' +
+            '他們點開後系統會跳問：「要套用此雲端設定嗎？」按「是」就自動連上、自動下載最新資料！' +
+        '</div>' +
+        '<div style="background:#f9fafb; padding:12px; border-radius:8px; margin-bottom:12px;">' +
+            '<div style="font-size:11px; color:#6b7280; margin-bottom:6px;">🔗 分享連結（長按複製或點按鈕）：</div>' +
+            '<textarea readonly id="gasShareLinkArea" style="width:100%; height:70px; padding:8px; border:1px solid #d1d5db; border-radius:4px; font-family:monospace; font-size:11px; background:white;" onclick="this.select()">' + shareUrl + '</textarea>' +
+            '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">' +
+                '<button class="btn-primary" style="padding:6px 14px; font-size:12px;" onclick="copyGasShareLink()">📋 複製連結</button>' +
+                '<button class="btn-secondary" style="padding:6px 14px; font-size:12px; background:#10b981; color:white;" onclick="shareGasLineSms()">📱 LINE / SMS</button>' +
+            '</div>' +
+        '</div>' +
+        '<div style="text-align:center; padding:12px; background:white; border:1px solid #e5e7eb; border-radius:8px;">' +
+            '<div style="font-size:12px; color:#6b7280; margin-bottom:6px;">📸 或讓員工用手機掃 QR Code：</div>' +
+            '<img src="' + qrApi + '" alt="QR Code" style="max-width:240px; width:100%; border-radius:6px;">' +
+            '<div style="font-size:11px; color:#9ca3af; margin-top:4px;">（用 iPhone 相機 / Android 相機直接掃）</div>' +
+        '</div>' +
+        '<div class="alert-box" style="background:#fef3c7; color:#92400e; margin-top:12px; font-size:12px;">' +
+            '⚠️ 此連結內含你 Google Drive 的 API 網址，請只傳給信任的員工。' +
+            '若洩漏，可到 Apps Script 重新部署取得新網址。' +
+        '</div>' +
+        '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function copyGasShareLink() {
+    var area = document.getElementById('gasShareLinkArea');
+    if (!area) return;
+    var text = area.value;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function(){
+            showNotif('📋 連結已複製！');
+        }, function(){
+            area.focus(); area.select();
+            showNotif('💡 請手動複製文字框');
+        });
+    } else {
+        area.focus(); area.select();
+        try { document.execCommand('copy'); showNotif('📋 連結已複製！'); }
+        catch(e) { showNotif('💡 請手動複製文字框'); }
+    }
+}
+
+function shareGasLineSms() {
+    var area = document.getElementById('gasShareLinkArea');
+    if (!area) return;
+    var text = '【HR 系統雲端同步】\n點此連結即可自動設定：\n' + area.value;
+    // 嘗試用瀏覽器原生分享 API（手機支援度高）
+    if (navigator.share) {
+        navigator.share({
+            title: 'HR 系統雲端同步',
+            text: text,
+            url: area.value
+        }).catch(function(){});
+    } else {
+        // 退而用 sms: 協議
+        window.location.href = 'sms:?&body=' + encodeURIComponent(text);
+    }
+}
+
+// 🔗 偵測網址中的同步分享連結（員工開新裝置點連結時自動套用）
+function checkSyncShareLink() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var encodedGas = params.get('syncgas');
+        if (!encodedGas) return;
+        // 已處理過就跳過
+        if (sessionStorage.getItem('_syncLinkHandled') === encodedGas) return;
+        
+        var url;
+        try {
+            url = decodeURIComponent(escape(atob(decodeURIComponent(encodedGas))));
+        } catch(e) {
+            console.warn('解碼失敗', e);
+            return;
+        }
+        if (!url || url.indexOf('script.google.com') === -1) {
+            console.warn('連結格式不對');
+            return;
+        }
+        
+        // 標記已處理（避免重新整理時重複跳）
+        sessionStorage.setItem('_syncLinkHandled', encodedGas);
+        
+        // 延遲 600ms 等頁面渲染完成
+        setTimeout(function() {
+            var msg = '🔗 偵測到雲端同步連結！\n\n' +
+                '網址：\n' + url + '\n\n' +
+                '✅ 套用後系統將：\n' +
+                '① 連接到此 Google 雲端\n' +
+                '② 自動下載最新資料（會覆蓋本機）\n' +
+                '③ 重新整理畫面\n\n' +
+                '要套用嗎？';
+            if (confirm(msg)) {
+                gasSetUrl(url);
+                showNotif('✅ 已連接 Google 雲端，下載中...');
+                pullFromGAS(false).then(function(n) {
+                    showNotif('☁️ 已下載 ' + n + ' 項，重新整理畫面...');
+                    setTimeout(function() {
+                        // 移除 URL 參數，避免分享給他人時帶到
+                        history.replaceState({}, '', window.location.pathname);
+                        location.reload();
+                    }, 1500);
+                }).catch(function(err) {
+                    alert('⚠️ 已連接，但下載失敗：' + (err.message || err) + '\n\n請手動點「⬇️ 強制下載」');
+                });
+            } else {
+                // 使用者拒絕 → 清除 URL 參數
+                history.replaceState({}, '', window.location.pathname);
+            }
+        }, 600);
+    } catch(e) {
+        console.warn('checkSyncShareLink err', e);
+    }
 }
 
 function cloudPull(silent) {
@@ -20431,9 +20661,15 @@ function initCloudSyncPage() {
     var gasStatusEl = document.getElementById('gasStatus');
     var gasScriptArea = document.getElementById('gasScriptArea');
     if (gasScriptArea) gasScriptArea.value = GAS_SCRIPT_TEMPLATE;
-    if (gasUrlEl && gasGetUrl()) {
-        gasUrlEl.value = gasGetUrl();
-        if (gasStatusEl) { gasStatusEl.textContent = '✅ 已連接 Google 雲端，跨裝置同步運作中（優先使用）'; gasStatusEl.style.color = '#059669'; }
+    var localGas = localStorage.getItem('_gas_url');
+    var effectiveGas = localGas || DEFAULT_GAS_URL;
+    if (gasUrlEl && effectiveGas) {
+        gasUrlEl.value = effectiveGas;
+        if (gasStatusEl) {
+            var src = localGas ? '本機設定' : '🔧 系統內建';
+            gasStatusEl.innerHTML = '✅ 已連接 Google 雲端 ｜ 來源：<strong>' + src + '</strong> ｜ 跨裝置同步運作中（優先使用）';
+            gasStatusEl.style.color = '#059669';
+        }
     }
     
     // 更新 Token 狀態
@@ -21028,18 +21264,22 @@ window.saveData = function(key, value) {
 
 // 啟動時自動恢復同步狀態
 window.addEventListener('load', function() {
+    // 🔗 優先偵測同步分享連結（新員工點分享連結時自動套用）
+    if (typeof checkSyncShareLink === 'function') checkSyncShareLink();
+    
     setTimeout(function() {
         // 🔧 修正：支援內建 Firebase，且只要有雲端端點就自動啟用（免 _cs_enabled 手動設定）
         if (typeof applyLoginAnnouncements === 'function') applyLoginAnnouncements();
+        var hasGas = (typeof gasEnabled === 'function' && gasEnabled());
         var hasFb = (typeof fbEnabled === 'function' && fbEnabled());
         var hasPantry = (typeof pantryEnabled === 'function' && pantryEnabled());
         var gistId = ghGetGistId();
         var token = ghGetToken();
-        var enabled = localStorage.getItem('_cs_enabled') === '1' || hasFb || hasPantry || (gistId && token);
+        var enabled = localStorage.getItem('_cs_enabled') === '1' || hasGas || hasFb || hasPantry || (gistId && token);
         if (enabled) {
             _syncEnabled = true;
             localStorage.setItem('_cs_enabled', '1');
-            addSyncLog('恢復線上同步' + (hasPantry ? '（Pantry）' : hasFb ? '（Firebase）' : '（GitHub Gist）'), 'info');
+            addSyncLog('恢復線上同步' + (hasGas ? '（Google）' : hasPantry ? '（Pantry）' : hasFb ? '（Firebase）' : '（GitHub Gist）'), 'info');
             startAutoPull();
             // 🆕 啟動時立刻拉取（讓登入畫面的帳號/人臉/資料是最新）
             setTimeout(function() {
