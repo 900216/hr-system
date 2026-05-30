@@ -5532,6 +5532,8 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                     <div style="display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;">
                         <button onclick="fbForcePush()" style="padding:9px 16px; background:#0ea5e9; color:white; border:0; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">⬆️ 強制上傳本機資料</button>
                         <button onclick="fbForcePull()" style="padding:9px 16px; background:#8b5cf6; color:white; border:0; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">⬇️ 強制下載雲端資料</button>
+                        <button onclick="checkDataSize()" style="padding:9px 16px; background:#f59e0b; color:white; border:0; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">📏 檢查資料大小</button>
+                        <button onclick="trimLocalLogs()" style="padding:9px 16px; background:#ef4444; color:white; border:0; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">✂️ 瘦身舊資料</button>
                     </div>
                 </div>
                 
@@ -19289,6 +19291,100 @@ function fbForcePull() {
     });
 }
 
+// 📏 檢查本機資料大小（找出哪個 key 太大）
+function checkDataSize() {
+    var resultEl = document.getElementById('fbDiagResult');
+    var log = function(m) { if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = m; } };
+    var items = [];
+    var totalBytes = 0;
+    for (var i = 0; i < BACKUP_KEYS.length; i++) {
+        var k = BACKUP_KEYS[i];
+        var v = localStorage.getItem(k);
+        if (v === null) continue;
+        var bytes = v.length;
+        totalBytes += bytes;
+        var arrCount = '';
+        try {
+            var parsed = JSON.parse(v);
+            if (Array.isArray(parsed)) arrCount = ' (陣列 ' + parsed.length + ' 筆)';
+            else if (parsed && typeof parsed === 'object') arrCount = ' (物件 ' + Object.keys(parsed).length + ' 鍵)';
+        } catch(e){}
+        items.push({ key: k, bytes: bytes, info: arrCount });
+    }
+    items.sort(function(a,b){return b.bytes - a.bytes;});
+    
+    var totalKB = (totalBytes/1024).toFixed(1);
+    var LIMIT_KB = 1300;
+    var pct = Math.min(100, Math.round(totalBytes/1024 / LIMIT_KB * 100));
+    var status = totalBytes/1024 > LIMIT_KB ? '❌ 超過上限！' :
+                 totalBytes/1024 > 1000 ? '⚠️ 接近上限' : '✅ 正常';
+    
+    var msg = '📏 本機資料大小檢查\n' +
+        '━━━━━━━━━━━━━━━━━━━━\n' +
+        '總大小：' + totalKB + ' KB / 1300 KB (' + pct + '%)\n' +
+        '狀態：' + status + '\n\n' +
+        'Top 10 大資料：\n';
+    for (var j = 0; j < Math.min(10, items.length); j++) {
+        var it = items[j];
+        var kb = (it.bytes / 1024).toFixed(1);
+        var bar = '█'.repeat(Math.min(20, Math.round(it.bytes / totalBytes * 40)));
+        msg += '  ' + it.key + '：' + kb + ' KB' + it.info + '\n  ' + bar + '\n';
+    }
+    if (totalBytes/1024 > LIMIT_KB) {
+        msg += '\n💡 建議點「✂️ 瘦身舊資料」精簡日誌類資料';
+    }
+    log(msg);
+}
+
+// ✂️ 瘦身本機舊日誌（保留近期、刪除舊歷史）
+function trimLocalLogs() {
+    var resultEl = document.getElementById('fbDiagResult');
+    var log = function(m) { if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = m; } };
+    
+    if (!confirm('✂️ 將精簡以下舊資料：\n\n' +
+        '• 寄送記錄：保留最近 100 筆\n' +
+        '• 勞健保異動：保留最近 100 筆\n' +
+        '• 打卡記錄：保留最近 500 筆\n' +
+        '• 系統記錄：保留最近 200 筆\n' +
+        '• 同步日誌：保留最近 50 筆\n' +
+        '• 任務通知：保留最近 100 筆\n\n' +
+        '⚠️ 此操作會永久刪除本機舊資料！\n是否繼續？')) return;
+    
+    var rules = [
+        { key: 'salarySlipEmailLog', keepLast: 100, label: '寄送記錄' },
+        { key: 'insuranceChangeLog', keepLast: 100, label: '勞健保異動' },
+        { key: 'clockRecords',       keepLast: 500, label: '打卡記錄' },
+        { key: 'systemLog',          keepLast: 200, label: '系統記錄' },
+        { key: 'syncLog',            keepLast: 50,  label: '同步日誌' },
+        { key: 'taskNotifications',  keepLast: 100, label: '任務通知' }
+    ];
+    var report = ['✂️ 瘦身完成：'];
+    var savedKB = 0;
+    for (var i = 0; i < rules.length; i++) {
+        var r = rules[i];
+        var v = localStorage.getItem(r.key);
+        if (!v) continue;
+        try {
+            var arr = JSON.parse(v);
+            if (Array.isArray(arr) && arr.length > r.keepLast) {
+                var beforeKB = v.length / 1024;
+                var trimmed = arr.slice(-r.keepLast);
+                var newV = JSON.stringify(trimmed);
+                localStorage.setItem(r.key, newV);
+                var afterKB = newV.length / 1024;
+                var diff = (beforeKB - afterKB).toFixed(1);
+                savedKB += parseFloat(diff);
+                report.push('  ' + r.label + '：' + arr.length + ' → ' + trimmed.length + ' 筆（省 ' + diff + ' KB）');
+            }
+        } catch(e){}
+    }
+    report.push('━━━━━━━━━━━━━━━━━━━━');
+    report.push('總共節省：' + savedKB.toFixed(1) + ' KB');
+    report.push('\n💡 建議點「⬆️ 強制上傳」推送瘦身後的資料到雲端');
+    log(report.join('\n'));
+    showNotif('✂️ 已瘦身（省 ' + savedKB.toFixed(1) + 'KB）');
+}
+
 
 
 // 🆕 免 Token 公開讀取 Gist（員工開 App 自動同步用）
@@ -20173,17 +20269,70 @@ function manualPushToCloud(silent) {
         if (v !== null) snapshot._data[key] = v;
     }
     
+    // 🩺 自動瘦身：Pantry 限制 1.4MB / basket，超過就裁切日誌類資料
+    var payloadStr = JSON.stringify(snapshot);
+    var sizeKB = Math.round(payloadStr.length / 1024);
+    var LIMIT_KB = 1300;  // 保守抓 1.3MB 留緩衝
+    
+    if (sizeKB > LIMIT_KB) {
+        addSyncLog('⚠️ 資料 ' + sizeKB + 'KB 超過上限，自動瘦身中…', 'error');
+        var trimRules = [
+            { key: 'salarySlipEmailLog', keepLast: 100, label: '寄送記錄' },
+            { key: 'insuranceChangeLog', keepLast: 100, label: '勞健保異動' },
+            { key: 'clockRecords',       keepLast: 500, label: '打卡記錄' },
+            { key: 'systemLog',          keepLast: 200, label: '系統記錄' },
+            { key: 'syncLog',            keepLast: 50,  label: '同步日誌' },
+            { key: 'taskNotifications',  keepLast: 100, label: '任務通知' }
+        ];
+        for (var ti = 0; ti < trimRules.length; ti++) {
+            var rule = trimRules[ti];
+            if (snapshot._data[rule.key]) {
+                try {
+                    var arr = JSON.parse(snapshot._data[rule.key]);
+                    if (Array.isArray(arr) && arr.length > rule.keepLast) {
+                        var trimmed = arr.slice(-rule.keepLast);
+                        snapshot._data[rule.key] = JSON.stringify(trimmed);
+                        addSyncLog('  ✂️ ' + rule.label + '：' + arr.length + ' → ' + trimmed.length + ' 筆', 'info');
+                    }
+                } catch(e){}
+            }
+        }
+        payloadStr = JSON.stringify(snapshot);
+        sizeKB = Math.round(payloadStr.length / 1024);
+        addSyncLog('✂️ 瘦身後：' + sizeKB + 'KB', 'info');
+        
+        // 仍超過 → 給使用者明確錯誤
+        if (sizeKB > LIMIT_KB) {
+            var msg = '❌ 資料超過 Pantry 雲端上限\n\n' +
+                '目前大小：' + sizeKB + ' KB\n' +
+                '上限：    ' + LIMIT_KB + ' KB\n\n' +
+                '建議：\n' +
+                '① 清理舊月份的排班資料\n' +
+                '② 刪除舊薪資單\n' +
+                '③ 或改用 GitHub Gist 模式（支援更大資料量）';
+            addSyncLog('❌ 推送失敗：超過大小上限', 'error');
+            if (!silent) alert(msg);
+            return;
+        }
+    }
+    addSyncLog('📤 推送中（' + sizeKB + 'KB）…', 'info');
+    
     ezFetch(endpoint.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(snapshot)
+        body: payloadStr
     }, 12000).then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) {
+            if (r.status === 400) {
+                throw new Error('HTTP 400 — 資料 ' + sizeKB + 'KB 可能超過 Pantry 限制，請清理舊資料');
+            }
+            throw new Error('HTTP ' + r.status);
+        }
         return r.text();
     }).then(function() {
         localStorage.setItem('_cs_lastPush', String(snapshot._timestamp));
         localStorage.setItem('_cs_lastKnownTs', String(snapshot._timestamp));
-        addSyncLog('推送成功（' + Object.keys(snapshot._data).length + ' 項）', 'success');
+        addSyncLog('推送成功（' + Object.keys(snapshot._data).length + ' 項 / ' + sizeKB + 'KB）', 'success');
         if (!silent) showNotif('✅ 推送成功！');
         updateSyncUI();
     }).catch(function(err) {
