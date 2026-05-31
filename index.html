@@ -2483,6 +2483,9 @@ body.view-mobile .system-menu .menu-close-btn:active {
 body:not(.view-mobile) .menu-close-btn { display: none; }
 /* 🔇 全螢幕選單開啟時，隱藏右上角同步浮窗（避免跟 ✕ 鈕重疊）*/
 body.view-mobile.menu-drawer-open .sync-indicator { display: none !important; }
+/* 🔇 全螢幕選單開啟時，強制關閉底部彈出小選單（避免兩個選單重疊）*/
+body.menu-drawer-open .bnav-popup,
+body.menu-drawer-open .bnav-popup-backdrop { display: none !important; }
 /* 手機版選單項：直式排列、卡片化 */
 body.view-mobile .system-menu .menu-item {
     display: block; width: 100%; box-sizing: border-box; margin: 8px 0 !important;
@@ -2827,13 +2830,11 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 0 20px rgba(16,185,129,0.25) !important;
 }
 
-/* 1️⃣8️⃣ 選單抽屜開啟時，主內容輕微縮放（深度感）*/
-body.view-mobile.menu-drawer-open #mainPage {
-    transform: scale(0.96);
-    transition: transform 0.3s ease, filter 0.3s ease;
-    filter: brightness(0.85);
-}
-body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; }
+/* 1️⃣8️⃣ 選單抽屜開啟時：⚠️ 不可對 #mainPage 用 transform/filter！
+   因為 systemMenu 與 menuBackdrop 都在 #mainPage 內，
+   一旦祖先有 transform 或 filter，內部 position:fixed 會以該祖先為基準而非視窗，
+   導致全螢幕選單跑版／看不到。改為不套用任何變形。 */
+body.view-mobile #mainPage { transition: filter 0.3s ease; }
 
 /* 1️⃣9️⃣ 上拉小選單項目發光 */
 .bnav-popup-item:active {
@@ -2892,6 +2893,577 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
     padding: 8px 10px !important;
     font-size: 13px;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ✨ UI 精緻化 v2 — 整體優化層（統一質感、提升手機體驗）
+   ═══════════════════════════════════════════════════════════ */
+:root {
+    --ui-radius-sm: 8px;
+    --ui-radius: 12px;
+    --ui-radius-lg: 16px;
+    --ui-green: #16a34a;
+    --ui-green-d: #15803d;
+    --ui-blue: #2563eb;
+    --ui-red: #dc2626;
+    --ui-amber: #f59e0b;
+    --ui-gray: #6b7280;
+    --ui-transition: .2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* 🔘 全站按鈕統一：圓角、觸控回饋、最小高度 44px（iOS 標準）*/
+.btn-confirm, .btn-secondary, .btn-action, .header-btn, .btn-toolbar {
+    border-radius: var(--ui-radius) !important;
+    border: 0 !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.2px;
+    transition: transform var(--ui-transition), box-shadow var(--ui-transition), filter var(--ui-transition) !important;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+}
+.btn-confirm { background: linear-gradient(135deg, #34d399, #16a34a) !important; color: #fff !important; }
+.btn-secondary { background: linear-gradient(135deg, #e5e7eb, #cbd1d9) !important; color: #374151 !important; }
+.btn-confirm:hover, .btn-secondary:hover, .btn-action:hover, .header-btn:hover, .btn-toolbar:hover {
+    filter: brightness(1.05); transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
+}
+.btn-confirm:active, .btn-secondary:active, .btn-action:active, .header-btn:active, .btn-toolbar:active {
+    transform: translateY(0) scale(0.98); filter: brightness(0.97);
+}
+/* 手機上主要操作鈕加大、好點 */
+body.view-mobile .btn-confirm, body.view-mobile .btn-secondary {
+    min-height: 44px; padding: 11px 20px !important; font-size: 15px !important;
+}
+
+/* 📝 輸入框/下拉統一：大觸控區、清楚焦點、防 iOS 自動放大（font ≥16px）*/
+input[type="text"], input[type="number"], input[type="password"],
+input[type="email"], input[type="tel"], input[type="date"], input[type="search"],
+select, textarea {
+    border-radius: var(--ui-radius-sm) !important;
+    border: 1.5px solid #d8d2c8 !important;
+    transition: border-color var(--ui-transition), box-shadow var(--ui-transition) !important;
+    background: #fff;
+    color: var(--ink);
+}
+input:focus, select:focus, textarea:focus {
+    outline: none !important;
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 3px rgba(224,140,44,0.15) !important;
+}
+body.view-mobile input[type="text"], body.view-mobile input[type="number"],
+body.view-mobile input[type="password"], body.view-mobile input[type="email"],
+body.view-mobile input[type="tel"], body.view-mobile input[type="date"],
+body.view-mobile select, body.view-mobile textarea {
+    font-size: 16px !important;  /* 防止 iOS Safari 點擊輸入框時自動放大畫面 */
+    padding: 10px 12px !important;
+    min-height: 44px; box-sizing: border-box;
+}
+
+/* 🗂️ 卡片/面板：柔和現代陰影、圓角統一 */
+.work-list-panel {
+    border: 1px solid #ece7df !important;
+    border-radius: var(--ui-radius-lg) !important;
+    box-shadow: var(--shadow-md) !important;
+    overflow: hidden;
+    transition: box-shadow var(--ui-transition);
+}
+.panel-header {
+    background: linear-gradient(135deg, #fffdf8, #fdf0d8) !important;
+    border-bottom: 1px solid #f0d9a8 !important;
+    padding: 12px 16px !important;
+}
+
+/* 📊 表格：易讀、斑馬紋、圓角容器（排班表等寬表格不套，避免破版）*/
+.work-table { border-radius: var(--ui-radius); overflow: hidden; }
+.work-table th {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    color: var(--brand-dark) !important; font-weight: 700;
+    padding: 11px 10px !important; font-size: 13px;
+    border-bottom: 2px solid #f0d9a8 !important;
+}
+.work-table td { padding: 10px !important; font-size: 13px; border-bottom: 1px solid #f1ede5 !important; }
+.work-table tbody tr:nth-child(even) { background: #fdfbf7; }
+.work-table tbody tr:active { background: #fef6e8; }
+
+/* 🪟 彈窗：更柔的進場、毛玻璃遮罩 */
+.modal-overlay { background: rgba(30,25,20,0.5) !important; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.modal-box, .modal-content {
+    border-radius: var(--ui-radius-lg) !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+    animation: uiModalIn .26s cubic-bezier(0.18,0.89,0.32,1.05);
+}
+@keyframes uiModalIn { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal-title, .modal-header h3 { letter-spacing: 0.3px; }
+
+/* 🏷️ 狀態標籤更圓潤 */
+.status-tag { border-radius: 999px !important; padding: 3px 12px !important; font-weight: 700; font-size: 12px; }
+
+/* 🔢 數字/金額對齊更整齊 */
+.work-table td:last-child { font-variant-numeric: tabular-nums; }
+
+/* 📱 底部導航：玻璃感、頂部細線 */
+body.view-mobile .bottom-nav {
+    background: rgba(255,255,255,0.96) !important;
+    backdrop-filter: saturate(1.5) blur(12px);
+    -webkit-backdrop-filter: saturate(1.5) blur(12px);
+    border-top: 1px solid rgba(0,0,0,0.06) !important;
+    box-shadow: 0 -2px 16px rgba(0,0,0,0.06) !important;
+}
+
+/* 🎚️ 平滑捲動 + 點擊不殘留highlight */
+* { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+html { scroll-behavior: smooth; }
+
+/* 🧭 麵包屑更清爽 */
+.breadcrumb { color: var(--ink-soft); font-size: 13px; padding: 10px 4px; }
+.breadcrumb a { color: var(--brand-dark); cursor: pointer; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* 💬 通知 toast 更精緻 */
+.notification {
+    border-radius: var(--ui-radius) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.22) !important;
+    backdrop-filter: blur(6px);
+    font-weight: 600; letter-spacing: 0.2px;
+}
+
+/* ♿ 聚焦可見性（鍵盤操作友善）*/
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--brand); outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🛸 科技風主題 v3 — TECH THEME
+   深色太空底 + 霓虹青藍光暈 + 玻璃擬態。卡片維持淺色確保可讀。
+   ═══════════════════════════════════════════════════════════ */
+:root {
+    --tech-bg-1: #0a0f1e;
+    --tech-bg-2: #111a2e;
+    --tech-cyan: #22d3ee;
+    --tech-cyan-d: #0891b2;
+    --tech-blue: #3b82f6;
+    --tech-violet: #8b5cf6;
+    --tech-glow: rgba(34,211,238,0.35);
+    --tech-line: rgba(34,211,238,0.18);
+    --tech-card: #ffffff;
+    --tech-card-edge: rgba(34,211,238,0.22);
+}
+
+/* 🌌 深色太空背景 + 細格網 + 角落光暈 */
+body {
+    background:
+        radial-gradient(1200px 600px at 15% -5%, rgba(59,130,246,0.18), transparent 60%),
+        radial-gradient(1000px 500px at 110% 10%, rgba(139,92,246,0.16), transparent 55%),
+        linear-gradient(160deg, var(--tech-bg-1) 0%, var(--tech-bg-2) 100%) !important;
+    background-attachment: fixed !important;
+    color: #e2e8f0;
+}
+.main-page { background: transparent !important; }
+/* 細格線科技底紋 */
+.main-page::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+        linear-gradient(var(--tech-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--tech-line) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 100% 70% at 50% 0%, #000 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse 100% 70% at 50% 0%, #000 30%, transparent 75%);
+    opacity: 0.5;
+}
+.main-content, .header-bar, .bottom-nav, .system-menu { position: relative; z-index: 1; }
+
+/* 🔆 重要！淺色容器內文字一律維持深色（透過繼承，不用 * 以免誤傷彩色框）*/
+.work-list-panel, .panel-body,
+.modal-box, .modal-content,
+.login-form,
+.work-table, .work-table td, .form-table, .form-table td,
+.schedule-table, .week-display, .panel-section,
+.submenu, .submenu-item,
+.salary-slip, .cr-table, .ps-table, .sched-vertical-table,
+.recipe-card, .print-area {
+    color: #1e293b;
+}
+/* 面板標題在深色底，文字維持亮色 */
+.work-list-panel .panel-header { color: #e2e8f0; }
+.work-list-panel .panel-header h3 { color: #67e8f9 !important; }
+
+/* 🔝 頂部列：深色玻璃 + 青光底線 */
+.header-bar {
+    background: linear-gradient(135deg, rgba(17,26,46,0.92), rgba(10,15,30,0.92)) !important;
+    backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border-bottom: 1px solid var(--tech-line) !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.4), 0 1px 0 var(--tech-glow) !important;
+}
+.logo-area h2 { color: #e2e8f0 !important; text-shadow: 0 0 12px rgba(34,211,238,0.4); }
+.logo-area span { color: #7dd3fc !important; }
+.user-info-bar { color: #cbd5e1 !important; }
+.user-info-bar .info-item {
+    border: 1px solid var(--tech-line) !important;
+    background: rgba(34,211,238,0.06) !important;
+    color: #e2e8f0 !important;
+}
+
+/* 🗂️ 卡片：淺色玻璃 + 青色描邊 + 光暈（保持深色文字可讀）*/
+.work-list-panel {
+    background: rgba(255,255,255,0.97) !important;
+    border: 1px solid var(--tech-card-edge) !important;
+    border-radius: 14px !important;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04),
+        0 8px 32px rgba(0,0,0,0.45),
+        0 0 24px rgba(34,211,238,0.08) !important;
+    backdrop-filter: blur(8px);
+}
+/* 卡片頂部科技漸層條 */
+.work-list-panel { position: relative; overflow: hidden; }
+.work-list-panel::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--tech-cyan), var(--tech-blue), var(--tech-violet));
+    box-shadow: 0 0 14px var(--tech-glow); z-index: 2;
+}
+
+/* 📋 面板標題：深色科技漸層 + 亮色文字 */
+.panel-header {
+    background: linear-gradient(135deg, #15233f, #0f1a30) !important;
+    border-bottom: 1px solid var(--tech-line) !important;
+    color: #e2e8f0 !important;
+}
+.panel-header h3 {
+    color: #67e8f9 !important;
+    text-shadow: 0 0 10px rgba(34,211,238,0.35);
+    letter-spacing: 0.4px;
+}
+
+/* 🧭 麵包屑：深色玻璃膠囊 */
+.breadcrumb {
+    background: rgba(17,26,46,0.6) !important;
+    border: 1px solid var(--tech-line) !important;
+    border-radius: 12px;
+    color: #94a3b8 !important;
+    margin: 8px; backdrop-filter: blur(6px);
+}
+.breadcrumb a { color: #67e8f9 !important; }
+.breadcrumb strong { color: #e2e8f0 !important; }
+
+/* 🔘 按鈕：科技漸層 + 霓虹光暈 */
+.btn-confirm {
+    background: linear-gradient(135deg, #22d3ee, #0891b2) !important;
+    color: #06212b !important;
+    box-shadow: 0 4px 18px rgba(34,211,238,0.4) !important;
+    text-shadow: none;
+}
+.btn-confirm:hover { box-shadow: 0 6px 24px rgba(34,211,238,0.55) !important; }
+.btn-action.btn-login, .btn-action.btn-signin {
+    background: linear-gradient(135deg, #22d3ee, #3b82f6) !important; color: #051b2e !important;
+    box-shadow: 0 4px 18px rgba(59,130,246,0.45) !important;
+}
+.header-btn {
+    background: linear-gradient(135deg, rgba(34,211,238,0.18), rgba(59,130,246,0.18)) !important;
+    color: #a5f3fc !important;
+    border: 1px solid var(--tech-line) !important;
+    box-shadow: 0 0 12px rgba(34,211,238,0.15) !important;
+}
+.header-btn.logout {
+    background: linear-gradient(135deg, rgba(244,63,94,0.25), rgba(239,68,68,0.25)) !important;
+    color: #fecaca !important; border-color: rgba(244,63,94,0.3) !important;
+}
+
+/* 📝 輸入框：深色科技 + 青色聚焦光 */
+input[type="text"], input[type="number"], input[type="password"],
+input[type="email"], input[type="tel"], input[type="date"], input[type="search"],
+select, textarea {
+    background: rgba(255,255,255,0.97) !important;
+    border: 1.5px solid rgba(34,211,238,0.25) !important;
+    color: #1e293b !important;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: var(--tech-cyan) !important;
+    box-shadow: 0 0 0 3px rgba(34,211,238,0.22), 0 0 16px rgba(34,211,238,0.25) !important;
+}
+
+/* 📊 表格：科技深色表頭 */
+.work-table th {
+    background: linear-gradient(135deg, #15233f, #0f1a30) !important;
+    color: #67e8f9 !important;
+    border-bottom: 2px solid var(--tech-line) !important;
+    text-shadow: 0 0 8px rgba(34,211,238,0.3);
+}
+.work-table tbody tr:nth-child(even) { background: #f0f9ff; }
+.work-table tbody tr:active { background: #e0f2fe; }
+
+/* 📱 底部導航：深色玻璃 + 青光作用態 */
+body.view-mobile .bottom-nav {
+    background: linear-gradient(180deg, rgba(17,26,46,0.96), rgba(10,15,30,0.98)) !important;
+    backdrop-filter: blur(16px) saturate(1.5); -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    border-top: 1px solid var(--tech-line) !important;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.5), 0 -1px 0 var(--tech-glow) !important;
+}
+.bnav-item { color: #94a3b8 !important; }
+.bnav-label { color: inherit !important; }
+.bnav-item.active { color: #67e8f9 !important; }
+.bnav-item.active .bnav-label { color: #67e8f9 !important; }
+.bnav-item.active::after {
+    background: radial-gradient(circle, #22d3ee, transparent 70%) !important;
+}
+
+/* 🛸 全螢幕選單：深空玻璃 + 青色描邊項目 */
+body.view-mobile .system-menu {
+    background:
+        radial-gradient(800px 400px at 50% 0%, rgba(34,211,238,0.12), transparent 60%),
+        linear-gradient(160deg, #0a0f1e, #111a2e) !important;
+}
+body.view-mobile .system-menu::before {
+    color: #67e8f9 !important;
+    background: linear-gradient(to bottom, #0f1a30, rgba(15,26,48,0.9)) !important;
+    text-shadow: 0 0 12px rgba(34,211,238,0.4);
+    border-bottom: 1px solid var(--tech-line) !important;
+}
+body.view-mobile .system-menu .menu-item {
+    background: rgba(34,211,238,0.06) !important;
+    border: 1px solid var(--tech-line) !important;
+    color: #e2e8f0 !important;
+}
+body.view-mobile .system-menu .menu-item.active,
+body.view-mobile .system-menu .menu-item.open {
+    background: linear-gradient(135deg, #22d3ee, #0891b2) !important;
+    color: #06212b !important;
+    box-shadow: 0 0 18px rgba(34,211,238,0.5) !important;
+}
+body.view-mobile .system-menu .submenu { background: rgba(0,0,0,0.28) !important; }
+body.view-mobile .system-menu .submenu-item { color: #cbd5e1 !important; }
+body.view-mobile .system-menu .submenu-item:active,
+body.view-mobile .system-menu .submenu-item:hover {
+    background: linear-gradient(135deg, #22d3ee, #0891b2) !important; color: #06212b !important;
+}
+body.view-mobile .system-menu .menu-close-btn {
+    background: rgba(34,211,238,0.15) !important; color: #67e8f9 !important;
+    border: 1px solid var(--tech-line) !important;
+}
+
+/* 🪟 彈窗：深色玻璃面板 + 青色描邊（標題列深色，內容仍白底可讀）*/
+.modal-overlay { background: rgba(5,10,20,0.66) !important; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+.modal-box, .modal-content {
+    border: 1px solid var(--tech-card-edge) !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(34,211,238,0.12) !important;
+}
+.modal-header, .modal-title {
+    border-bottom: 1px solid rgba(34,211,238,0.15);
+}
+
+/* 🏷️ 狀態標籤：科技光暈 */
+.status-tag.status-done { background: rgba(34,197,94,0.18) !important; color: #16a34a !important; border: 1px solid rgba(34,197,94,0.3); }
+.status-tag.status-pending { background: rgba(234,179,8,0.18) !important; color: #a16207 !important; border: 1px solid rgba(234,179,8,0.3); }
+
+/* ☁️ 同步指示器：科技膠囊 */
+.sync-indicator {
+    background: rgba(17,26,46,0.92) !important;
+    border: 1px solid var(--tech-line) !important;
+    color: #a5f3fc !important;
+    box-shadow: 0 0 16px rgba(34,211,238,0.2) !important;
+    backdrop-filter: blur(8px);
+}
+
+/* ✨ 登入頁科技化 */
+.login-form {
+    background: rgba(255,255,255,0.97) !important;
+    border: 1px solid var(--tech-card-edge) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 30px rgba(34,211,238,0.15) !important;
+}
+.system-title h1 {
+    color: #67e8f9 !important;
+    text-shadow: 0 0 20px rgba(34,211,238,0.5);
+}
+.system-title p { color: #94a3b8 !important; }
+.system-title { border-bottom: 1px solid var(--tech-line) !important; }
+
+/* 微光呼吸動畫（頂部品牌）*/
+@keyframes techPulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+.logo-area h2 { animation: techPulse 3s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════════════════════
+   ⚡ 科技風動畫層 v3.1 — TECH ANIMATIONS
+   GPU 友善（transform / opacity），尊重 prefers-reduced-motion
+   ═══════════════════════════════════════════════════════════ */
+
+/* 1️⃣ 背景格網緩慢漂移 + 呼吸光 */
+@keyframes gridDrift {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 44px 44px, 44px 44px; }
+}
+.main-page::before { animation: gridDrift 9s linear infinite; }
+
+/* 2️⃣ 卡片頂部漸層光條：流動 */
+@keyframes barFlow {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+.work-list-panel::before {
+    background: linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6, #22d3ee) !important;
+    background-size: 200% 100% !important;
+    animation: barFlow 4s linear infinite;
+}
+
+/* 3️⃣ 面板標題掃描光線（從左到右掠過）*/
+.panel-header { position: relative; overflow: hidden; }
+.panel-header::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 35%;
+    background: linear-gradient(90deg, transparent, rgba(34,211,238,0.18), transparent);
+    transform: skewX(-20deg);
+    animation: scanSweep 5s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes scanSweep {
+    0%   { left: -45%; }
+    55%  { left: 130%; }
+    100% { left: 130%; }
+}
+
+/* 4️⃣ 卡片進場：淡入 + 上移 + 輕微發光 */
+@keyframes cardRise {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.page-content:not(.hidden) .work-list-panel { animation: cardRise 0.45s cubic-bezier(0.18,0.89,0.32,1.05) both; }
+.page-content:not(.hidden) .work-list-panel:nth-child(2) { animation-delay: .06s; }
+.page-content:not(.hidden) .work-list-panel:nth-child(3) { animation-delay: .12s; }
+.page-content:not(.hidden) .work-list-panel:nth-child(4) { animation-delay: .18s; }
+
+/* 5️⃣ 按鈕按下：發光漣漪 */
+.btn-confirm, .btn-action, .btn-toolbar, .header-btn { position: relative; overflow: hidden; }
+.btn-confirm::after, .btn-action::after, .btn-toolbar::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.5), transparent 60%);
+    opacity: 0; transform: scale(0.3); pointer-events: none;
+}
+.btn-confirm:active::after, .btn-action:active::after, .btn-toolbar:active::after {
+    animation: btnRipple 0.5s ease-out;
+}
+@keyframes btnRipple {
+    0%   { opacity: 0.7; transform: scale(0.3); }
+    100% { opacity: 0; transform: scale(2.2); }
+}
+
+/* 6️⃣ 底部導航作用態：脈動光暈 */
+@keyframes navGlow {
+    0%,100% { box-shadow: 0 0 8px rgba(34,211,238,0.4); }
+    50%     { box-shadow: 0 0 18px rgba(34,211,238,0.8); }
+}
+.bnav-item.active .bnav-icon {
+    filter: drop-shadow(0 0 6px rgba(34,211,238,0.7));
+    animation: navGlow 2s ease-in-out infinite;
+    border-radius: 50%;
+}
+
+/* 7️⃣ 同步指示器：旋轉光點 + 呼吸 */
+@keyframes syncBreath {
+    0%,100% { box-shadow: 0 0 12px rgba(34,211,238,0.2); }
+    50%     { box-shadow: 0 0 22px rgba(34,211,238,0.45); }
+}
+.sync-indicator { animation: syncBreath 2.6s ease-in-out infinite; }
+
+/* 8️⃣ 輸入框聚焦：光暈脈動一次 */
+@keyframes inputFocusPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34,211,238,0.5); }
+    100% { box-shadow: 0 0 0 8px rgba(34,211,238,0); }
+}
+input:focus, select:focus, textarea:focus {
+    animation: inputFocusPulse 0.6s ease-out;
+}
+
+/* 9️⃣ 標題霓虹微閃（登入頁/系統標題）*/
+@keyframes neonFlicker {
+    0%,100%  { text-shadow: 0 0 20px rgba(34,211,238,0.5), 0 0 8px rgba(34,211,238,0.3); }
+    48%      { text-shadow: 0 0 20px rgba(34,211,238,0.5), 0 0 8px rgba(34,211,238,0.3); }
+    50%      { text-shadow: 0 0 28px rgba(34,211,238,0.8), 0 0 12px rgba(103,232,249,0.6); }
+    52%      { text-shadow: 0 0 20px rgba(34,211,238,0.5), 0 0 8px rgba(34,211,238,0.3); }
+}
+.system-title h1 { animation: neonFlicker 4s ease-in-out infinite; }
+
+/* 🔟 選單項目 hover：左側霓虹邊 */
+body.view-mobile .system-menu .menu-item {
+    position: relative; overflow: hidden;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+body.view-mobile .system-menu .menu-item::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, #22d3ee, #8b5cf6);
+    transform: scaleY(0); transform-origin: center;
+    transition: transform .25s ease;
+    box-shadow: 0 0 10px rgba(34,211,238,0.6);
+}
+body.view-mobile .system-menu .menu-item:active::before { transform: scaleY(1); }
+
+/* 1️⃣1️⃣ 狀態標籤：完成態微光呼吸 */
+@keyframes tagGlow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    50%     { box-shadow: 0 0 10px 0 rgba(34,197,94,0.4); }
+}
+.status-tag.status-done { animation: tagGlow 2.5s ease-in-out infinite; }
+
+/* 1️⃣2️⃣ 頂部品牌 logo emoji 輕微浮動 */
+@keyframes logoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.logo-area .uniopen-mark { animation: logoFloat 3.5s ease-in-out infinite; }
+
+/* 1️⃣3️⃣ 卡片 hover：邊框光暈增強（桌面）*/
+.work-list-panel { transition: box-shadow .3s ease, transform .3s ease; }
+body.view-desktop .work-list-panel:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 28px rgba(34,211,238,0.22) !important;
+    transform: translateY(-2px);
+}
+
+/* ♿ 尊重「減少動態效果」系統設定（無障礙）*/
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001s !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001s !important;
+    }
+}
+
+/* 1️⃣4️⃣ 頂部載入進度條（科技霓虹）*/
+#techProgress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+    background: linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6, #22d3ee);
+    background-size: 200% 100%;
+    box-shadow: 0 0 12px rgba(34,211,238,0.85), 0 0 4px rgba(34,211,238,0.6);
+    z-index: 99999; opacity: 0; pointer-events: none;
+    transition: width .25s ease, opacity .4s ease;
+    animation: barFlow 2s linear infinite;
+}
+#techProgress.active { opacity: 1; }
+/* 進度條前端光點 */
+#techProgress::after {
+    content: ''; position: absolute; right: 0; top: -2px; width: 14px; height: 7px;
+    border-radius: 50%; background: #a5f3fc;
+    box-shadow: 0 0 14px 3px rgba(165,243,252,0.9);
+}
+
+/* 1️⃣5️⃣ 打字機游標 */
+.tw-cursor::after {
+    content: '▋'; display: inline-block; margin-left: 2px;
+    color: #22d3ee; font-weight: 400;
+    text-shadow: 0 0 8px rgba(34,211,238,0.8);
+    animation: twBlink 0.75s step-end infinite;
+}
+@keyframes twBlink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* 1️⃣6️⃣ 數字跳動時的微光 */
+.tech-countup { font-variant-numeric: tabular-nums; transition: text-shadow .3s; }
+.tech-countup.counting { text-shadow: 0 0 12px rgba(34,211,238,0.6); }
+
+/* 1️⃣7️⃣ 載入打字機提示（搭配進度條，科技 boot 風）*/
+#techProgressHint {
+    position: fixed; top: 9px; left: 50%; transform: translateX(-50%);
+    z-index: 99998; font-size: 12px; color: #67e8f9;
+    background: rgba(10,15,30,0.88); padding: 4px 16px; border-radius: 999px;
+    border: 1px solid rgba(34,211,238,0.35);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    letter-spacing: 0.5px; white-space: nowrap;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.45), 0 0 16px rgba(34,211,238,0.22);
+    opacity: 0; transition: opacity .3s ease; pointer-events: none;
+}
+#techProgressHint.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -2901,7 +3473,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
     <div class="login-box">
         <div class="system-title">
             <h1><span style="display:inline-block; animation:loginTulip 2.8s ease-in-out infinite;">🏪</span> 考勤管理系統</h1>
-            <p>Rostering System</p>
+            <p id="loginTagline">Rostering System</p>
         </div>
         <div class="announcement urgent" id="loginUrgentBox">
             <div class="announcement-title">🔔 緊急公告</div>
@@ -6363,6 +6935,142 @@ function showNotif(msg) {
     setTimeout(function() { n.remove(); }, 2000);
 }
 
+// ============================================================
+// ⚡ 科技動畫工具：進度條 / 數字跳動 / 打字機
+// ============================================================
+
+// 🔄 頂部載入進度條
+var _techProgEl = null, _techProgTimer = null, _techProgSafety = null;
+var _techHintEl = null, _techHintTimer = null;
+var _techBootMsgs = [
+    '▸ 載入模組中...', '▸ 讀取資料...', '▸ 連線雲端...',
+    '▸ 驗證權限...', '▸ 渲染介面...', '▸ 同步狀態...',
+    '▸ 初始化系統...', '▸ 解析排程...', '▸ 載入完成 ✓'
+];
+function _ensureProgEl() {
+    if (!_techProgEl) {
+        _techProgEl = document.getElementById('techProgress');
+        if (!_techProgEl) {
+            _techProgEl = document.createElement('div');
+            _techProgEl.id = 'techProgress';
+            document.body.appendChild(_techProgEl);
+        }
+    }
+    return _techProgEl;
+}
+function _ensureHintEl() {
+    if (!_techHintEl) {
+        _techHintEl = document.getElementById('techProgressHint');
+        if (!_techHintEl) {
+            _techHintEl = document.createElement('div');
+            _techHintEl.id = 'techProgressHint';
+            document.body.appendChild(_techHintEl);
+        }
+    }
+    return _techHintEl;
+}
+// 顯示一段打字機載入提示
+function _showBootHint(text) {
+    var h = _ensureHintEl();
+    if (_techHintTimer) clearTimeout(_techHintTimer);
+    h.classList.add('show');
+    var msg = text || _techBootMsgs[Math.floor(Math.random() * (_techBootMsgs.length - 1))];
+    if (typeof typewriterEffect === 'function') typewriterEffect(h, msg, 38, true);
+    else h.textContent = msg;
+}
+function _hideBootHint(finalText) {
+    var h = _ensureHintEl();
+    if (finalText && typeof typewriterEffect === 'function') typewriterEffect(h, finalText, 30, true);
+    else if (finalText) h.textContent = finalText;
+    if (_techHintTimer) clearTimeout(_techHintTimer);
+    _techHintTimer = setTimeout(function(){ h.classList.remove('show'); h.classList.remove('tw-cursor'); }, finalText ? 500 : 200);
+}
+function techProgressStart(hintText) {
+    var el = _ensureProgEl();
+    if (_techProgTimer) clearInterval(_techProgTimer);
+    if (_techProgSafety) clearTimeout(_techProgSafety);
+    el.classList.add('active');
+    el.style.width = '8%';
+    void el.offsetWidth; // 強制重繪
+    var w = 8;
+    _techProgTimer = setInterval(function() {
+        w += (92 - w) * 0.14;           // 緩慢逼近 92%
+        el.style.width = w.toFixed(1) + '%';
+        if (w >= 91) { clearInterval(_techProgTimer); _techProgTimer = null; }
+    }, 130);
+    _showBootHint(hintText);
+    // 安全網：最多 12 秒自動結束，避免卡住
+    _techProgSafety = setTimeout(function(){ techProgressDone(); }, 12000);
+}
+function techProgressDone() {
+    var el = _ensureProgEl();
+    if (_techProgTimer) { clearInterval(_techProgTimer); _techProgTimer = null; }
+    if (_techProgSafety) { clearTimeout(_techProgSafety); _techProgSafety = null; }
+    el.style.width = '100%';
+    _hideBootHint('▸ 完成 ✓');
+    setTimeout(function() {
+        el.classList.remove('active');
+        setTimeout(function() { el.style.width = '0%'; }, 400);
+    }, 280);
+}
+// 包裝一個 Promise，自動顯示/結束進度條
+function techProgressWrap(promise) {
+    techProgressStart();
+    return Promise.resolve(promise).then(function(r){ techProgressDone(); return r; })
+        .catch(function(e){ techProgressDone(); throw e; });
+}
+
+// 🔢 數字跳動（count-up）
+function animateCountUp(el, target, duration) {
+    if (!el) return;
+    target = Number(target) || 0;
+    duration = duration || 900;
+    var startVal = 0;
+    var isFloat = (target % 1 !== 0);
+    var startTime = null;
+    el.classList.add('counting');
+    function step(ts) {
+        if (!startTime) startTime = ts;
+        var p = Math.min((ts - startTime) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);   // easeOutCubic
+        var val = startVal + (target - startVal) * eased;
+        el.textContent = isFloat ? val.toFixed(1) : Math.round(val).toLocaleString();
+        if (p < 1) { requestAnimationFrame(step); }
+        else { el.textContent = isFloat ? target.toFixed(1) : target.toLocaleString(); el.classList.remove('counting'); }
+    }
+    requestAnimationFrame(step);
+}
+// 掃描容器內所有 .tech-countup 元素並跳動（讀 data-target 或現有文字）
+function runCountUps(container) {
+    var scope = container || document;
+    var nodes = scope.querySelectorAll ? scope.querySelectorAll('.tech-countup') : [];
+    for (var i = 0; i < nodes.length; i++) {
+        var raw = nodes[i].getAttribute('data-target');
+        if (raw === null) raw = nodes[i].textContent;
+        var t = parseFloat(String(raw).replace(/[,\s]/g, '')) || 0;
+        animateCountUp(nodes[i], t, 900);
+    }
+}
+
+// ⌨️ 打字機效果
+function typewriterEffect(el, text, speed, keepCursor) {
+    if (!el) return;
+    speed = speed || 55;
+    el.textContent = '';
+    el.classList.add('tw-cursor');
+    var i = 0;
+    function tick() {
+        if (i <= text.length) {
+            el.textContent = text.slice(0, i);
+            i++;
+            setTimeout(tick, speed);
+        } else if (!keepCursor) {
+            setTimeout(function(){ el.classList.remove('tw-cursor'); }, 700);
+        }
+    }
+    tick();
+}
+
 // ============= 日期工具 =============
 function formatDate(d) {
     return d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0');
@@ -6637,10 +7345,17 @@ function showWelcomeAnimation(name, roleName) {
             '<div class="welcome-greet">' + greetEmoji + ' ' + greet + '</div>' +
             '<div class="welcome-name">' + name + '</div>' +
             '<div class="welcome-role">' + roleName + '</div>' +
-            '<div class="welcome-sub">歡迎使用考勤管理系統</div>' +
+            '<div class="welcome-sub" id="welcomeSubText"></div>' +
             '<div class="welcome-bar"><div class="welcome-bar-fill"></div></div>' +
         '</div>';
     document.body.appendChild(ov);
+    
+    // ⌨️ 副標打字機
+    setTimeout(function(){
+        var sub = document.getElementById('welcomeSubText');
+        if (sub && typeof typewriterEffect === 'function') typewriterEffect(sub, '系統載入中 · 歡迎回來', 50);
+        else if (sub) sub.textContent = '歡迎使用考勤管理系統';
+    }, 300);
     
     // 自動淡出
     setTimeout(function() { ov.classList.add('welcome-out'); }, 1600);
@@ -7495,6 +8210,8 @@ function goToPage(pageName, menuId) {
         alert('⚠️ 您沒有權限存取此功能\n\n如需協助請聯絡管理員');
         return;
     }
+    // ⚡ 換頁載入進度條
+    if (typeof techProgressStart === 'function') { techProgressStart(); setTimeout(function(){ if(typeof techProgressDone==='function') techProgressDone(); }, 550); }
     
     // 🔌 切換頁面時關閉相機（避免背景持續使用）
     if (typeof _currentScanner !== 'undefined' && _currentScanner) {
@@ -7615,6 +8332,8 @@ function showBnavPopup(title, items) {
     var popup = document.getElementById('bnavPopup');
     var backdrop = document.getElementById('bnavPopupBackdrop');
     if (!popup) return;
+    // 🔧 先關閉全螢幕選單，避免兩個選單重疊
+    if (document.body.classList.contains('menu-drawer-open')) closeMenuDrawer();
     var html = '<div class="bnav-popup-title">' + title + '</div>';
     for (var i = 0; i < items.length; i++) {
         html += '<div class="bnav-popup-item" data-idx="' + i + '"><span class="bp-icon">' + items[i].icon + '</span>' + items[i].label + '</div>';
@@ -7644,6 +8363,8 @@ function toggleMenuDrawer() {
     else openMenuDrawer();
 }
 function openMenuDrawer() {
+    // 🔧 先關閉底部彈出小選單，避免兩個選單重疊
+    closeBnavPopup();
     document.body.classList.add('menu-drawer-open');
     setBottomNavActive('menu');
 }
@@ -7728,17 +8449,24 @@ function renderHomeDashboard(works) {
     el.innerHTML =
         '<div class="home-banner">' +
             '<div class="home-banner-text">' +
-                '<div class="home-greet">' + greetEmoji + ' ' + greet + '，' + name + '</div>' +
+                '<div class="home-greet" id="homeGreetText">' + greetEmoji + ' ' + greet + '，' + name + '</div>' +
                 (roleName ? '<div class="home-role">' + roleName + '</div>' : '') +
                 '<div class="home-date">📅 ' + dateStr + '</div>' +
             '</div>' +
             avatarHtml +
         '</div>' +
         '<div class="home-stats">' +
-            '<div class="home-stat-card pending"><div class="hs-num">' + pending + '</div><div class="hs-label">⏳ 未完成</div></div>' +
-            '<div class="home-stat-card review"><div class="hs-num">' + review + '</div><div class="hs-label">🔄 進行中</div></div>' +
-            '<div class="home-stat-card done"><div class="hs-num">' + done + '</div><div class="hs-label">✓ 已完成</div></div>' +
+            '<div class="home-stat-card pending"><div class="hs-num tech-countup" data-target="' + pending + '">0</div><div class="hs-label">⏳ 未完成</div></div>' +
+            '<div class="home-stat-card review"><div class="hs-num tech-countup" data-target="' + review + '">0</div><div class="hs-label">🔄 進行中</div></div>' +
+            '<div class="home-stat-card done"><div class="hs-num tech-countup" data-target="' + done + '">0</div><div class="hs-label">✓ 已完成</div></div>' +
         '</div>';
+    
+    // ⚡ 科技動畫：數字跳動 + 問候語打字機
+    setTimeout(function() {
+        runCountUps(el);
+        var greetEl = document.getElementById('homeGreetText');
+        if (greetEl) typewriterEffect(greetEl, greetEmoji + ' ' + greet + '，' + name, 60);
+    }, 80);
 }
 
 // 📷 上傳並轉換成 Q 版頭像
@@ -20743,7 +21471,7 @@ function manualPushToCloud(silent) {
         return;
     }
     
-    if (!silent) showNotif('📤 推送到雲端中...');
+    if (!silent) { showNotif('📤 推送到雲端中...'); if (typeof techProgressStart === 'function') techProgressStart(); }
     
     // 🚀 GitHub Gist 模式
     if (endpoint.type === 'github') {
@@ -20884,7 +21612,7 @@ function manualPullFromCloud(silent) {
         return;
     }
     
-    if (!silent) showNotif('📥 從雲端拉取中...');
+    if (!silent) { showNotif('📥 從雲端拉取中...'); if (typeof techProgressStart === 'function') techProgressStart(); }
     
     // 🚀 GitHub Gist 模式
     if (endpoint.type === 'github') {
@@ -26322,6 +27050,29 @@ document.addEventListener('keydown', function(e) {
 window.addEventListener('load', function() {
     var u = document.getElementById('username');
     if (u) u.focus();
+    
+    // ⌨️ 登入頁標語打字機輪播
+    (function(){
+        var tagEl = document.getElementById('loginTagline');
+        if (!tagEl || typeof typewriterEffect !== 'function') return;
+        var taglines = [
+            'Rostering System · 智慧排班',
+            '☁️ 雲端同步 · 多裝置即時共享',
+            '⚡ 一鍵打卡 · 班表 · 薪資管理',
+            '🛸 OPEN! 門市營運整合平台'
+        ];
+        var ti = 0;
+        function cycle() {
+            // 只有在登入頁顯示時才跑
+            var lp = document.getElementById('loginPage');
+            if (lp && lp.style.display !== 'none') {
+                typewriterEffect(tagEl, taglines[ti % taglines.length], 55, false);
+                ti++;
+            }
+            setTimeout(cycle, 4200);
+        }
+        cycle();
+    })();
     
     // 🆕 套用上次選擇的版本（電腦/手機）
     applyViewMode();
