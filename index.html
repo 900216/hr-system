@@ -3464,6 +3464,56 @@ body.view-desktop .work-list-panel:hover {
     opacity: 0; transition: opacity .3s ease; pointer-events: none;
 }
 #techProgressHint.show { opacity: 1; }
+
+/* 1️⃣8️⃣ OCR 掃描動畫：掃描線 + 科技格網覆蓋預覽圖 */
+.ocr-scanning { position: relative !important; overflow: hidden !important; }
+.ocr-scanning::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; z-index: 6;
+    background: linear-gradient(90deg, transparent, #22d3ee 20%, #a5f3fc 50%, #22d3ee 80%, transparent);
+    box-shadow: 0 0 20px 6px rgba(34,211,238,0.75);
+    animation: ocrScanLine 2s ease-in-out infinite;
+    pointer-events: none;
+}
+.ocr-scanning::after {
+    content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+    background-image:
+        linear-gradient(rgba(34,211,238,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,211,238,0.1) 1px, transparent 1px);
+    background-size: 18px 18px;
+    box-shadow: inset 0 0 40px rgba(34,211,238,0.25);
+    animation: ocrGridPulse 1.6s ease-in-out infinite;
+}
+@keyframes ocrScanLine {
+    0%   { top: 0; }
+    50%  { top: calc(100% - 4px); }
+    100% { top: 0; }
+}
+@keyframes ocrGridPulse {
+    0%,100% { opacity: 0.5; }
+    50%     { opacity: 0.9; }
+}
+/* 四角科技框 */
+.ocr-scanning .ocr-corner { position: absolute; width: 22px; height: 22px; z-index: 7; border: 3px solid #22d3ee; box-shadow: 0 0 10px rgba(34,211,238,0.7); pointer-events: none; }
+.ocr-scanning .ocr-corner.tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
+.ocr-scanning .ocr-corner.tr { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
+.ocr-scanning .ocr-corner.bl { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
+.ocr-scanning .ocr-corner.br { bottom: 6px; right: 6px; border-left: 0; border-top: 0; }
+
+/* 1️⃣9️⃣ OCR 霓虹進度條 */
+.ocr-prog-wrap { padding: 6px 0; }
+.ocr-prog-label { font-size: 13px; font-weight: 700; color: #0891b2; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.ocr-prog-pct { color: #06b6d4; font-variant-numeric: tabular-nums; margin-left: auto; font-size: 15px; text-shadow: 0 0 8px rgba(34,211,238,0.4); }
+.ocr-prog-track { height: 9px; background: rgba(34,211,238,0.15); border-radius: 999px; overflow: hidden; box-shadow: inset 0 0 4px rgba(0,0,0,0.15); }
+.ocr-prog-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6, #22d3ee);
+    background-size: 200% 100%;
+    transition: width .3s ease;
+    animation: barFlow 2s linear infinite;
+    box-shadow: 0 0 12px rgba(34,211,238,0.6);
+}
+@keyframes ocrSpin { to { transform: rotate(360deg); } }
+.ocr-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(34,211,238,0.3); border-top-color: #22d3ee; border-radius: 50%; animation: ocrSpin 0.7s linear infinite; }
 </style>
 </head>
 <body>
@@ -7069,6 +7119,45 @@ function typewriterEffect(el, text, speed, keepCursor) {
         }
     }
     tick();
+}
+
+// 🔍 OCR 掃描動畫工具
+// 在預覽圖容器加掃描線 + 四角框
+function ocrScanStart(previewWrapId) {
+    var wrap = document.getElementById(previewWrapId);
+    if (!wrap) return;
+    wrap.classList.add('ocr-scanning');
+    // 加四角科技框（若還沒加）
+    if (!wrap.querySelector('.ocr-corner')) {
+        ['tl','tr','bl','br'].forEach(function(pos){
+            var d = document.createElement('div');
+            d.className = 'ocr-corner ' + pos;
+            wrap.appendChild(d);
+        });
+    }
+}
+function ocrScanStop(previewWrapId) {
+    var wrap = document.getElementById(previewWrapId);
+    if (!wrap) return;
+    wrap.classList.remove('ocr-scanning');
+    var corners = wrap.querySelectorAll('.ocr-corner');
+    for (var i = 0; i < corners.length; i++) corners[i].remove();
+}
+// 顯示 OCR 霓虹進度條到 statusEl
+function ocrProgress(statusEl, pct, label) {
+    if (!statusEl) return;
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    statusEl.innerHTML =
+        '<div class="ocr-prog-wrap">' +
+            '<div class="ocr-prog-label"><span class="ocr-spinner"></span>' + (label || '辨識中') +
+                '<span class="ocr-prog-pct">' + pct + '%</span></div>' +
+            '<div class="ocr-prog-track"><div class="ocr-prog-fill" style="width:' + pct + '%"></div></div>' +
+        '</div>';
+}
+// OCR 完成顯示（綠色勾）
+function ocrComplete(statusEl, msg) {
+    if (!statusEl) return;
+    statusEl.innerHTML = '<div style="color:#16a34a; font-weight:700; padding:6px 0;">✅ ' + (msg || '辨識完成') + '</div>';
 }
 
 // ============= 日期工具 =============
@@ -14532,20 +14621,22 @@ function processShelfImage() {
     
     var statusEl = document.getElementById('sbStatus');
     statusEl.textContent = '⏳ 圖片前處理中...';
+    ocrScanStart('sbPreviewWrap');
     
     preprocessImageForOCR(_sbCurrentImage, 'document').then(function(processed) {
-        statusEl.textContent = '⏳ OCR 辨識中（大圖約 30-60 秒）...';
+        ocrProgress(statusEl, 0, '辨識中（大圖約 30-60 秒）');
         return Tesseract.recognize(processed, 'chi_tra+eng', {
             tessedit_pageseg_mode: '6',  // 統一區塊
             tessedit_ocr_engine_mode: '1',
             preserve_interword_spaces: '1',
             logger: function(m) {
                 if (m.status === 'recognizing text') {
-                    statusEl.textContent = '🔍 辨識中... ' + Math.round(m.progress * 100) + '%';
+                    ocrProgress(statusEl, m.progress * 100, '辨識中');
                 }
             }
         });
     }).then(function(result) {
+        ocrScanStop('sbPreviewWrap');
         var text = result.data.text;
         document.getElementById('sbRawText').value = text;
         
@@ -14585,6 +14676,7 @@ function processShelfImage() {
         var namedCount = _sbResults.filter(function(r){ return r.productName; }).length;
         statusEl.textContent = '✅ 完成！共辨識 ' + _sbResults.length + ' 筆（其中 ' + namedCount + ' 筆有品名），請檢查/修正';
     }).catch(function(err) {
+        ocrScanStop('sbPreviewWrap');
         statusEl.textContent = '❌ 辨識失敗：' + (err.message || err);
         console.error(err);
     });
@@ -15948,9 +16040,10 @@ function processPurchaseReceiptOCR() {
     }
     
     statusEl.textContent = '⏳ 圖片前處理中...';
+    ocrScanStart('prImagePreview');
     
     preprocessImageForOCR(file, 'document').then(function(processedBlob) {
-        statusEl.textContent = '⏳ 開始辨識...';
+        ocrProgress(statusEl, 0, '啟動辨識引擎');
         return Tesseract.recognize(
             processedBlob,
             'chi_tra+eng',
@@ -15961,23 +16054,25 @@ function processPurchaseReceiptOCR() {
                 preserve_interword_spaces: '1',
                 logger: function(m) {
                     if (m.status === 'recognizing text') {
-                        statusEl.textContent = '🔍 辨識中... ' + Math.round(m.progress * 100) + '%';
+                        ocrProgress(statusEl, m.progress * 100, '辨識中');
                     } else if (m.status === 'loading language traineddata') {
-                        statusEl.textContent = '⏳ 下載中文語言包...';
+                        ocrProgress(statusEl, m.progress * 100, '下載中文語言包');
                     }
                 }
             }
         );
     }).then(function(result) {
+        ocrScanStop('prImagePreview');
         document.getElementById('prOcrResult').value = result.data.text;
         document.getElementById('prOcrResult').style.display = 'block';
         document.getElementById('prApplyOcrBtn').style.display = 'inline-block';
-        statusEl.textContent = '✅ 辨識完成，請檢查後點「套用」';
+        statusEl.innerHTML = '✅ 辨識完成，請檢查後點「套用」';
         // 🆕 保存 words 座標供空間解析
         try {
             _prOcrWords = (result.data && result.data.words) ? result.data.words : [];
         } catch(e) { _prOcrWords = []; }
     }).catch(function(err) {
+        ocrScanStop('prImagePreview');
         statusEl.textContent = '❌ 辨識失敗：' + err.message;
     });
 }
@@ -17524,9 +17619,10 @@ function processCashReportOCR() {
     }
     
     statusEl.textContent = '⏳ 步驟 1/3：圖片前處理中（放大 + 增加對比）...';
+    ocrScanStart('crImagePreview');
     
     preprocessImageForOCR(file, 'document').then(function(processedBlob) {
-        statusEl.textContent = '⏳ 步驟 2/3：開始辨識...';
+        ocrProgress(statusEl, 0, '步驟 2/3：啟動辨識引擎');
         
         return Tesseract.recognize(
             processedBlob,
@@ -17541,16 +17637,17 @@ function processCashReportOCR() {
                 preserve_interword_spaces: '1',
                 logger: function(m) {
                     if (m.status === 'recognizing text') {
-                        statusEl.textContent = '🔍 步驟 3/3：辨識中... ' + Math.round(m.progress * 100) + '%';
+                        ocrProgress(statusEl, m.progress * 100, '步驟 3/3：辨識中');
                     } else if (m.status === 'loading language traineddata') {
-                        statusEl.textContent = '⏳ 下載語言包（首次約 12MB）...';
+                        ocrProgress(statusEl, m.progress * 100, '下載語言包（首次約 12MB）');
                     } else if (m.status === 'initializing api') {
-                        statusEl.textContent = '⏳ 初始化引擎...';
+                        ocrProgress(statusEl, m.progress * 100, '初始化引擎');
                     }
                 }
             }
         );
     }).then(function(result) {
+        ocrScanStop('crImagePreview');
         document.getElementById('crOcrResult').value = result.data.text;
         document.getElementById('crOcrResult').style.display = 'block';
         document.getElementById('crApplyOcrBtn').style.display = 'inline-block';
@@ -17563,6 +17660,7 @@ function processCashReportOCR() {
             statusEl.innerHTML = '⚠️ 未偵測到代碼，請檢查 OCR 文字並手動修正';
         }
     }).catch(function(err) {
+        ocrScanStop('crImagePreview');
         statusEl.textContent = '❌ 辨識失敗：' + err.message;
         console.error('OCR error:', err);
     });
