@@ -3187,8 +3187,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <strong style="color:#1e40af; font-size:13px;">📦 排班匯入/匯出：</strong>
                 <button class="btn-toolbar" style="background:#10b981; color:white;" onclick="exportSchedulesCsv()">📤 匯出</button>
                 <button class="btn-toolbar" style="background:#3b82f6; color:white;" onclick="downloadScheduleTemplate()">📄 模板</button>
-                <label for="_schedCsvImportInput" class="btn-toolbar" style="background:#f59e0b; color:white; cursor:pointer; display:inline-block;">📥 匯入</label>
-                <input type="file" id="_schedCsvImportInput" accept=".csv,text/csv,application/csv,text/plain,application/vnd.ms-excel" style="display:none;" onchange="_handleSchedCsvImport(this)">
+                <button class="btn-toolbar" style="background:#f59e0b; color:white;" onclick="openCsvPasteModal('schedule')">📥 匯入</button>
                 <span style="margin-left:auto; font-size:11px; color:#6b7280;">💡 用 Excel 編輯後匯入</span>
             </div>
             <div class="filter-row" id="schedViewToolbar" style="display:none;">
@@ -3779,8 +3778,7 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                     <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#10b981; color:white;" onclick="exportEmployeesCsv()">📤 匯出員工 CSV</button>
                     <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#3b82f6; color:white;" onclick="downloadEmployeeTemplate()">📄 下載空白模板</button>
-                    <label for="_empCsvImportInput" class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#f59e0b; color:white; cursor:pointer; display:inline-block; border-radius:6px;">📥 匯入員工 CSV</label>
-                    <input type="file" id="_empCsvImportInput" accept=".csv,text/csv,application/csv,text/plain,application/vnd.ms-excel" style="display:none;" onchange="_handleEmpCsvImport(this)">
+                    <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#f59e0b; color:white;" onclick="openCsvPasteModal('employee')">📥 匯入員工 CSV</button>
                 </div>
                 <div style="font-size:11px; color:#6b7280; margin-top:4px;">💡 匯出含投保金額/眷屬等完整欄位；匯入會依「員工工號」更新或新增</div>
             </div>
@@ -23157,6 +23155,118 @@ function _handleEmpCsvImport(input) {
         input.value = '';
     };
     reader.readAsText(f, 'UTF-8');
+}
+
+// 📋 通用 CSV 貼上匯入彈窗（iOS Safari 100% 可用！避開檔案選擇器限制）
+function openCsvPasteModal(mode) {
+    // mode: 'employee' 或 'schedule'
+    var isEmp = mode === 'employee';
+    var title = isEmp ? '📥 匯入員工資料' : '📥 匯入排班資料';
+    var templateBtn = isEmp ? 'downloadEmployeeTemplate()' : 'downloadScheduleTemplate()';
+    var processFn = isEmp ? '_processEmployeeCsvImport' : '_processScheduleCsvImport';
+    var emptyHint = isEmp ? '員工工號,姓名,員工類型,月薪,...' : '日期,員工工號,員工姓名,班次序,班別,...';
+    var existingModal = document.getElementById('csvPasteModal');
+    if (existingModal) existingModal.remove();
+    
+    var html = '<div id="csvPasteModal" class="modal-overlay" style="z-index:10001;">' +
+        '<div class="modal-box" style="max-width:680px; width:95%;">' +
+        '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<h3 style="margin:0;">' + title + '</h3>' +
+            '<button onclick="document.getElementById(\'csvPasteModal\').remove()" style="background:none; border:none; font-size:22px; cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        '<div class="alert-box info" style="background:#dbeafe; color:#1e40af; font-size:13px;">' +
+            '💡 <strong>三步驟匯入：</strong><br>' +
+            '1️⃣ 先下載模板填好資料（已有資料可直接複製）<br>' +
+            '2️⃣ 用 Excel/Numbers 打開 CSV 模板 → <strong>全選表格 (Ctrl+A 或 Cmd+A)</strong> → 複製 (Ctrl+C 或 Cmd+C)<br>' +
+            '3️⃣ 在下方貼上 (長按貼上 / Ctrl+V) → 點「✅ 解析並匯入」' +
+        '</div>' +
+        '<div style="background:#fef3c7; padding:10px; border-radius:6px; margin-bottom:10px; font-size:12px; color:#92400e;">' +
+            '📌 也支援直接貼 <strong>CSV 純文字內容</strong>。<br>' +
+            '📌 從 Numbers/Excel 表格貼過來會自動轉換（即使是 Tab 分隔也能識別）。' +
+        '</div>' +
+        '<div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">' +
+            '<button class="btn-secondary" style="background:#3b82f6; color:white;" onclick="' + templateBtn + '">📄 下載空白模板</button>' +
+            '<label for="_csvPasteFileInput" class="btn-secondary" style="background:#10b981; color:white; cursor:pointer; padding:6px 14px; border-radius:6px;">📁 或選擇檔案</label>' +
+            '<input type="file" id="_csvPasteFileInput" accept=".csv,text/csv,text/plain,application/vnd.ms-excel" style="display:none;" onchange="_handleCsvPasteFile(this, \'' + mode + '\')">' +
+        '</div>' +
+        '<textarea id="csvPasteArea" placeholder="' + emptyHint + '&#10;在此貼上 CSV 內容...&#10;&#10;支援：&#10;• Excel/Numbers 複製的表格（自動轉 CSV）&#10;• 純 CSV 文字（逗號分隔）&#10;• Tab 分隔文字" style="width:100%; height:240px; padding:10px; font-family:monospace; font-size:12px; border:2px solid #d1d5db; border-radius:6px; box-sizing:border-box; resize:vertical;"></textarea>' +
+        '<div style="margin-top:8px; font-size:11px; color:#6b7280;" id="csvPasteRowCount">📊 0 行</div>' +
+        '<div style="text-align:center; margin-top:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">' +
+            '<button class="btn-secondary" onclick="document.getElementById(\'csvPasteModal\').remove()">取消</button>' +
+            '<button class="btn-confirm" style="padding:10px 24px; font-size:14px;" onclick="_submitCsvPaste(\'' + mode + '\')">✅ 解析並匯入</button>' +
+        '</div>' +
+        '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    
+    // 即時顯示行數（給使用者反饋）
+    setTimeout(function() {
+        var ta = document.getElementById('csvPasteArea');
+        var cnt = document.getElementById('csvPasteRowCount');
+        if (ta && cnt) {
+            ta.addEventListener('input', function() {
+                var lines = (ta.value || '').split(/\r?\n/).filter(function(l){return l.trim();});
+                cnt.textContent = '📊 ' + lines.length + ' 行' + (lines.length >= 2 ? '（首行為標題，' + (lines.length-1) + ' 筆資料）' : '');
+            });
+            ta.focus();
+        }
+    }, 100);
+}
+
+// 處理「📁 或選擇檔案」上傳：把檔案內容塞到貼上區
+function _handleCsvPasteFile(input, mode) {
+    if (!input || !input.files || input.files.length === 0) return;
+    var f = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function() {
+        var ta = document.getElementById('csvPasteArea');
+        if (ta) {
+            ta.value = reader.result;
+            // 觸發行數更新
+            ta.dispatchEvent(new Event('input'));
+        }
+        input.value = '';
+    };
+    reader.onerror = function() {
+        alert('⚠️ 讀檔失敗');
+        input.value = '';
+    };
+    reader.readAsText(f, 'UTF-8');
+}
+
+// 解析並匯入（自動轉 Tab 分隔成 CSV）
+function _submitCsvPaste(mode) {
+    var ta = document.getElementById('csvPasteArea');
+    if (!ta) return;
+    var text = (ta.value || '').trim();
+    if (!text) {
+        alert('⚠️ 請貼上 CSV 內容');
+        ta.focus();
+        return;
+    }
+    // 若是 Tab 分隔（從 Excel/Numbers 直接複製），轉成逗號分隔
+    var firstLine = text.split(/\r?\n/)[0] || '';
+    if (firstLine.indexOf('\t') !== -1 && firstLine.indexOf(',') === -1) {
+        // 把 tab 轉成逗號（保留欄位內逗號的需要用 quote）
+        text = text.split(/\r?\n/).map(function(line) {
+            return line.split('\t').map(function(cell) {
+                cell = cell.trim();
+                if (cell.indexOf(',') !== -1 || cell.indexOf('"') !== -1) {
+                    return '"' + cell.replace(/"/g, '""') + '"';
+                }
+                return cell;
+            }).join(',');
+        }).join('\n');
+    }
+    // 關閉彈窗
+    var modal = document.getElementById('csvPasteModal');
+    if (modal) modal.remove();
+    // 呼叫處理函數
+    if (mode === 'employee') {
+        _processEmployeeCsvImport(text);
+    } else if (mode === 'schedule') {
+        _processScheduleCsvImport(text);
+    }
 }
 
 // （舊版兼容：透過 _csvPick 啟動）
