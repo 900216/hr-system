@@ -19113,15 +19113,28 @@ function pullFromPantry(silent) {
     }).then(function(rawData) {
         if (!rawData || typeof rawData !== 'object') throw new Error('NO_DATA');
         // 🗜️ 自動解壓（若雲端是壓縮格式）
-        var data = lzUnpackFromCloud(rawData);
-        if (!data || typeof data !== 'object') throw new Error('UNPACK_FAILED');
+        var unpacked = lzUnpackFromCloud(rawData);
+        if (!unpacked || typeof unpacked !== 'object') throw new Error('UNPACK_FAILED');
+        // 🔄 雙格式相容：包裹格式（_data）或扁平格式（直接key）
+        var data;
+        if (unpacked._data && typeof unpacked._data === 'object') {
+            data = unpacked._data;
+        } else {
+            data = unpacked;
+        }
         var applied = 0;
         for (var k in data) {
             if (BACKUP_KEYS.indexOf(k) >= 0) {
-                try { localStorage.setItem(k, JSON.stringify(data[k])); applied++; } catch(e) {}
+                try {
+                    var v = data[k];
+                    // string 直接存；object/array 才 JSON.stringify
+                    localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+                    applied++;
+                } catch(e) {}
             }
         }
         localStorage.setItem('_cs_lastPull', Date.now().toString());
+        if (unpacked._timestamp) localStorage.setItem('_cs_lastKnownTs', String(unpacked._timestamp));
         if (!silent) showNotif('☁️ 已同步雲端資料（' + applied + ' 項）');
         return applied;
     });
@@ -19130,23 +19143,23 @@ function pullFromPantry(silent) {
 function pushToPantry(silent) {
     var id = pantryGetId();
     if (!id) return Promise.reject(new Error('NO_PANTRY'));
-    var data = {};
+    // 🔧 統一使用「包裹格式」：{_timestamp, _device, _data:{key:stringValue}}
+    var snapshot = { _timestamp: Date.now(), _device: getDeviceId(), _data: {} };
     for (var i = 0; i < BACKUP_KEYS.length; i++) {
         var k = BACKUP_KEYS[i];
         var v = localStorage.getItem(k);
-        if (v !== null) { try { data[k] = JSON.parse(v); } catch(e) { data[k] = v; } }
+        if (v !== null) snapshot._data[k] = v;  // 保留 string，pull 時直接 setItem
     }
     // 🗜️ 自動壓縮（若 LZString 可用且能縮小）
-    var packed = lzPackForCloud(data);
+    var packed = lzPackForCloud(snapshot);
     var bodyStr = JSON.stringify(packed);
     var sizeKB = (bodyStr.length / 1024).toFixed(1);
     var compInfo = '';
     if (packed._compressed) {
         var ratio = Math.round((1 - packed._compSize / packed._origSize) * 100);
         compInfo = '（壓縮率 ' + ratio + '%）';
-        addSyncLog('🗜️ 壓縮上傳：' + (packed._origSize/1024).toFixed(1) + 'KB → ' + sizeKB + 'KB ' + compInfo, 'info');
+        if (typeof addSyncLog === 'function') addSyncLog('🗜️ 壓縮上傳：' + (packed._origSize/1024).toFixed(1) + 'KB → ' + sizeKB + 'KB ' + compInfo, 'info');
     }
-    // POST 會建立或完整覆蓋 basket 內容
     return ezFetch(pantryUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -19157,6 +19170,7 @@ function pushToPantry(silent) {
             throw new Error('HTTP_' + r.status);
         }
         localStorage.setItem('_cs_lastPush', Date.now().toString());
+        localStorage.setItem('_cs_lastKnownTs', String(snapshot._timestamp));
         if (!silent) showNotif('☁️ 已上傳至雲端 ' + compInfo);
         return true;
     });
@@ -19355,14 +19369,15 @@ function gasTest() {
 function pushToGAS(silent) {
     var url = gasGetUrl();
     if (!url) return Promise.reject(new Error('NO_GAS'));
-    var data = {};
+    // 🔧 統一使用「包裹格式」
+    var snapshot = { _timestamp: Date.now(), _device: getDeviceId(), _data: {} };
     for (var i = 0; i < BACKUP_KEYS.length; i++) {
         var k = BACKUP_KEYS[i];
         var v = localStorage.getItem(k);
-        if (v !== null) { try { data[k] = JSON.parse(v); } catch(e) { data[k] = v; } }
+        if (v !== null) snapshot._data[k] = v;
     }
     // 🗜️ 壓縮（同 Pantry 處理）
-    var packed = lzPackForCloud(data);
+    var packed = lzPackForCloud(snapshot);
     var bodyStr = JSON.stringify(packed);
     var sizeKB = (bodyStr.length/1024).toFixed(1);
     var compInfo = '';
@@ -19381,6 +19396,7 @@ function pushToGAS(silent) {
         return r.text();
     }).then(function(){
         localStorage.setItem('_cs_lastPush', Date.now().toString());
+        localStorage.setItem('_cs_lastKnownTs', String(snapshot._timestamp));
         if (!silent) showNotif('☁️ 已上傳到 Google ' + compInfo);
         if (typeof addSyncLog === 'function') addSyncLog('Google 推送成功（' + sizeKB + 'KB' + compInfo + '）', 'success');
         return true;
@@ -19400,14 +19416,26 @@ function pullFromGAS(silent) {
         if (!rawData || typeof rawData !== 'object') throw new Error('NO_DATA');
         if (rawData._error) throw new Error('GAS:' + rawData._error);
         // 🗜️ 自動解壓
-        var data = lzUnpackFromCloud(rawData);
+        var unpacked = lzUnpackFromCloud(rawData);
+        // 🔄 雙格式相容
+        var data;
+        if (unpacked._data && typeof unpacked._data === 'object') {
+            data = unpacked._data;
+        } else {
+            data = unpacked;
+        }
         var applied = 0;
         for (var k in data) {
             if (BACKUP_KEYS.indexOf(k) >= 0) {
-                try { localStorage.setItem(k, JSON.stringify(data[k])); applied++; } catch(e) {}
+                try {
+                    var v = data[k];
+                    localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+                    applied++;
+                } catch(e) {}
             }
         }
         localStorage.setItem('_cs_lastPull', Date.now().toString());
+        if (unpacked._timestamp) localStorage.setItem('_cs_lastKnownTs', String(unpacked._timestamp));
         if (!silent) showNotif('☁️ 已從 Google 同步（' + applied + ' 項）');
         if (typeof addSyncLog === 'function') addSyncLog('Google 拉取成功（' + applied + ' 項）', 'success');
         return applied;
@@ -20929,29 +20957,41 @@ function manualPullFromCloud(silent) {
         .then(function(rawData) {
             if (!rawData) return;
             // 🗜️ 自動解壓（若 push 時用了壓縮，這裡會自動展開）
-            var data = lzUnpackFromCloud(rawData);
-            if (!data || !data._data) {
+            var unpacked = lzUnpackFromCloud(rawData);
+            if (!unpacked || typeof unpacked !== 'object') {
                 addSyncLog('⚠️ 雲端資料格式不符', 'error');
                 return;
             }
+            // 🔄 雙格式相容
+            var data, ts, dev;
+            if (unpacked._data && typeof unpacked._data === 'object') {
+                data = unpacked._data;
+                ts = unpacked._timestamp;
+                dev = unpacked._device;
+            } else {
+                data = unpacked;
+                ts = 0;
+                dev = '';
+            }
             
             var lastKnown = parseInt(localStorage.getItem('_cs_lastKnownTs') || '0');
-            if (data._timestamp <= lastKnown && data._device === getDeviceId()) {
+            if (ts && ts <= lastKnown && dev === getDeviceId()) {
                 addSyncLog('雲端資料未變動，略過', 'info');
                 if (!silent) showNotif('✅ 已是最新');
                 return;
             }
             
             var applied = 0;
-            for (var k in data._data) {
-                if (data._data.hasOwnProperty(k)) {
-                    localStorage.setItem(k, data._data[k]);
+            for (var k in data) {
+                if (data.hasOwnProperty(k) && BACKUP_KEYS.indexOf(k) >= 0) {
+                    var v = data[k];
+                    localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
                     applied++;
                 }
             }
             
             localStorage.setItem('_cs_lastPull', String(Date.now()));
-            localStorage.setItem('_cs_lastKnownTs', String(data._timestamp));
+            if (ts) localStorage.setItem('_cs_lastKnownTs', String(ts));
             
             var fmtNote = rawData._compressed ? '（已解壓）' : '';
             addSyncLog('拉取成功' + fmtNote + '（套用 ' + applied + ' 項）', 'success');
