@@ -22957,17 +22957,76 @@ function _csvDownload(filename, content) {
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
 }
 function _csvPick(callback) {
+    // 確認回呼存在
+    if (typeof callback !== 'function') return;
+    
+    // 建立 input 並掛到 DOM（iOS Safari 必要！未掛 DOM 的 input click 會被擋）
     var input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv,text/csv,application/csv';
-    input.onchange = function(e) {
-        var f = e.target.files[0];
-        if (!f) return;
-        var reader = new FileReader();
-        reader.onload = function() { callback(reader.result, f.name); };
-        reader.readAsText(f, 'UTF-8');
+    // 用寬鬆 accept（iOS 對 CSV mime 認得不一致）
+    input.accept = '.csv,text/csv,application/csv,text/comma-separated-values,application/vnd.ms-excel,text/plain';
+    input.style.cssText = 'position:fixed; left:-9999px; top:-9999px; opacity:0; width:1px; height:1px;';
+    document.body.appendChild(input);
+    
+    var cleaned = false;
+    var cleanup = function() {
+        if (cleaned) return;
+        cleaned = true;
+        try { if (input && input.parentNode) input.parentNode.removeChild(input); } catch(e){}
     };
-    input.click();
+    
+    input.onchange = function(e) {
+        try {
+            var f = (e.target.files && e.target.files[0]) || (input.files && input.files[0]);
+            if (!f) { cleanup(); return; }
+            
+            // 容量上限：CSV 通常很小，10MB 應綽綽
+            if (f.size > 10 * 1024 * 1024) {
+                cleanup();
+                alert('⚠️ 檔案過大（' + (f.size/1024/1024).toFixed(1) + 'MB），請壓縮或拆分後再匯入');
+                return;
+            }
+            
+            var reader = new FileReader();
+            reader.onload = function() {
+                cleanup();
+                try {
+                    callback(reader.result, f.name);
+                } catch(err) {
+                    console.error('CSV 處理錯誤', err);
+                    alert('⚠️ 處理檔案時錯誤：\n' + (err.message || err));
+                }
+            };
+            reader.onerror = function() {
+                cleanup();
+                alert('⚠️ 讀檔失敗，請確認檔案未損毀');
+            };
+            reader.readAsText(f, 'UTF-8');
+        } catch(err) {
+            cleanup();
+            console.error('檔案處理錯誤', err);
+            alert('⚠️ 開啟檔案失敗：' + (err.message || err));
+        }
+    };
+    
+    // 取消偵測：iOS 上若使用者按取消不會觸發 onchange，靠 focus 事件清理
+    var focusHandler = function() {
+        window.removeEventListener('focus', focusHandler);
+        setTimeout(function() {
+            if (!input.files || input.files.length === 0) cleanup();
+        }, 500);
+    };
+    setTimeout(function() {
+        window.addEventListener('focus', focusHandler);
+    }, 100);
+    
+    // 觸發檔案選擇
+    try {
+        input.click();
+    } catch(err) {
+        cleanup();
+        alert('⚠️ 無法開啟檔案選擇器：' + (err.message || err) + '\n\n請改用桌面瀏覽器。');
+    }
 }
 
 // ===== 員工資料：匯出 =====
