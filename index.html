@@ -3187,7 +3187,8 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <strong style="color:#1e40af; font-size:13px;">📦 排班匯入/匯出：</strong>
                 <button class="btn-toolbar" style="background:#10b981; color:white;" onclick="exportSchedulesCsv()">📤 匯出</button>
                 <button class="btn-toolbar" style="background:#3b82f6; color:white;" onclick="downloadScheduleTemplate()">📄 模板</button>
-                <button class="btn-toolbar" style="background:#f59e0b; color:white;" onclick="importSchedulesCsv()">📥 匯入</button>
+                <label for="_schedCsvImportInput" class="btn-toolbar" style="background:#f59e0b; color:white; cursor:pointer; display:inline-block;">📥 匯入</label>
+                <input type="file" id="_schedCsvImportInput" accept=".csv,text/csv,application/csv,text/plain,application/vnd.ms-excel" style="display:none;" onchange="_handleSchedCsvImport(this)">
                 <span style="margin-left:auto; font-size:11px; color:#6b7280;">💡 用 Excel 編輯後匯入</span>
             </div>
             <div class="filter-row" id="schedViewToolbar" style="display:none;">
@@ -3778,7 +3779,8 @@ body.view-mobile #mainPage { transition: transform 0.3s ease, filter 0.3s ease; 
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                     <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#10b981; color:white;" onclick="exportEmployeesCsv()">📤 匯出員工 CSV</button>
                     <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#3b82f6; color:white;" onclick="downloadEmployeeTemplate()">📄 下載空白模板</button>
-                    <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#f59e0b; color:white;" onclick="importEmployeesCsv()">📥 匯入員工 CSV</button>
+                    <label for="_empCsvImportInput" class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#f59e0b; color:white; cursor:pointer; display:inline-block; border-radius:6px;">📥 匯入員工 CSV</label>
+                    <input type="file" id="_empCsvImportInput" accept=".csv,text/csv,application/csv,text/plain,application/vnd.ms-excel" style="display:none;" onchange="_handleEmpCsvImport(this)">
                 </div>
                 <div style="font-size:11px; color:#6b7280; margin-top:4px;">💡 匯出含投保金額/眷屬等完整欄位；匯入會依「員工工號」更新或新增</div>
             </div>
@@ -23066,8 +23068,9 @@ function downloadEmployeeTemplate() {
 }
 
 // ===== 員工資料：匯入 =====
-function importEmployeesCsv() {
-    _csvPick(function(text) {
+// 員工 CSV 匯入：實際處理邏輯（從 text 開始）
+function _processEmployeeCsvImport(text) {
+    try {
         var rows = _csvParse(text);
         if (rows.length < 2) return alert('⚠️ CSV 至少要有標題列 + 1 筆資料');
         var headers = rows[0];
@@ -23134,7 +23137,31 @@ function importEmployeesCsv() {
         saveData('employeesFullInfo', fullInfo);
         alert('✅ 已匯入 ' + applied + ' 筆員工資料！3 秒後重新整理。');
         setTimeout(function(){ location.reload(); }, 3000);
-    });
+    } catch(err) {
+        console.error('員工匯入錯誤', err);
+        alert('⚠️ 匯入失敗：' + (err.message || err));
+    }
+}
+
+// 員工 CSV 匯入：從 <input type=file> 觸發（label-input 模式，iOS 100% 相容）
+function _handleEmpCsvImport(input) {
+    if (!input || !input.files || input.files.length === 0) return;
+    var f = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function() {
+        _processEmployeeCsvImport(reader.result);
+        input.value = '';  // 重置才能連續匯入同檔
+    };
+    reader.onerror = function() {
+        alert('⚠️ 讀檔失敗');
+        input.value = '';
+    };
+    reader.readAsText(f, 'UTF-8');
+}
+
+// （舊版兼容：透過 _csvPick 啟動）
+function importEmployeesCsv() {
+    _csvPick(function(text) { _processEmployeeCsvImport(text); });
 }
 
 // ===== 排班：匯出 =====
@@ -23192,8 +23219,9 @@ function downloadScheduleTemplate() {
 }
 
 // ===== 排班：匯入 =====
-function importSchedulesCsv() {
-    _csvPick(function(text) {
+// 排班 CSV 匯入：實際處理邏輯
+function _processScheduleCsvImport(text) {
+    try {
         var rows = _csvParse(text);
         if (rows.length < 2) return alert('⚠️ CSV 至少要有標題列 + 1 筆資料');
         var headers = rows[0];
@@ -23256,7 +23284,31 @@ function importSchedulesCsv() {
         saveData('shifts', shifts);
         alert('✅ 已匯入 ' + recordCount + ' 筆排班！3 秒後重新整理。');
         setTimeout(function(){ location.reload(); }, 3000);
-    });
+    } catch(err) {
+        console.error('排班匯入錯誤', err);
+        alert('⚠️ 匯入失敗：' + (err.message || err));
+    }
+}
+
+// 排班 CSV 匯入：從 <input type=file> 觸發（label-input 模式，iOS 100% 相容）
+function _handleSchedCsvImport(input) {
+    if (!input || !input.files || input.files.length === 0) return;
+    var f = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function() {
+        _processScheduleCsvImport(reader.result);
+        input.value = '';
+    };
+    reader.onerror = function() {
+        alert('⚠️ 讀檔失敗');
+        input.value = '';
+    };
+    reader.readAsText(f, 'UTF-8');
+}
+
+// 舊版兼容
+function importSchedulesCsv() {
+    _csvPick(function(text) { _processScheduleCsvImport(text); });
 }
 
 
