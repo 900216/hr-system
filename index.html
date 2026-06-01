@@ -3513,7 +3513,7 @@ body.view-desktop .work-list-panel:hover {
 @keyframes ocrSpin { to { transform: rotate(360deg); } }
 .ocr-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(34,211,238,0.3); border-top-color: #22d3ee; border-radius: 50%; animation: ocrSpin 0.7s linear infinite; }
 
-/* 2️⃣0️⃣ 賣場配置圖 */
+/* 2️⃣0️⃣ 賣場配置圖（2D 平面圖，絕對定位）*/
 .layout-map {
     position: relative;
     background:
@@ -3522,57 +3522,49 @@ body.view-desktop .work-list-panel:hover {
         #f8fafc;
     background-size: 20px 20px;
     border: 2px solid #cbd5e1; border-radius: 10px;
-    padding: 10px; overflow-x: auto;
+    padding: 8px; overflow: auto; -webkit-overflow-scrolling: touch;
 }
-.layout-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 6px;
-    min-width: 560px;
+/* 平面圖畫布：固定比例，內部絕對定位 */
+.floor-canvas {
+    position: relative;
+    width: 660px; height: 600px;
+    margin: 0 auto;
+    background:
+        linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px);
+    background-size: 33px 30px;
+    border: 2.5px solid #475569; border-radius: 6px;
 }
-.zone-cell {
-    border-radius: 8px; padding: 8px 4px; text-align: center;
-    font-size: 11px; font-weight: 700; cursor: pointer;
-    border: 2px solid transparent; color: #1e293b;
-    transition: transform .15s ease, box-shadow .15s ease;
-    min-height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    position: relative; line-height: 1.2;
+.fp-zone {
+    position: absolute; box-sizing: border-box;
+    border: 2px solid transparent; border-radius: 5px;
+    font-size: 10.5px; font-weight: 700; line-height: 1.05;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; overflow: hidden; cursor: pointer; padding: 1px;
+    color: #1e293b; transition: transform .12s, box-shadow .12s;
     -webkit-tap-highlight-color: transparent;
 }
-.zone-cell:active { transform: scale(0.95); }
-.zone-cell .zone-assignee {
-    font-size: 9px; font-weight: 600; margin-top: 2px;
-    background: rgba(0,0,0,0.12); padding: 1px 5px; border-radius: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
-}
-.zone-cell .zone-badge {
-    position: absolute; top: -5px; right: -5px; width: 16px; height: 16px;
-    border-radius: 50%; font-size: 9px; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-}
-/* 狀態色 */
-.zone-normal { background: #e0f2fe; border-color: #bae6fd; }
-.zone-need   { background: #fee2e2; border-color: #fca5a5; }
-.zone-doing  { background: #fef9c3; border-color: #fde047; }
-.zone-done   { background: #dcfce7; border-color: #86efac; }
-/* 設施型（不可清潔，僅標示）*/
-.zone-fixture { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; cursor: default; opacity: 0.85; }
-.zone-fixture:active { transform: none; }
-/* 跨欄 */
-.zone-w2 { grid-column: span 2; }
-.zone-w3 { grid-column: span 3; }
-.zone-w4 { grid-column: span 4; }
+.fp-zone:active { transform: scale(0.96); z-index: 50; }
+.fp-zone .fp-ico { font-size: 13px; line-height: 1; }
+.fp-zone .fp-name { font-size: 9.5px; margin-top: 1px; }
+.fp-zone .fp-assignee { font-size: 8px; background: rgba(0,0,0,0.14); border-radius: 4px; padding: 0 3px; margin-top: 1px; max-width: 96%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.fp-zone .zone-badge { position: absolute; top: -4px; right: -4px; width: 15px; height: 15px; border-radius: 50%; font-size: 8px; display:flex; align-items:center; justify-content:center; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+/* 狀態色（沿用 zone-* 的底色 / 邊框色）*/
+.fp-zone.zone-normal { background:#e0f2fe; border-color:#7dd3fc; }
+.fp-zone.zone-need   { background:#fee2e2; border-color:#f87171; }
+.fp-zone.zone-doing  { background:#fef9c3; border-color:#facc15; }
+.fp-zone.zone-done   { background:#dcfce7; border-color:#4ade80; }
+.fp-zone.zone-fixture{ background:#ede9fe; border-color:#a78bfa; color:#5b21b6; cursor:default; }
+.fp-zone.zone-fixture:active { transform: none; }
+.fp-zone.fp-edit { border-style: dashed !important; border-color:#8b5cf6 !important; cursor: move !important; touch-action: none; }
+.fp-zone.fp-dragging { opacity: 0.85; border-style: solid !important; transform: scale(1.04); }
+/* 縮放控制 */
+.fp-zoom-bar { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
+.fp-zoom-bar button { padding:4px 12px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; }
+
 .layout-legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; margin: 10px 0; }
 .layout-legend span { display: inline-flex; align-items: center; gap: 4px; }
 .legend-dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1.5px solid rgba(0,0,0,0.15); }
-/* 分區標籤帶（橫跨整列）*/
-.layout-section-label {
-    grid-column: 1 / -1;
-    font-size: 12px; font-weight: 800; color: #0891b2;
-    background: linear-gradient(90deg, rgba(34,211,238,0.16), transparent);
-    border-left: 4px solid #22d3ee; border-radius: 4px;
-    padding: 5px 10px; margin-top: 6px; letter-spacing: 0.5px;
-}
-.layout-section-label:first-child { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -4515,6 +4507,7 @@ body.view-desktop .work-list-panel:hover {
             <h3>🗺️ 賣場配置圖 · 貨架查核 / 品保</h3>
             <div style="display:flex; gap:6px;">
                 <button id="layoutEditBtn" class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#8b5cf6; color:white; display:none;" onclick="toggleLayoutEdit()">⚙️ 編輯配置</button>
+                <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#10b981; color:white;" onclick="printStoreLayout()">🖨️ 列印</button>
                 <button class="btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="resetLayoutStatus()">🔄 全部重設</button>
             </div>
         </div><div class="panel-body">
@@ -4529,7 +4522,7 @@ body.view-desktop .work-list-panel:hover {
                     <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#3b82f6; color:white;" onclick="openCopyLayoutModal()">📋 複製到其他門市</button>
                     <button class="btn-secondary" style="padding:6px 12px; font-size:12px; background:#f59e0b; color:white;" onclick="restoreDefaultLayout()">♻️ 還原預設配置</button>
                 </div>
-                <div style="font-size:11px; color:#6b21a8; margin-top:6px;">📌 編輯模式下，點區域可改名稱/圖示/類型/寬度；用 ◀▶ 調整順序。完成後再按一次「⚙️ 編輯配置」結束。</div>
+                <div style="font-size:11px; color:#6b21a8; margin-top:6px;">📌 編輯模式：<strong>直接拖拉</strong>移動位置；<strong>點一下</strong>改名稱/圖示/類型/大小。完成後再按一次「✅ 完成編輯」結束。</div>
             </div>
             <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
                 <span style="font-size:13px; font-weight:bold;">🏬 門市：</span>
@@ -4544,9 +4537,17 @@ body.view-desktop .work-list-panel:hover {
                 <span><i class="legend-dot" style="background:#dcfce7;"></i>已完成</span>
                 <span><i class="legend-dot" style="background:#ede9fe;"></i>設施</span>
             </div>
-            <!-- 配置圖 -->
-            <div class="layout-map"><div class="layout-grid" id="layoutGrid"></div></div>
-            <div style="font-size:11px; color:#94a3b8; margin-top:8px;">📐 圖示為門市標準配置示意（依實際門市調整）。北↑為賣場後方，南↓為大門出入口。</div>
+            <!-- 縮放控制 -->
+            <div class="fp-zoom-bar">
+                <span style="font-size:12px; color:#6b7280;">🔍 縮放：</span>
+                <button onclick="setLayoutZoom(-1)">－</button>
+                <button onclick="setLayoutZoom(0)">適合</button>
+                <button onclick="setLayoutZoom(1)">＋</button>
+                <span style="font-size:11px; color:#94a3b8;">（手機可雙指放大／橫向捲動）</span>
+            </div>
+            <!-- 配置圖（2D 平面） -->
+            <div class="layout-map" id="layoutMapWrap"><div class="floor-canvas" id="layoutGrid"></div></div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:8px;">📐 依小金門市實際配置圖繪製。上方=賣場後方(北)，下方=大門出入口(南)。點貨架可指派/標記。</div>
         </div></div></div>
     </div>
     
@@ -6585,13 +6586,14 @@ body.view-desktop .work-list-panel:hover {
                     <option value="fixture">🧊 設施（僅標示）</option>
                 </select>
             </td></tr>
-            <tr><td class="label-col">寬度：</td><td>
-                <select id="zoneConfigWidth" style="min-width:120px;">
-                    <option value="1">1 格（窄）</option>
-                    <option value="2" selected>2 格（標準）</option>
-                    <option value="3">3 格（寬）</option>
-                    <option value="4">4 格（特寬）</option>
-                </select>
+            <tr><td class="label-col">位置 X / Y：</td><td>
+                <input type="number" id="zoneConfigX" style="width:64px;" step="0.5" min="0" max="98"> %
+                <input type="number" id="zoneConfigY" style="width:64px;" step="0.5" min="0" max="98"> %
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">X=左右（0左~98右）Y=上下（0後方~98大門）</div>
+            </td></tr>
+            <tr><td class="label-col">寬 / 高：</td><td>
+                <input type="number" id="zoneConfigW" style="width:64px;" step="0.5" min="2" max="50"> %
+                <input type="number" id="zoneConfigH" style="width:64px;" step="0.5" min="2" max="40"> %
             </td></tr>
         </table>
         <div style="text-align:center; margin-top:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
@@ -19326,6 +19328,92 @@ function _layoutCurrentStore() {
     return sel ? sel.value : '';
 }
 var _layoutEditMode = false;
+var _layoutZoom = 0; // 0=適合, 其餘為縮放倍率索引
+var _layoutZoomLevels = [0.5, 0.62, 0.78, 1.0, 1.25];
+function setLayoutZoom(dir) {
+    var canvas = document.getElementById('layoutGrid');
+    var wrap = document.getElementById('layoutMapWrap');
+    if (!canvas || !wrap) return;
+    if (dir === 0) {
+        // 適合螢幕寬度
+        var avail = wrap.clientWidth - 20;
+        var z = Math.max(0.4, Math.min(1.3, avail / 660));
+        canvas.style.zoom = z;
+        _layoutZoom = z;
+    } else {
+        var cur = _layoutZoom || 0.78;
+        var idx = 0, best = 99;
+        for (var i = 0; i < _layoutZoomLevels.length; i++) {
+            var d = Math.abs(_layoutZoomLevels[i] - cur);
+            if (d < best) { best = d; idx = i; }
+        }
+        idx = Math.max(0, Math.min(_layoutZoomLevels.length - 1, idx + dir));
+        canvas.style.zoom = _layoutZoomLevels[idx];
+        _layoutZoom = _layoutZoomLevels[idx];
+    }
+}
+// ✥ 區域拖拉移動（編輯模式；支援觸控與滑鼠；可區分點擊 vs 拖拉）
+function _attachZoneDrag(el, canvas, storeId) {
+    var startX = 0, startY = 0, startLeft = 0, startTop = 0, dragging = false, moved = false;
+    var zoneId = el.getAttribute('data-zid');
+    function getRect() { return canvas.getBoundingClientRect(); }
+    function onDown(e) {
+        var pt = e.touches ? e.touches[0] : e;
+        dragging = true; moved = false;
+        startX = pt.clientX; startY = pt.clientY;
+        startLeft = parseFloat(el.style.left) || 0;
+        startTop = parseFloat(el.style.top) || 0;
+        el.style.zIndex = 100; el.style.boxShadow = '0 6px 20px rgba(139,92,246,0.6)';
+        el.classList.add('fp-dragging');
+        if (e.cancelable) e.preventDefault();
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, {passive:false});
+        document.addEventListener('touchend', onUp);
+    }
+    function onMove(e) {
+        if (!dragging) return;
+        var pt = e.touches ? e.touches[0] : e;
+        var rect = getRect();
+        var dxPct = ((pt.clientX - startX) / rect.width) * 100;
+        var dyPct = ((pt.clientY - startY) / rect.height) * 100;
+        if (Math.abs(pt.clientX - startX) > 4 || Math.abs(pt.clientY - startY) > 4) moved = true;
+        var w = parseFloat(el.style.width) || 10;
+        var h = parseFloat(el.style.height) || 7;
+        var nx = Math.max(0, Math.min(100 - w, startLeft + dxPct));
+        var ny = Math.max(0, Math.min(100 - h, startTop + dyPct));
+        el.style.left = nx + '%';
+        el.style.top = ny + '%';
+        if (e.cancelable) e.preventDefault();
+    }
+    function onUp() {
+        if (!dragging) return;
+        dragging = false;
+        el.style.zIndex = ''; el.style.boxShadow = '';
+        el.classList.remove('fp-dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        if (moved) {
+            // 儲存新位置
+            var zones = getStoreZones(storeId);
+            var idx = zones.findIndex(function(x){ return x.id === zoneId; });
+            if (idx >= 0) {
+                zones[idx].x = Math.round((parseFloat(el.style.left) || 0) * 10) / 10;
+                zones[idx].y = Math.round((parseFloat(el.style.top) || 0) * 10) / 10;
+                saveStoreZones(storeId, zones);
+                showNotif('📍 已移動：' + zones[idx].name);
+            }
+        } else {
+            // 視為點擊 → 開設定
+            openZoneConfigModal(zoneId);
+        }
+    }
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('touchstart', onDown, {passive:false});
+}
+
 function renderStoreLayout() {
     var stores = loadData('stores', defaultStores);
     var sel = document.getElementById('layoutStoreSel');
@@ -19340,8 +19428,8 @@ function renderStoreLayout() {
     }
     var storeId = sel.value || (visibleStores[0] && visibleStores[0].id) || 'store1';
     var zones = getStoreZones(storeId);
-    var grid = document.getElementById('layoutGrid');
-    if (!grid) return;
+    var canvas = document.getElementById('layoutGrid');
+    if (!canvas) return;
     
     // 🔑 編輯按鈕：僅 admin/manager/deputy 可見
     var isEditor = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'deputy');
@@ -19349,36 +19437,35 @@ function renderStoreLayout() {
     if (editBtn) editBtn.style.display = isEditor ? '' : 'none';
     if (!isEditor) _layoutEditMode = false;
     
-    var lastSec = null;
-    grid.innerHTML = zones.map(function(z, i){
-        var secLabel = '';
-        if ((z.sec || '其他') !== lastSec) {
-            lastSec = z.sec || '其他';
-            secLabel = '<div class="layout-section-label">' + lastSec + '</div>';
-        }
-        var wCls = z.w >= 4 ? 'zone-w4' : z.w === 3 ? 'zone-w3' : z.w === 2 ? 'zone-w2' : '';
-        // ⚙️ 編輯模式：所有區域可點開設定 + ◀▶ 排序
+    // 🗺️ 絕對定位繪製平面圖
+    canvas.innerHTML = zones.map(function(z){
+        var pos = 'left:' + z.x + '%; top:' + z.y + '%; width:' + z.w + '%; height:' + z.h + '%;';
+        var isFixture = (z.group === 'fixture');
         if (_layoutEditMode) {
-            var arrows = '<div style="display:flex; gap:2px; justify-content:center; margin-top:3px;">' +
-                (i > 0 ? '<span onclick="event.stopPropagation();moveZoneOrder(\'' + z.id + '\',-1)" style="cursor:pointer; background:rgba(0,0,0,0.15); border-radius:4px; padding:0 4px; font-size:10px;">◀</span>' : '') +
-                (i < zones.length-1 ? '<span onclick="event.stopPropagation();moveZoneOrder(\'' + z.id + '\',1)" style="cursor:pointer; background:rgba(0,0,0,0.15); border-radius:4px; padding:0 4px; font-size:10px;">▶</span>' : '') +
-                '</div>';
-            var grpCls = z.group === 'fixture' ? 'zone-fixture' : 'zone-normal';
-            return secLabel + '<div class="zone-cell ' + grpCls + ' ' + wCls + '" style="border-style:dashed; cursor:pointer;" onclick="openZoneConfigModal(\'' + z.id + '\')">' +
-                '<div class="zone-badge" style="background:#8b5cf6;color:#fff;">✎</div>' +
-                (z.icon||'') + '<div>' + z.name + '</div>' + arrows + '</div>';
+            // 編輯模式：可拖拉移動 + 點一下開設定（用 data-zid，拖拉/點擊由 JS 判斷）
+            var cls = isFixture ? 'zone-fixture' : 'zone-normal';
+            return '<div class="fp-zone ' + cls + ' fp-edit" style="' + pos + '" data-zid="' + z.id + '">' +
+                '<div class="zone-badge" style="background:#8b5cf6;color:#fff;">✥</div>' +
+                '<span class="fp-ico">' + (z.icon||'') + '</span><span class="fp-name">' + z.name + '</span></div>';
         }
-        // 一般模式
-        if (z.group === 'fixture') {
-            return secLabel + '<div class="zone-cell zone-fixture ' + wCls + '">' + (z.icon||'') + '<div>' + z.name + '</div></div>';
+        if (isFixture) {
+            return '<div class="fp-zone zone-fixture" style="' + pos + '">' +
+                '<span class="fp-ico">' + (z.icon||'') + '</span><span class="fp-name">' + z.name + '</span></div>';
         }
         var stCls = 'zone-' + (z.status || 'normal');
-        var badge = '';
-        if (z.qc) badge = '<div class="zone-badge" style="background:#16a34a;color:#fff;">✓</div>';
-        var assignee = z.assignee ? '<div class="zone-assignee">👤' + z.assignee + '</div>' : '';
-        return secLabel + '<div class="zone-cell ' + stCls + ' ' + wCls + '" onclick="openZoneModal(\'' + z.id + '\')">' +
-            badge + (z.icon||'') + '<div>' + z.name + '</div>' + assignee + '</div>';
+        var badge = z.qc ? '<div class="zone-badge" style="background:#16a34a;color:#fff;">✓</div>' : '';
+        var assignee = z.assignee ? '<span class="fp-assignee">👤' + z.assignee + '</span>' : '';
+        return '<div class="fp-zone ' + stCls + '" style="' + pos + '" onclick="openZoneModal(\'' + z.id + '\')">' +
+            badge + '<span class="fp-ico">' + (z.icon||'') + '</span><span class="fp-name">' + z.name + '</span>' + assignee + '</div>';
     }).join('');
+    
+    // ✥ 編輯模式：為每個區域綁定拖拉
+    if (_layoutEditMode) {
+        var editZones = canvas.querySelectorAll('.fp-edit');
+        for (var ei = 0; ei < editZones.length; ei++) {
+            _attachZoneDrag(editZones[ei], canvas, storeId);
+        }
+    }
     
     // 統計
     var shelves = zones.filter(function(z){ return z.group === 'shelf'; });
@@ -19390,6 +19477,8 @@ function renderStoreLayout() {
         if (_layoutEditMode) sm.innerHTML = '⚙️ 編輯模式（共 ' + zones.length + ' 區）';
         else sm.innerHTML = '貨架 ' + shelves.length + ' 區 ｜ 🟥待清 ' + need + ' ｜ 🟩完成 ' + done + ' ｜ ✓品保 ' + qc;
     }
+    // 首次自動適合螢幕
+    setTimeout(function(){ if (!_layoutZoom) setLayoutZoom(0); }, 30);
 }
 
 var _zoneEditingStore = '';
@@ -19454,6 +19543,109 @@ function resetLayoutStatus() {
     showNotif('🔄 已重設');
 }
 
+// 🖨️ 列印賣場配置圖（平面圖 + 查核清單 + 簽核）
+function printStoreLayout() {
+    var storeId = _layoutCurrentStore();
+    var stores = loadData('stores', defaultStores);
+    var store = stores.find(function(s){ return s.id === storeId; });
+    var storeName = store ? ((store.code ? store.code + ' ' : '') + store.name) : '門市';
+    var zones = getStoreZones(storeId);
+    var now = new Date();
+    var wd = ['日','一','二','三','四','五','六'];
+    var dateStr = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + String(now.getDate()).padStart(2,'0') + '（' + wd[now.getDay()] + '）';
+    
+    var statusText = { normal:'正常', need:'待清潔', doing:'清潔中', done:'已完成' };
+    var statusColor = { normal:'#0369a1', need:'#dc2626', doing:'#a16207', done:'#16a34a' };
+    
+    // 平面圖（靜態，縮放至列印寬度）
+    var planHtml = zones.map(function(z){
+        var pos = 'left:' + z.x + '%; top:' + z.y + '%; width:' + z.w + '%; height:' + z.h + '%;';
+        var bg = '#eef2ff', bd = '#a5b4fc', col = '#3730a3';
+        if (z.group === 'shelf') {
+            var st = z.status || 'normal';
+            if (st === 'normal') { bg = '#e0f2fe'; bd = '#7dd3fc'; col = '#075985'; }
+            else if (st === 'need') { bg = '#fee2e2'; bd = '#f87171'; col = '#991b1b'; }
+            else if (st === 'doing') { bg = '#fef9c3'; bd = '#eab308'; col = '#854d0e'; }
+            else if (st === 'done') { bg = '#dcfce7'; bd = '#4ade80'; col = '#166534'; }
+        }
+        var who = z.assignee ? '<br><span style="font-size:7px;">👤' + z.assignee + '</span>' : '';
+        var qcMark = z.qc ? ' ✓' : '';
+        return '<div style="position:absolute;' + pos + 'box-sizing:border-box;border:1.2px solid ' + bd + ';background:' + bg + ';color:' + col + ';border-radius:3px;font-size:8px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:1px;line-height:1.05;">' +
+            (z.icon||'') + '<span style="font-size:7.5px;">' + z.name + qcMark + '</span>' + who + '</div>';
+    }).join('');
+    
+    // 查核清單（只列貨架）
+    var shelves = zones.filter(function(z){ return z.group === 'shelf'; });
+    var listRows = shelves.map(function(z, i){
+        var st = z.status || 'normal';
+        return '<tr>' +
+            '<td style="text-align:center;">' + (i+1) + '</td>' +
+            '<td>' + (z.icon||'') + ' ' + z.name + '</td>' +
+            '<td style="text-align:center; color:' + (statusColor[st]||'#333') + '; font-weight:700;">' + (statusText[st]||'正常') + '</td>' +
+            '<td style="text-align:center;">' + (z.qc ? '✓' : '☐') + '</td>' +
+            '<td>' + (z.assignee || '') + '</td>' +
+            '<td>' + (z.note || '') + '</td>' +
+        '</tr>';
+    }).join('');
+    
+    var need = shelves.filter(function(z){ return z.status === 'need'; }).length;
+    var done = shelves.filter(function(z){ return z.status === 'done'; }).length;
+    var qc = shelves.filter(function(z){ return z.qc; }).length;
+    
+    var content =
+        '<div style="text-align:center; margin-bottom:10px;">' +
+            '<div style="font-size:20px; font-weight:bold;">🗺️ 賣場貨架查核 / 品保表</div>' +
+            '<div style="font-size:13px; margin-top:4px;">' + storeName + '　｜　日期：' + dateStr + '</div>' +
+            '<div style="font-size:11px; color:#555; margin-top:2px;">貨架 ' + shelves.length + ' 區　待清潔 ' + need + '　已完成 ' + done + '　品保 ' + qc + '</div>' +
+        '</div>' +
+        '<div style="position:relative; width:100%; max-width:640px; height:560px; margin:0 auto 14px; border:2px solid #475569; border-radius:6px; background:#fafafa;">' + planHtml + '</div>' +
+        '<table style="width:100%; border-collapse:collapse; font-size:11px;" border="1">' +
+            '<thead><tr style="background:#e2e8f0;">' +
+                '<th style="padding:4px; width:32px;">#</th><th style="padding:4px;">貨架區</th><th style="padding:4px; width:60px;">狀態</th><th style="padding:4px; width:44px;">品保</th><th style="padding:4px; width:80px;">負責人</th><th style="padding:4px;">備註</th>' +
+            '</tr></thead><tbody>' + listRows + '</tbody>' +
+        '</table>' +
+        '<div style="margin-top:20px; display:flex; justify-content:space-between; font-size:12px;">' +
+            '<div>查核人簽名：＿＿＿＿＿＿＿＿</div>' +
+            '<div>主管簽核：＿＿＿＿＿＿＿＿</div>' +
+        '</div>';
+    
+    var oldOverlay = document.getElementById('layoutPrintOverlay');
+    if (oldOverlay) oldOverlay.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'layoutPrintOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:white; z-index:99999; overflow:auto; -webkit-overflow-scrolling:touch;';
+    overlay.innerHTML =
+        '<div class="layout-print-toolbar" style="position:sticky; top:0; background:linear-gradient(to bottom,#065f46,#064e3b); padding:12px; text-align:center; z-index:1;">' +
+            '<div style="color:white; font-weight:bold; margin-bottom:8px; font-size:13px;">📋 預覽完成後請點「🖨️ 列印」</div>' +
+            '<button onclick="closeLayoutPrintOverlay()" style="padding:10px 18px; margin:0 4px; background:#6b7280; color:white; border:0; border-radius:6px; font-size:14px; font-weight:bold;">✕ 關閉</button>' +
+            '<button onclick="window.print()" style="padding:10px 22px; margin:0 4px; background:#10b981; color:white; border:0; border-radius:6px; font-weight:bold; font-size:14px;">🖨️ 列印</button>' +
+        '</div>' +
+        '<div style="padding:15px; max-width:210mm; margin:0 auto; background:white; color:black;">' + content + '</div>';
+    document.body.appendChild(overlay);
+    
+    var oldStyle = document.getElementById('layoutPrintStyle');
+    if (oldStyle) oldStyle.remove();
+    var styleEl = document.createElement('style');
+    styleEl.id = 'layoutPrintStyle';
+    styleEl.innerHTML =
+        ' @media print {' +
+            '.layout-print-toolbar { display:none !important; }' +
+            'body > *:not(#layoutPrintOverlay) { display:none !important; }' +
+            '#layoutPrintOverlay { position:static !important; overflow:visible !important; }' +
+            '@page { size:A4; margin:8mm; }' +
+        '}';
+    document.head.appendChild(styleEl);
+    document.body.style.overflow = 'hidden';
+    overlay.scrollTop = 0;
+}
+function closeLayoutPrintOverlay() {
+    var ov = document.getElementById('layoutPrintOverlay');
+    if (ov) ov.remove();
+    var st = document.getElementById('layoutPrintStyle');
+    if (st) st.remove();
+    document.body.style.overflow = '';
+}
+
 // ============================================================
 // ⚙️ 賣場配置「後台設定」（貨架名稱/類型/寬度/順序/複製/還原）
 // ============================================================
@@ -19493,7 +19685,10 @@ function openZoneConfigModal(zoneId) {
         if (secSel) secSel.value = z.sec || secs[0];
         document.getElementById('zoneConfigIcon').value = z.icon || '';
         document.getElementById('zoneConfigGroup').value = z.group || 'shelf';
-        document.getElementById('zoneConfigWidth').value = String(z.w || 2);
+        document.getElementById('zoneConfigX').value = (z.x != null ? z.x : 2);
+        document.getElementById('zoneConfigY').value = (z.y != null ? z.y : 2);
+        document.getElementById('zoneConfigW').value = (z.w != null ? z.w : 11);
+        document.getElementById('zoneConfigH').value = (z.h != null ? z.h : 7);
         if (delBtn) delBtn.style.display = '';
     } else {
         document.getElementById('zoneConfigTitle').textContent = '➕ 新增區域';
@@ -19501,7 +19696,10 @@ function openZoneConfigModal(zoneId) {
         if (secSel) secSel.value = secs[0];
         document.getElementById('zoneConfigIcon').value = '';
         document.getElementById('zoneConfigGroup').value = 'shelf';
-        document.getElementById('zoneConfigWidth').value = '2';
+        document.getElementById('zoneConfigX').value = 40;
+        document.getElementById('zoneConfigY').value = 40;
+        document.getElementById('zoneConfigW').value = 12;
+        document.getElementById('zoneConfigH').value = 7;
         if (delBtn) delBtn.style.display = 'none';
     }
     document.getElementById('zoneConfigModal').classList.remove('hidden');
@@ -19513,30 +19711,29 @@ function saveZoneConfig() {
     if (!name) return alert('⚠️ 請輸入區域名稱');
     var icon = document.getElementById('zoneConfigIcon').value.trim();
     var group = document.getElementById('zoneConfigGroup').value;
-    var w = parseInt(document.getElementById('zoneConfigWidth').value) || 2;
     var secSel = document.getElementById('zoneConfigSec');
     var sec = secSel ? secSel.value : '其他';
+    var zx = parseFloat(document.getElementById('zoneConfigX').value); if (isNaN(zx)) zx = 40;
+    var zy = parseFloat(document.getElementById('zoneConfigY').value); if (isNaN(zy)) zy = 40;
+    var zw = parseFloat(document.getElementById('zoneConfigW').value); if (isNaN(zw)) zw = 12;
+    var zh = parseFloat(document.getElementById('zoneConfigH').value); if (isNaN(zh)) zh = 7;
     var zones = getStoreZones(storeId);
     var id = document.getElementById('zoneConfigId').value;
     if (id) {
         var idx = zones.findIndex(function(x){ return x.id === id; });
         if (idx >= 0) {
             zones[idx].name = name; zones[idx].icon = icon;
-            zones[idx].group = group; zones[idx].w = w; zones[idx].sec = sec;
-            // 設施型不需清潔狀態
+            zones[idx].group = group; zones[idx].sec = sec;
+            zones[idx].x = zx; zones[idx].y = zy; zones[idx].w = zw; zones[idx].h = zh;
             if (group === 'fixture') { zones[idx].status = 'normal'; zones[idx].assignee = ''; zones[idx].qc = false; }
         }
     } else {
-        // 新增：插入到同分區的最後一個之後，維持分區聚集
-        var newZone = {
+        zones.push({
             id: 'z_custom_' + Date.now(),
-            sec: sec, name: name, icon: icon, group: group, w: w,
+            sec: sec, name: name, icon: icon, group: group,
+            x: zx, y: zy, w: zw, h: zh,
             status: 'normal', assignee: '', qc: false, note: '', lastChecked: '', lastBy: ''
-        };
-        var lastIdx = -1;
-        for (var k = 0; k < zones.length; k++) { if (zones[k].sec === sec) lastIdx = k; }
-        if (lastIdx >= 0) zones.splice(lastIdx + 1, 0, newZone);
-        else zones.push(newZone);
+        });
     }
     saveStoreZones(storeId, zones);
     closeModal('zoneConfigModal');
