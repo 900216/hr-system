@@ -3285,22 +3285,20 @@ body.view-mobile .system-menu .menu-close-btn {
    GPU 友善（transform / opacity），尊重 prefers-reduced-motion
    ═══════════════════════════════════════════════════════════ */
 
-/* 1️⃣ 背景格網緩慢漂移 + 呼吸光 */
+/* 1️⃣ 背景格網（靜態，省電）*/
 @keyframes gridDrift {
     0%   { background-position: 0 0, 0 0; }
     100% { background-position: 44px 44px, 44px 44px; }
 }
-.main-page::before { animation: gridDrift 9s linear infinite; }
+.main-page::before { /* 靜態格網，不再持續動畫以省電 */ }
 
-/* 2️⃣ 卡片頂部漸層光條：流動 */
+/* 2️⃣ 卡片頂部漸層光條（靜態漸層，省電）*/
 @keyframes barFlow {
     0%   { background-position: 0% 50%; }
     100% { background-position: 200% 50%; }
 }
 .work-list-panel::before {
-    background: linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6, #22d3ee) !important;
-    background-size: 200% 100% !important;
-    animation: barFlow 4s linear infinite;
+    background: linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6) !important;
 }
 
 /* 3️⃣ 面板標題掃描光線（從左到右掠過）*/
@@ -3626,6 +3624,7 @@ body.view-desktop .work-list-panel:hover {
         <div class="menu-item" id="menu-employee">👥 員工資料 ▼
             <div class="submenu">
                 <div class="submenu-item" onclick="goToPage('employeeBasic','menu-employee')">📝 員工基本資料</div>
+                <div class="submenu-item" onclick="goToPage('empPenalty','menu-employee')">⚖️ 員工處罰表</div>
                 <div class="submenu-item" onclick="goToPage('leaveAllocation','menu-employee')">🌴 假別額度管理</div>
                 <div class="submenu-item" onclick="goToPage('payroll','menu-employee')">💰 薪資管理</div>
                 <div class="submenu-item" onclick="goToPage('mySalary','menu-employee')">📄 我的薪資</div>
@@ -4416,7 +4415,38 @@ body.view-desktop .work-list-panel:hover {
         </div></div></div>
     </div>
     
-    <!-- 🌴 假別額度管理頁面 -->
+    <!-- ⚖️ 員工處罰表頁面 -->
+    <div id="page-empPenalty" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 👥 員工資料 &gt; <strong>⚖️ 員工處罰表</strong></div>
+        <div class="main-content"><div class="work-list-panel"><div class="panel-header">
+            <h3>⚖️ 員工處罰紀錄</h3>
+            <div><button class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="openPenaltyModal()">➕ 新增處罰</button></div>
+        </div><div class="panel-body">
+            <div style="background:linear-gradient(135deg,#fef9c3,#fde68a); padding:10px; border-radius:8px; margin-bottom:12px; font-size:12px; color:#854d0e;">
+                💡 此表記錄員工違規與獎懲。可作為績效考核、勞資爭議佐證。請客觀記錄事實。
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="penaltySearchInput" placeholder="🔍 搜尋姓名 / 事由" style="padding:7px 10px; border:1px solid #d4c5a8; border-radius:8px; flex:1; min-width:150px;" oninput="renderPenaltyList()">
+                <select id="penaltyTypeFilter" style="padding:7px 10px; border:1px solid #d4c5a8; border-radius:8px;" onchange="renderPenaltyList()">
+                    <option value="">全部類型</option>
+                    <option value="口頭警告">口頭警告</option>
+                    <option value="書面警告">書面警告</option>
+                    <option value="申誡">申誡</option>
+                    <option value="記過">記過</option>
+                    <option value="記大過">記大過</option>
+                    <option value="扣薪">扣薪</option>
+                    <option value="獎勵">🏆 獎勵</option>
+                </select>
+                <span id="penaltyCountInfo" style="font-size:12px; color:#6b7280;"></span>
+            </div>
+            <!-- 統計卡 -->
+            <div id="penaltyStats" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;"></div>
+            <table class="work-table"><thead><tr><th>日期</th><th>姓名</th><th>類型</th><th>事由</th><th>處置</th><th>扣款</th><th>處理人</th><th>操作</th></tr></thead>
+            <tbody id="penaltyList"></tbody></table>
+        </div></div></div>
+    </div>
+    
+    <!-- 假別額度管理頁面 -->
     <div id="page-leaveAllocation" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 👥 員工資料 &gt; <strong>🌴 假別額度管理</strong></div>
         <div class="main-content">
@@ -6430,6 +6460,38 @@ body.view-desktop .work-list-panel:hover {
 </div>
 
 <!-- 員工完整資料 Modal -->
+<!-- ⚖️ 員工處罰編輯彈窗 -->
+<div id="penaltyModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:500px;">
+        <div class="modal-title" id="penaltyModalTitle">➕ 新增處罰紀錄</div>
+        <input type="hidden" id="penaltyId">
+        <table class="form-table">
+            <tr><td class="label-col">員工：</td><td><select id="penaltyEmp" style="min-width:220px;"></select></td></tr>
+            <tr><td class="label-col">日期：</td><td><input type="date" id="penaltyDate"></td></tr>
+            <tr><td class="label-col">類型：</td><td>
+                <select id="penaltyType" onchange="onPenaltyTypeChange()" style="min-width:160px;">
+                    <option value="口頭警告">口頭警告</option>
+                    <option value="書面警告">書面警告</option>
+                    <option value="申誡">申誡</option>
+                    <option value="記過">記過</option>
+                    <option value="記大過">記大過</option>
+                    <option value="扣薪">扣薪</option>
+                    <option value="獎勵">🏆 獎勵（嘉獎/記功）</option>
+                </select>
+            </td></tr>
+            <tr><td class="label-col">事由：</td><td><textarea id="penaltyReason" rows="2" placeholder="例：未依規定打卡、遲到 30 分鐘" style="width:100%;box-sizing:border-box;"></textarea></td></tr>
+            <tr><td class="label-col">處置內容：</td><td><textarea id="penaltyDetail" rows="2" placeholder="例：扣當月全勤獎金、書面記錄存檔" style="width:100%;box-sizing:border-box;"></textarea></td></tr>
+            <tr id="penaltyAmountRow"><td class="label-col">扣款金額：</td><td><input type="number" id="penaltyAmount" placeholder="0" style="width:120px;"> 元</td></tr>
+            <tr><td class="label-col">處理人：</td><td><input type="text" id="penaltyHandler" placeholder="例：店長 王大明"></td></tr>
+            <tr><td class="label-col">備註：</td><td><input type="text" id="penaltyNote" placeholder="選填"></td></tr>
+        </table>
+        <div style="text-align:center; margin-top:16px; display:flex; gap:8px; justify-content:center;">
+            <button class="btn-secondary" onclick="closeModal('penaltyModal')">取消</button>
+            <button class="btn-confirm" onclick="savePenalty()">💾 儲存</button>
+        </div>
+    </div>
+</div>
+
 <div id="empFullModal" class="modal-overlay hidden">
     <div class="modal-content" style="max-width:520px;">
         <div class="modal-title" id="empfTitle">➕ 新增員工</div>
@@ -7872,6 +7934,7 @@ var PERMISSION_FEATURES = [
     ]},
     { group: '👥 員工資料', items: [
         { id: 'employeeBasic',    name: '📝 員工基本資料' },
+        { id: 'empPenalty',       name: '⚖️ 員工處罰表' },
         { id: 'leaveAllocation',  name: '🌴 假別額度管理' },
         { id: 'insuranceAdd',     name: '➕ 加保作業' },
         { id: 'insuranceRemove',  name: '➖ 退保作業' },
@@ -8327,6 +8390,7 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'attendanceQuery') { loadEmployeeOptions('aqEmployee'); setCurrentMonth('aqMonth'); renderAttendanceQuery(); }
     else if (pageName === 'scheduleQuery') { loadEmployeeOptions('sqEmployee'); setCurrentMonth('sqMonth'); renderScheduleQuery(); }
     else if (pageName === 'employeeBasic') renderEmployeeBasicList();
+    else if (pageName === 'empPenalty') renderPenaltyList();
     else if (pageName === 'leaveAllocation') renderLeaveAllocation();
     else if (pageName === 'cashReport') initCashReport();
     else if (pageName === 'purchaseReceipt') initPurchaseReceipt();
@@ -18789,6 +18853,144 @@ function applyApprovedLeaveToSchedule(leaveItem) {
 }
 
 // ============= 員工基本資料維護 =============
+// ============================================================
+// ⚖️ 員工處罰表
+// ============================================================
+var PENALTY_TYPES = ['口頭警告','書面警告','申誡','記過','記大過','扣薪','獎勵'];
+function _penaltyTypeColor(t) {
+    var map = {
+        '口頭警告':'#94a3b8', '書面警告':'#f59e0b', '申誡':'#fb923c',
+        '記過':'#ef4444', '記大過':'#dc2626', '扣薪':'#b91c1c', '獎勵':'#16a34a'
+    };
+    return map[t] || '#6b7280';
+}
+function onPenaltyTypeChange() {
+    var t = document.getElementById('penaltyType').value;
+    var row = document.getElementById('penaltyAmountRow');
+    if (row) row.style.display = (t === '扣薪') ? '' : 'none';
+}
+function openPenaltyModal(id) {
+    var emps = loadData('employees', defaultEmployees);
+    var sel = document.getElementById('penaltyEmp');
+    sel.innerHTML = emps.map(function(e){ return '<option value="' + e.id + '">' + e.name + '（' + (e.num||e.id) + '）</option>'; }).join('');
+    document.getElementById('penaltyModalTitle').textContent = id ? '✏️ 編輯處罰紀錄' : '➕ 新增處罰紀錄';
+    document.getElementById('penaltyId').value = id || '';
+    if (id) {
+        var list = loadData('penaltyList', []);
+        var p = list.find(function(x){ return x.id === id; });
+        if (p) {
+            sel.value = p.empId;
+            document.getElementById('penaltyDate').value = p.date || '';
+            document.getElementById('penaltyType').value = p.type || '口頭警告';
+            document.getElementById('penaltyReason').value = p.reason || '';
+            document.getElementById('penaltyDetail').value = p.detail || '';
+            document.getElementById('penaltyAmount').value = p.amount || '';
+            document.getElementById('penaltyHandler').value = p.handler || '';
+            document.getElementById('penaltyNote').value = p.note || '';
+        }
+    } else {
+        var today = new Date();
+        document.getElementById('penaltyDate').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        document.getElementById('penaltyType').value = '口頭警告';
+        document.getElementById('penaltyReason').value = '';
+        document.getElementById('penaltyDetail').value = '';
+        document.getElementById('penaltyAmount').value = '';
+        document.getElementById('penaltyHandler').value = currentUser ? (currentUser.name || '') : '';
+        document.getElementById('penaltyNote').value = '';
+    }
+    onPenaltyTypeChange();
+    document.getElementById('penaltyModal').classList.remove('hidden');
+}
+function savePenalty() {
+    var empSel = document.getElementById('penaltyEmp');
+    var empId = empSel.value;
+    var empName = empSel.options[empSel.selectedIndex] ? empSel.options[empSel.selectedIndex].text.split('（')[0] : '';
+    var date = document.getElementById('penaltyDate').value;
+    var type = document.getElementById('penaltyType').value;
+    var reason = document.getElementById('penaltyReason').value.trim();
+    if (!empId) return alert('⚠️ 請選擇員工');
+    if (!date) return alert('⚠️ 請選擇日期');
+    if (!reason) return alert('⚠️ 請填寫事由');
+    var list = loadData('penaltyList', []);
+    var id = document.getElementById('penaltyId').value;
+    var rec = {
+        id: id || ('pen_' + Date.now()),
+        empId: empId, empName: empName, date: date, type: type,
+        reason: reason,
+        detail: document.getElementById('penaltyDetail').value.trim(),
+        amount: type === '扣薪' ? (parseInt(document.getElementById('penaltyAmount').value) || 0) : 0,
+        handler: document.getElementById('penaltyHandler').value.trim(),
+        note: document.getElementById('penaltyNote').value.trim(),
+        createdAt: id ? undefined : Date.now()
+    };
+    if (id) {
+        var idx = list.findIndex(function(x){ return x.id === id; });
+        if (idx >= 0) { rec.createdAt = list[idx].createdAt; list[idx] = rec; }
+    } else {
+        list.push(rec);
+    }
+    saveData('penaltyList', list);
+    closeModal('penaltyModal');
+    renderPenaltyList();
+    showNotif('✅ 已儲存處罰紀錄');
+}
+function deletePenalty(id) {
+    if (!confirm('確定刪除這筆處罰紀錄？')) return;
+    var list = loadData('penaltyList', []);
+    list = list.filter(function(x){ return x.id !== id; });
+    saveData('penaltyList', list);
+    renderPenaltyList();
+    showNotif('🗑️ 已刪除');
+}
+function renderPenaltyList() {
+    var list = loadData('penaltyList', []);
+    var kw = (document.getElementById('penaltySearchInput') || {value:''}).value.toLowerCase();
+    var typeF = (document.getElementById('penaltyTypeFilter') || {value:''}).value;
+    var tbody = document.getElementById('penaltyList');
+    var statsEl = document.getElementById('penaltyStats');
+    if (!tbody) return;
+    
+    // 統計
+    var counts = {};
+    PENALTY_TYPES.forEach(function(t){ counts[t] = 0; });
+    list.forEach(function(p){ if (counts[p.type] !== undefined) counts[p.type]++; });
+    if (statsEl) {
+        statsEl.innerHTML = PENALTY_TYPES.filter(function(t){ return counts[t] > 0; }).map(function(t){
+            return '<div style="background:' + _penaltyTypeColor(t) + '; color:#fff; padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700;">' + t + ' ' + counts[t] + '</div>';
+        }).join('') || '<span style="font-size:12px;color:#94a3b8;">尚無紀錄</span>';
+    }
+    
+    var filtered = list.filter(function(p){
+        if (typeF && p.type !== typeF) return false;
+        if (kw && (p.empName||'').toLowerCase().indexOf(kw) < 0 && (p.reason||'').toLowerCase().indexOf(kw) < 0) return false;
+        return true;
+    }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    
+    var info = document.getElementById('penaltyCountInfo');
+    if (info) info.textContent = '共 ' + filtered.length + ' 筆';
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:24px;">尚無處罰紀錄</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filtered.map(function(p){
+        var color = _penaltyTypeColor(p.type);
+        return '<tr>' +
+            '<td>' + (p.date||'') + '</td>' +
+            '<td><strong>' + (p.empName||'') + '</strong></td>' +
+            '<td><span style="background:' + color + '; color:#fff; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700;">' + p.type + '</span></td>' +
+            '<td style="max-width:160px; font-size:12px;">' + (p.reason||'') + '</td>' +
+            '<td style="max-width:140px; font-size:12px; color:#6b7280;">' + (p.detail||'-') + '</td>' +
+            '<td style="text-align:right;">' + (p.amount ? '-' + p.amount.toLocaleString() : '-') + '</td>' +
+            '<td style="font-size:12px;">' + (p.handler||'-') + '</td>' +
+            '<td style="white-space:nowrap;">' +
+                '<button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="openPenaltyModal(\'' + p.id + '\')">✏️</button> ' +
+                '<button class="btn-secondary" style="padding:3px 8px; font-size:11px; background:#fee2e2; color:#b91c1c;" onclick="deletePenalty(\'' + p.id + '\')">🗑️</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
+}
+
 function renderEmployeeBasicList() {
     var employees = loadData('employees', defaultEmployees);
     var fullInfo = loadData('employeesFullInfo', {});
@@ -19780,6 +19982,7 @@ var BACKUP_KEYS = [
     'insuranceList',
     'salarySlips',
     'leaveBalanceAdjustments',
+    'penaltyList',
     'dailyCashReports',
     'purchaseReceipts',
     'transferOrders',
