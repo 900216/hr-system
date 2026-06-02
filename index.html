@@ -506,27 +506,38 @@ body { font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, sans
     appearance: textfield;
 }
 
-.slot-times input[type="time"] {
-    width: 90px;
+.slot-times input.time24 {
+    width: 72px;
     padding: 3px;
     border: 1px solid #999;
     border-radius: 3px;
     text-align: center;
     font-size: 12px;
     font-weight: bold;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    letter-spacing: 1px;
 }
 
-/* 🔑 強制 24 小時制：隱藏 AM/PM 選擇器 */
-input[type="time"]::-webkit-datetime-edit-ampm-field {
-    display: none !important;
-    appearance: none;
-    -webkit-appearance: none;
-    width: 0;
-    visibility: hidden;
-}
-input[type="time"]::-webkit-datetime-edit-hour-field,
-input[type="time"]::-webkit-datetime-edit-minute-field {
+/* 🔑 排班時間文字輸入（24 小時制 HH:MM） */
+input.time24 {
+    width: 72px;
+    padding: 4px 6px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: bold;
     text-align: center;
+    letter-spacing: 1px;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+input.time24:focus {
+    outline: none;
+    border-color: #d97706;
+    box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
+}
+input.time24.invalid {
+    border-color: #dc2626;
+    background: #fef2f2;
 }
 .slot-checkbox {
     display: block;
@@ -805,25 +816,9 @@ input[type="time"]::-webkit-datetime-edit-minute-field {
 
 .shift-info-box { background: #fef3c7; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 13px; }
 
-.shift-types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 12px 0; }
-.shift-type-btn {
-    padding: 12px 8px;
-    border: 2px solid #d1d5db;
-    border-radius: 6px;
-    background: white;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.15s;
-}
-.shift-type-btn:hover { border-color: #f59e0b; background: #fef3c7; }
-.shift-type-btn.selected { border-color: #f59e0b; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; }
-.shift-type-btn .big-emoji { font-size: 28px; display: block; margin-bottom: 4px; }
-.shift-type-btn .type-name { font-weight: bold; font-size: 13px; }
-.shift-type-btn .type-time { font-size: 11px; opacity: 0.8; margin-top: 3px; }
-
 .time-inputs { background: #f9fafb; padding: 12px; border-radius: 4px; margin-top: 10px; }
 .time-inputs label { display: inline-block; min-width: 80px; font-weight: bold; font-size: 13px; }
-.time-inputs input[type="time"] { padding: 5px; border: 1px solid #999; border-radius: 3px; font-size: 13px; }
+.time-inputs input.time24 { padding: 5px; border: 1px solid #999; border-radius: 3px; font-size: 13px; font-family: ui-monospace, "SF Mono", Consolas, monospace; width: 80px; text-align: center; letter-spacing: 1px; }
 
 .add-employee-btn { background: #22c55e; color: white; padding: 8px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%; }
 .emp-list-item { padding: 6px 8px; background: #f3f4f6; margin: 4px 0; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
@@ -1831,6 +1826,20 @@ div[style*="border-radius:4px"], div[style*="border-radius: 4px"] { border-radiu
     font-weight: 800 !important;
 }
 
+.shift-status-btn {
+    padding: 8px 18px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.15s;
+}
+.shift-status-btn:hover { border-color: #f59e0b; background: #fef3c7; }
+.shift-status-btn.selected { border-color: #d97706; background: linear-gradient(to bottom, #fbbf24, #f59e0b); color: #78350f; box-shadow: 0 2px 6px rgba(217,119,6,0.35); }
+
 /* ── 員工卡 / 列表項目 hover ── */
 .employee-card, .list-item, .data-row {
     border-radius: 10px !important;
@@ -1840,6 +1849,7 @@ div[style*="border-radius:4px"], div[style*="border-radius: 4px"] { border-radiu
 
 /* ── 數字輸入、日期、下拉統一圓角 ── */
 input[type="text"], input[type="number"], input[type="date"], input[type="time"],
+input.time24,
 input[type="password"], input[type="email"], input[type="tel"], select, textarea {
     border-radius: 9px !important;
 }
@@ -4255,8 +4265,8 @@ body.view-desktop .work-list-panel:hover {
             <table class="form-table">
                 <tr><td class="label-col">加班日期：</td><td><input type="date" id="otDate"></td></tr>
                 <tr><td class="label-col">類型：</td><td><select id="otType"><option>平日延長(1.34倍)</option><option>平日延長(1.67倍)</option><option>休息日加班</option><option>例假日加班(雙倍)</option></select></td></tr>
-                <tr><td class="label-col">開始：</td><td><input type="time" id="otStart" value="18:00"></td></tr>
-                <tr><td class="label-col">結束：</td><td><input type="time" id="otEnd" value="20:00"></td></tr>
+                <tr><td class="label-col">開始：</td><td><input type="text" id="otStart" class="time24" value="18:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></td></tr>
+                <tr><td class="label-col">結束：</td><td><input type="text" id="otEnd" class="time24" value="20:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></td></tr>
                 <tr><td class="label-col">原因：</td><td><textarea id="otReason" rows="3" placeholder="請說明加班原因"></textarea></td></tr>
             </table>
             <div style="text-align:center; margin-top:15px;"><button class="btn-confirm" onclick="submitOvertime()">✅ 提交</button></div>
@@ -4292,7 +4302,7 @@ body.view-desktop .work-list-panel:hover {
             <table class="form-table">
                 <tr><td class="label-col">補卡日期：</td><td><input type="date" id="csDate"></td></tr>
                 <tr><td class="label-col">類型：</td><td><select id="csType"><option>補簽到</option><option>補簽退</option><option>補簽到+簽退</option></select></td></tr>
-                <tr><td class="label-col">補卡時間：</td><td><input type="time" id="csTime" value="08:00"></td></tr>
+                <tr><td class="label-col">補卡時間：</td><td><input type="text" id="csTime" class="time24" value="08:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></td></tr>
                 <tr><td class="label-col">原因：</td><td><textarea id="csReason" rows="3" placeholder="請說明補卡原因"></textarea></td></tr>
             </table>
             <div style="text-align:center; margin-top:15px;"><button class="btn-confirm" onclick="submitCardSupp()">✅ 提交</button></div>
@@ -6486,53 +6496,17 @@ body.view-desktop .work-list-panel:hover {
             <strong>📅 日期：</strong><span id="modalDate"></span>
         </div>
         
-        <div style="font-weight:bold; margin-bottom:6px;">🎯 選擇班別：</div>
-        <div class="shift-types">
-            <div class="shift-type-btn" data-type="normal" onclick="selectShiftType('normal')">
-                <span class="big-emoji">☀️</span>
-                <div class="type-name">正常班</div>
-                <div class="type-time">08:00-17:00</div>
-            </div>
-            <div class="shift-type-btn" data-type="morning" onclick="selectShiftType('morning')">
-                <span class="big-emoji">🌅</span>
-                <div class="type-name">早班</div>
-                <div class="type-time">07:00-15:00</div>
-            </div>
-            <div class="shift-type-btn" data-type="afternoon" onclick="selectShiftType('afternoon')">
-                <span class="big-emoji">🌆</span>
-                <div class="type-name">中班</div>
-                <div class="type-time">15:00-23:00</div>
-            </div>
-            <div class="shift-type-btn" data-type="night" onclick="selectShiftType('night')">
-                <span class="big-emoji">🌙</span>
-                <div class="type-name">大夜班</div>
-                <div class="type-time">23:00-07:00</div>
-            </div>
-            <div class="shift-type-btn" data-type="rest" onclick="selectShiftType('rest')">
-                <span class="big-emoji">🛏️</span>
-                <div class="type-name">休息日</div>
-                <div class="type-time">無班</div>
-            </div>
-            <div class="shift-type-btn" data-type="holiday" onclick="selectShiftType('holiday')">
-                <span class="big-emoji">🎉</span>
-                <div class="type-name">例假日</div>
-                <div class="type-time">無班</div>
-            </div>
-            <div class="shift-type-btn" data-type="leave" onclick="selectShiftType('leave')">
-                <span class="big-emoji">🌴</span>
-                <div class="type-name">請假</div>
-                <div class="type-time">請假</div>
-            </div>
-            <div class="shift-type-btn" data-type="custom" onclick="selectShiftType('custom')">
-                <span class="big-emoji">⚙️</span>
-                <div class="type-name">自訂時間</div>
-                <div class="type-time">手動設定</div>
-            </div>
+        <div style="font-weight:bold; margin-bottom:8px;">🎯 狀態：</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+            <button class="shift-status-btn" data-type="normal" onclick="selectShiftStatus('normal')">☀️ 上班</button>
+            <button class="shift-status-btn" data-type="rest" onclick="selectShiftStatus('rest')">🛏️ 休息日</button>
+            <button class="shift-status-btn" data-type="holiday" onclick="selectShiftStatus('holiday')">🎉 例假日</button>
+            <button class="shift-status-btn" data-type="leave" onclick="selectShiftStatus('leave')">🌴 請假</button>
         </div>
-        
+
         <div id="timeInputs" class="time-inputs hidden">
-            <div style="margin-bottom:8px;"><label>⏰ 上班：</label><input type="time" id="shiftStart" value="08:00"></div>
-            <div><label>⏰ 下班：</label><input type="time" id="shiftEnd" value="17:00"></div>
+            <div style="margin-bottom:8px;"><label>⏰ 上班：</label><input type="text" id="shiftStart" class="time24" value="08:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></div>
+            <div><label>⏰ 下班：</label><input type="text" id="shiftEnd" class="time24" value="17:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></div>
         </div>
         
         <div style="margin-top:15px; padding-top:12px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
@@ -10214,13 +10188,9 @@ function openEditShiftModal(empId, dateKey) {
                      (emp.empType === 'parttime' ? '[工讀]' : '[正職]') +
                      '<br><strong>📅 日期：</strong>' + dateKey;
     
-    // 渲染 2 個 slot 編輯卡片
+    // 渲染 1 個 slot 編輯卡片
     var slotsContainer = document.getElementById('shiftEditSlots');
-    var html = '';
-    for (var i = 0; i < 2; i++) {
-        html += renderSlotEditCard(i, slots[i] || emptySlot(), emp.homeStoreId);
-    }
-    slotsContainer.innerHTML = html;
+    slotsContainer.innerHTML = renderSlotEditCard(0, slots[0] || emptySlot(), emp.homeStoreId);
     
     document.getElementById('shiftEditModal').classList.remove('hidden');
 }
@@ -10241,7 +10211,6 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
     };
     
     var html = '<div class="modal-slot-card">';
-    html += '<div class="modal-slot-title">📋 班別 ' + (slotIndex + 1) + (slotIndex === 0 ? '（早班）' : '（晚班）') + '</div>';
     
     // 類型
     html += '<div class="form-row"><label>類型：</label>';
@@ -10253,9 +10222,9 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
     
     var needTime = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1;
     if (needTime) {
-        // 時間
-        html += '<div class="form-row"><label>上班：</label><input type="time" value="' + (slot.start || '08:00') + '" onchange="modalUpdateSlot(' + slotIndex + ',\'start\',this.value)"></div>';
-        html += '<div class="form-row"><label>下班：</label><input type="time" value="' + (slot.end || '17:00') + '" onchange="modalUpdateSlot(' + slotIndex + ',\'end\',this.value)"></div>';
+        // 時間（Enter 鍵自動跳到下一欄）
+        html += '<div class="form-row"><label>上班：</label><input type="text" id="slotStart_' + slotIndex + '" class="time24" value="' + (slot.start || '08:00') + '" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this);modalUpdateSlot(' + slotIndex + ',\'start\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();normalizeTime24(this);modalUpdateSlot(' + slotIndex + ',\'start\',this.value);var n=document.getElementById(\'slotEnd_' + slotIndex + '\');if(n){n.focus();n.select();}}"></div>';
+        html += '<div class="form-row"><label>下班：</label><input type="text" id="slotEnd_' + slotIndex + '" class="time24" value="' + (slot.end || '17:00') + '" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this);modalUpdateSlot(' + slotIndex + ',\'end\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();normalizeTime24(this);modalUpdateSlot(' + slotIndex + ',\'end\',this.value);var n=document.querySelector(\'#shiftEditSlots select\');if(n)n.focus();}"></div>';
         
         // 派駐門市
         html += '<div class="form-row"><label>派駐：</label>';
@@ -10669,47 +10638,80 @@ function openShiftModal(empId, dateKey) {
     document.getElementById('modalDate').textContent = dateKey;
     document.getElementById('shiftModalTitle').textContent = existing ? '✏️ 編輯排班' : '➕ 新增排班';
     
-    // 重置選擇狀態
-    var btns = document.querySelectorAll('.shift-type-btn');
+    // 重置狀態按鈕
+    var btns = document.querySelectorAll('.shift-status-btn');
     for (var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
-    
-    document.getElementById('timeInputs').classList.add('hidden');
+    selectedType = null;
+
     document.getElementById('deleteShiftBtn').style.display = existing ? 'inline-block' : 'none';
     
     if (existing) {
-        selectedType = existing.type;
-        var btn = document.querySelector('.shift-type-btn[data-type="' + existing.type + '"]');
-        if (btn) btn.classList.add('selected');
-        
-        if (['normal','morning','afternoon','night','custom'].indexOf(existing.type) !== -1) {
-            document.getElementById('timeInputs').classList.remove('hidden');
+        // 舊資料：normal/morning/afternoon/night/custom → 全對應到 'normal'（上班）
+        var mappedType = (['rest','holiday','leave'].indexOf(existing.type) !== -1) ? existing.type : 'normal';
+        selectShiftStatus(mappedType);
+        if (mappedType === 'normal') {
             document.getElementById('shiftStart').value = existing.start || '08:00';
             document.getElementById('shiftEnd').value = existing.end || '17:00';
         }
     } else {
-        selectedType = null;
+        document.getElementById('timeInputs').classList.add('hidden');
     }
     
     document.getElementById('shiftModal').classList.remove('hidden');
 }
 
-function selectShiftType(type) {
+function selectShiftStatus(type) {
     selectedType = type;
-    var btns = document.querySelectorAll('.shift-type-btn');
+    var btns = document.querySelectorAll('.shift-status-btn');
     for (var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
-    var sel = document.querySelector('.shift-type-btn[data-type="' + type + '"]');
+    var sel = document.querySelector('.shift-status-btn[data-type="' + type + '"]');
     if (sel) sel.classList.add('selected');
     
     var ti = document.getElementById('timeInputs');
-    if (['rest','holiday','leave'].indexOf(type) !== -1) {
-        ti.classList.add('hidden');
-    } else {
+    if (type === 'normal') {
         ti.classList.remove('hidden');
-        var preset = SHIFT_PRESETS[type];
-        if (preset && preset.start !== '-') {
-            document.getElementById('shiftStart').value = preset.start;
-            document.getElementById('shiftEnd').value = preset.end;
-        }
+    } else {
+        ti.classList.add('hidden');
+    }
+}
+
+// ⏰ 24 小時制輸入輔助函式
+function isValidTime24(val) {
+    if (!val) return false;
+    var m = val.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return false;
+    var h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+    return h >= 0 && h <= 23 && mi >= 0 && mi <= 59;
+}
+function normalizeTime24(input) {
+    var v = input.value.trim();
+    // 支援 "8:0" → "08:00", "830" → "08:30", "0830" → "08:30"
+    if (/^\d{3,4}$/.test(v)) {
+        var pad = v.length === 3 ? '0' + v : v;
+        v = pad.slice(0, 2) + ':' + pad.slice(2);
+    } else if (/^\d{1,2}$/.test(v)) {
+        v = (v.length === 1 ? '0' + v : v) + ':00';
+    } else if (/^\d{1,2}:\d{1}$/.test(v)) {
+        var parts = v.split(':');
+        v = (parts[0].length === 1 ? '0' + parts[0] : parts[0]) + ':0' + parts[1];
+    } else if (/^\d{1}:\d{2}$/.test(v)) {
+        v = '0' + v;
+    }
+    input.value = v;
+    if (isValidTime24(v)) {
+        input.classList.remove('invalid');
+    } else {
+        input.classList.add('invalid');
+    }
+}
+function validateTime24(input) {
+    var v = input.value;
+    if (isValidTime24(v)) {
+        input.classList.remove('invalid');
+    }
+    // 只在有完整格式時才標紅，避免打字中途就標
+    if (v.length >= 4 && !isValidTime24(v)) {
+        input.classList.add('invalid');
     }
 }
 
@@ -10726,6 +10728,8 @@ function saveShift() {
     } else {
         start = document.getElementById('shiftStart').value;
         end = document.getElementById('shiftEnd').value;
+        if (!isValidTime24(start)) return alert('⚠️ 上班時間格式錯誤，請輸入 HH:MM（24 小時制）\n例：08:00、13:30、23:00');
+        if (!isValidTime24(end)) return alert('⚠️ 下班時間格式錯誤，請輸入 HH:MM（24 小時制）\n例：17:00、22:00、07:00');
     }
     
     shifts[currentShift.dateKey][currentShift.empId] = {
@@ -20904,7 +20908,7 @@ var DEFAULT_PANTRY_ID = 'fa1fe25c-fd0a-4ba7-9cde-a67743c9ed74';  // ← 已內�
 
 // 📂 Google Apps Script 同步（你的 Google 雲端，免費大空間）
 // 設定方式：到「線上同步」頁，連接 Apps Script 後點「💾 寫入系統」自動更新此行
-var DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxuPPk5uVORIy1FfqJilWbhXZEjhDmNZMc-niWZIa5laYxsXITrdwVnIDj5CLkU1j3tsQ/exec";  // ← 寫入系統後此處會自動填入網址
+var DEFAULT_GAS_URL = "";  // ← 寫入系統後此處會自動填入網址
 
 function gasGetUrl() { return localStorage.getItem('_gas_url') || DEFAULT_GAS_URL || ''; }
 function gasSetUrl(u) { if (u) localStorage.setItem('_gas_url', u); else localStorage.removeItem('_gas_url'); }
