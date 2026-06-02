@@ -6505,8 +6505,8 @@ body.view-desktop .work-list-panel:hover {
         </div>
 
         <div id="timeInputs" class="time-inputs hidden">
-            <div style="margin-bottom:8px;"><label>⏰ 上班：</label><input type="text" id="shiftStart" class="time24" value="08:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></div>
-            <div><label>⏰ 下班：</label><input type="text" id="shiftEnd" class="time24" value="17:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)"></div>
+            <div style="margin-bottom:8px;"><label>⏰ 上班：</label><input type="text" id="shiftStart" class="time24" value="08:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();normalizeTime24(this);document.getElementById('shiftEnd').focus();document.getElementById('shiftEnd').select();}"></div>
+            <div><label>⏰ 下班：</label><input type="text" id="shiftEnd" class="time24" value="17:00" placeholder="HH:MM" maxlength="5" oninput="validateTime24(this)" onblur="normalizeTime24(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();normalizeTime24(this);document.querySelector('#shiftModal .btn-confirm').focus();}"></div>
         </div>
         
         <div style="margin-top:15px; padding-top:12px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
@@ -20908,7 +20908,7 @@ var DEFAULT_PANTRY_ID = 'fa1fe25c-fd0a-4ba7-9cde-a67743c9ed74';  // ← 已內�
 
 // 📂 Google Apps Script 同步（你的 Google 雲端，免費大空間）
 // 設定方式：到「線上同步」頁，連接 Apps Script 後點「💾 寫入系統」自動更新此行
-var DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxuPPk5uVORIy1FfqJilWbhXZEjhDmNZMc-niWZIa5laYxsXITrdwVnIDj5CLkU1j3tsQ/exec";  // ← 寫入系統後此處會自動填入網址
+var DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxuPPk5uVORIy1FfqJilWbhXZEjhDmNZMc-niWZIa5laYxsXITrdwVnIDj5CLkU1j3tsQ/exec";
 
 function gasGetUrl() { return localStorage.getItem('_gas_url') || DEFAULT_GAS_URL || ''; }
 function gasSetUrl(u) { if (u) localStorage.setItem('_gas_url', u); else localStorage.removeItem('_gas_url'); }
@@ -25000,7 +25000,8 @@ function _processEmployeeCsvImport(text) {
             var name = (r[idx.name]||'').trim();
             if (!num || !name) continue;
             var existing = existingByNum[num];
-            var emp = existing || { id: 'imp_' + Date.now() + '_' + ri2, num: num };
+            var isNew = !existing;
+            var emp = existing || { id: 'imp_' + num.replace(/\W/g,'') + '_' + ri2, num: num };
             emp.name = name;
             var empTypeRaw = ((r[idx.empType]||'').trim()).toLowerCase();
             emp.empType = (empTypeRaw === '工讀' || empTypeRaw === 'parttime') ? 'parttime' : 'fulltime';
@@ -25010,7 +25011,14 @@ function _processEmployeeCsvImport(text) {
                 var sN = (r[idx.storeName]||'').trim();
                 if (storeByName[sN]) emp.homeStoreId = storeByName[sN];
             }
-            if (!existing) nowEmps.push(emp);
+            if (isNew) {
+                nowEmps.push(emp);
+            } else {
+                // 更新：找到在 nowEmps 中的位置並替換
+                for (var ui = 0; ui < nowEmps.length; ui++) {
+                    if (nowEmps[ui].num === num) { nowEmps[ui] = emp; break; }
+                }
+            }
             var info = fullInfo[emp.id] || {};
             ['idNo','position','hireDate','status','phone','email'].forEach(function(f){
                 if (idx[f] !== undefined) info[f] = (r[idx[f]]||'').trim();
