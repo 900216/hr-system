@@ -10254,10 +10254,12 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         
         html += '<div class="form-row"><label>假別：</label>';
         html += '<select onchange="modalUpdateLeaveSlot(' + slotIndex + ',\'leaveType\',this.value)">';
-        var leaveTypes = ['特休假','特代休','例假日','休假日','病假','事假','喪假','生理假','婚假','產假','陪產假','育嬰假','公假','公傷病假','其他'];
-        for (var li = 0; li < leaveTypes.length; li++) {
-            var lsel = (slot.leaveType === leaveTypes[li]) ? ' selected' : '';
-            html += '<option value="' + leaveTypes[li] + '"' + lsel + '>' + leaveTypes[li] + '</option>';
+        // 假別清單直接取自 LEAVE_TYPES 主檔，確保與「假別額度管理」完全同步（含補休）
+        var _leaveKeys = Object.keys(LEAVE_TYPES);
+        for (var li = 0; li < _leaveKeys.length; li++) {
+            var _lt = LEAVE_TYPES[_leaveKeys[li]];
+            var lsel = (slot.leaveType === _lt.name) ? ' selected' : '';
+            html += '<option value="' + _lt.name + '"' + lsel + '>' + (_lt.icon || '') + ' ' + _lt.name + '</option>';
         }
         html += '</select></div>';
         
@@ -10378,12 +10380,15 @@ function applyLeaveDeductionFromShift(empId, leaveType, hours, dateKey) {
 function applyLeaveDeduction(empId, leaveType, hours, reason, sourceRef) {
     if (!empId || !leaveType || hours === 0) return;
     
-    var adjustments = loadData('leaveBalanceAdjustments', []);
+    // 🔑 排班自動扣假存獨立 key（leaveShiftDeductions），
+    //    與「假別額度管理」的手動調整 leaveBalanceAdjustments 分開，避免互相覆蓋
+    var deductions = loadData('leaveShiftDeductions', []);
+    if (!Array.isArray(deductions)) deductions = [];
     // 避免重複扣除：若有相同 sourceRef，先移除舊紀錄
-    adjustments = adjustments.filter(function(a) { return a.sourceRef !== sourceRef; });
+    deductions = deductions.filter(function(a) { return a.sourceRef !== sourceRef; });
     
     // 新增調整紀錄（負數=扣除）
-    adjustments.push({
+    deductions.push({
         empId: empId,
         leaveType: leaveType,
         hours: -hours,  // 扣除為負
@@ -10392,7 +10397,7 @@ function applyLeaveDeduction(empId, leaveType, hours, reason, sourceRef) {
         date: new Date().toISOString()
     });
     
-    saveData('leaveBalanceAdjustments', adjustments);
+    saveData('leaveShiftDeductions', deductions);
     logAction('leaveBalance', '排班自動扣假：' + empId + ' ' + leaveType + ' ' + hours + '小時 (' + sourceRef + ')');
 }
 
@@ -11061,6 +11066,22 @@ var LEAVE_TYPES = {
     'bereavement': { name: '喪假',   color: '#6b7280', icon: '🕯️', total: 0 },
     'comp':        { name: '補休',   color: '#8b5cf6', icon: '💼', total: 0 }
 };
+
+// 假別名稱 → key 對照（排班 modal 存的是中文名，額度管理用 key）
+// 也涵蓋舊資料可能出現的別名（特代休/代休 → 補休）
+function leaveNameToKey(name) {
+    if (!name) return null;
+    var n = String(name).trim();
+    for (var k in LEAVE_TYPES) { if (LEAVE_TYPES[k].name === n) return k; }
+    // 舊資料相容
+    if (n.indexOf('特代休') >= 0 || n.indexOf('代休') >= 0) return 'comp';
+    if (n.indexOf('特休') >= 0) return 'annual';
+    if (n.indexOf('病') >= 0) return 'sick';
+    if (n.indexOf('事') >= 0) return 'personal';
+    if (n.indexOf('婚') >= 0) return 'marriage';
+    if (n.indexOf('喪') >= 0) return 'bereavement';
+    return null;
+}
 
 // ============= 🏖️ 假別額度編輯 =============
 // 假別額度管理頁（員工總覽）
@@ -18577,13 +18598,25 @@ function renderLeaveAllocation() {
         var empAdj = adjustments[emp.id] || {};
         var compH = (compLeaveByEmp[emp.id] && compLeaveByEmp[emp.id].totalHours) || 0;
         
-        // 計算已使用
+        // 計算已使用（單位：小時）
         var used = {};
+        // 來源 1：請假申請清單 leaveList（x.days 視為小時）
         leaveList.forEach(function(x) {
             if (x.empId === emp.id && (x.status === 'approved' || x.status === 'pending')) {
                 used[x.type] = (used[x.type] || 0) + (x.days || 0);
             }
         });
+        // 來源 2：排班 modal 的自動扣假 leaveShiftDeductions（負數=扣除，名稱為中文）
+        var shiftAdjArr = loadData('leaveShiftDeductions', []);
+        if (Array.isArray(shiftAdjArr)) {
+            shiftAdjArr.forEach(function(a) {
+                if (a.empId !== emp.id) return;
+                var key = leaveNameToKey(a.leaveType);
+                if (!key) return;
+                // hours 為負代表扣除 → 已使用增加 (-hours)
+                if (a.hours < 0) used[key] = (used[key] || 0) + (-a.hours);
+            });
+        }
         
         html += '<tr>';
         html += '<td><strong>' + emp.name + '</strong><br><small style="color:#6b7280;">' + emp.num + '</small></td>';
@@ -20798,6 +20831,7 @@ var BACKUP_KEYS = [
     'accounts', 'employees', 'employeesFullInfo', 'stores',
     'workList', 'shifts',
     'leaveList', 'compLeaveByEmp', 'autoOvertimeByEmp',
+    'leaveShiftDeductions',
     'overtimeList', 'businessTripList', 'cardSuppList', 'cardSupplementList', 'shiftSwapList',
     'abnormalList', 'attendanceAbnormalList',
     'insuranceList',
@@ -21474,6 +21508,92 @@ function cloudPush(silent) {
     if (typeof manualPushToCloud === 'function') { manualPushToCloud(silent); return Promise.resolve(); }
     return Promise.reject(new Error('NO_SYNC'));
 }
+
+// ✅ 統一「儲存 → 上傳 → 拉回 → 驗證」流程
+// saveFn：（可選）執行實際本地存檔的函式，會在上傳前呼叫
+// opts：{ verifyKeys:['employees',...], onDone, onError, reloadOnSuccess, silent }
+// 流程：1) 本地存檔  2) 記錄上傳前快照  3) cloudPush 上傳
+//       4) cloudPull 從雲端拉回  5) 核對關鍵資料筆數是否一致
+function saveAndVerifySync(saveFn, opts) {
+    opts = opts || {};
+    var verifyKeys = opts.verifyKeys || ['employees', 'shifts', 'accounts', 'stores'];
+    var silent = !!opts.silent;
+
+    // ── 步驟 1：本地存檔 ──
+    try {
+        if (typeof saveFn === 'function') saveFn();
+    } catch (e) {
+        if (opts.onError) opts.onError(new Error('本地存檔失敗：' + (e.message || e)));
+        return Promise.reject(e);
+    }
+
+    // 計算某 key 的「筆數」（陣列長度或物件鍵數）供核對用
+    function countOf(key) {
+        try {
+            var raw = localStorage.getItem(key);
+            if (raw === null) return 0;
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed.length;
+            if (parsed && typeof parsed === 'object') return Object.keys(parsed).length;
+            return raw.length;
+        } catch (e) { return -1; }
+    }
+
+    // ── 步驟 2：記錄上傳前快照（核對基準） ──
+    var before = {};
+    verifyKeys.forEach(function (k) { before[k] = countOf(k); });
+
+    // 沒有設定任何雲端 → 只做本地存檔
+    var hasCloud = (typeof gasEnabled === 'function' && gasEnabled()) ||
+                   (typeof pantryEnabled === 'function' && pantryEnabled()) ||
+                   (typeof fbEnabled === 'function' && fbEnabled());
+    if (!hasCloud) {
+        if (!silent) showNotif('💾 已儲存（未啟用雲端同步）');
+        if (opts.onDone) opts.onDone({ cloud: false, verified: false });
+        return Promise.resolve({ cloud: false, verified: false });
+    }
+
+    if (!silent) showNotif('☁️ 上傳雲端中...');
+
+    // ── 步驟 3：上傳 → 步驟 4：拉回 → 步驟 5：核對 ──
+    return cloudPush(true).then(function () {
+        if (!silent) showNotif('⬇️ 從雲端拉回核對中...');
+        return cloudPull(true);
+    }).then(function () {
+        // 核對：拉回後的筆數需 >= 上傳前（雲端不應比剛上傳的少）
+        var after = {};
+        var mismatches = [];
+        verifyKeys.forEach(function (k) {
+            after[k] = countOf(k);
+            // 上傳前有 N 筆，拉回後卻變少 → 視為上傳/核對異常
+            if (before[k] >= 0 && after[k] >= 0 && after[k] < before[k]) {
+                mismatches.push(k + '（上傳前 ' + before[k] + '，雲端回傳 ' + after[k] + '）');
+            }
+        });
+
+        var result = { cloud: true, verified: mismatches.length === 0, before: before, after: after, mismatches: mismatches };
+
+        if (mismatches.length === 0) {
+            if (!silent) showNotif('✅ 已儲存並驗證雲端同步成功');
+            if (typeof addSyncLog === 'function') addSyncLog('儲存→上傳→拉回 驗證成功', 'success');
+        } else {
+            if (!silent) showNotif('⚠️ 雲端核對不一致，請檢查');
+            if (typeof addSyncLog === 'function') addSyncLog('雲端核對不一致：' + mismatches.join('；'), 'error');
+        }
+
+        if (opts.onDone) opts.onDone(result);
+        if (opts.reloadOnSuccess && mismatches.length === 0) {
+            setTimeout(function () { location.reload(); }, opts.reloadDelay || 1200);
+        }
+        return result;
+    }).catch(function (err) {
+        if (typeof addSyncLog === 'function') addSyncLog('儲存後雲端同步失敗：' + (err.message || err), 'error');
+        if (opts.onError) opts.onError(err);
+        else if (!silent) showNotif('⚠️ 本地已存，雲端同步失敗：' + (err.message || err));
+        return Promise.reject(err);
+    });
+}
+
 
 // 🥫 連接 Pantry
 function pantryConnect() {
@@ -25030,23 +25150,30 @@ function _processEmployeeCsvImport(text) {
             fullInfo[emp.id] = info;
             applied++;
         }
-        saveData('employees', nowEmps);
-        saveData('employeesFullInfo', fullInfo);
-        // 先推送到雲端，避免重新整理時 cloudPull 把舊雲端資料蓋回來
-        if (typeof cloudPush === 'function' && typeof gasEnabled === 'function' && (gasEnabled() || (typeof pantryEnabled==='function'&&pantryEnabled()) || (typeof fbEnabled==='function'&&fbEnabled()))) {
-            alert('✅ 已匯入 ' + applied + ' 筆員工資料！\n\n正在上傳雲端，請稍候...');
-            cloudPush(true).then(function() {
-                showNotif('☁️ 已上傳雲端，重新整理中...');
-                setTimeout(function(){ location.reload(); }, 1200);
-            }).catch(function(e) {
-                console.warn('匯入後雲端推送失敗', e);
-                alert('⚠️ 本地已存，但雲端上傳失敗：' + ((e&&e.message)||e) + '\n\n資料仍會保留在此裝置，重新整理後生效。');
-                setTimeout(function(){ location.reload(); }, 1500);
-            });
-        } else {
-            alert('✅ 已匯入 ' + applied + ' 筆員工資料！3 秒後重新整理。');
-            setTimeout(function(){ location.reload(); }, 3000);
-        }
+        // 儲存 → 上傳雲端 → 拉回核對，確認上傳成功
+        saveAndVerifySync(function() {
+            saveData('employees', nowEmps);
+            saveData('employeesFullInfo', fullInfo);
+        }, {
+            verifyKeys: ['employees', 'employeesFullInfo'],
+            silent: true,
+            onDone: function(res) {
+                if (!res.cloud) {
+                    alert('✅ 已匯入 ' + applied + ' 筆員工資料（未啟用雲端）！3 秒後重新整理。');
+                    setTimeout(function(){ location.reload(); }, 3000);
+                } else if (res.verified) {
+                    alert('✅ 已匯入 ' + applied + ' 筆員工資料！\n\n☁️ 雲端上傳並核對成功，重新整理中...');
+                    setTimeout(function(){ location.reload(); }, 1200);
+                } else {
+                    alert('⚠️ 已匯入 ' + applied + ' 筆並上傳，但雲端核對不一致：\n' + res.mismatches.join('\n') + '\n\n資料仍保留在此裝置，重新整理後生效。');
+                    setTimeout(function(){ location.reload(); }, 2000);
+                }
+            },
+            onError: function(e) {
+                alert('⚠️ 本地已匯入 ' + applied + ' 筆，但雲端同步失敗：' + ((e&&e.message)||e) + '\n\n資料仍保留在此裝置，重新整理後生效。');
+                setTimeout(function(){ location.reload(); }, 2000);
+            }
+        });
     } catch(err) {
         console.error('員工匯入錯誤', err);
         alert('⚠️ 匯入失敗：' + (err.message || err));
