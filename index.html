@@ -25032,8 +25032,21 @@ function _processEmployeeCsvImport(text) {
         }
         saveData('employees', nowEmps);
         saveData('employeesFullInfo', fullInfo);
-        alert('✅ 已匯入 ' + applied + ' 筆員工資料！3 秒後重新整理。');
-        setTimeout(function(){ location.reload(); }, 3000);
+        // 先推送到雲端，避免重新整理時 cloudPull 把舊雲端資料蓋回來
+        if (typeof cloudPush === 'function' && typeof gasEnabled === 'function' && (gasEnabled() || (typeof pantryEnabled==='function'&&pantryEnabled()) || (typeof fbEnabled==='function'&&fbEnabled()))) {
+            alert('✅ 已匯入 ' + applied + ' 筆員工資料！\n\n正在上傳雲端，請稍候...');
+            cloudPush(true).then(function() {
+                showNotif('☁️ 已上傳雲端，重新整理中...');
+                setTimeout(function(){ location.reload(); }, 1200);
+            }).catch(function(e) {
+                console.warn('匯入後雲端推送失敗', e);
+                alert('⚠️ 本地已存，但雲端上傳失敗：' + ((e&&e.message)||e) + '\n\n資料仍會保留在此裝置，重新整理後生效。');
+                setTimeout(function(){ location.reload(); }, 1500);
+            });
+        } else {
+            alert('✅ 已匯入 ' + applied + ' 筆員工資料！3 秒後重新整理。');
+            setTimeout(function(){ location.reload(); }, 3000);
+        }
     } catch(err) {
         console.error('員工匯入錯誤', err);
         alert('⚠️ 匯入失敗：' + (err.message || err));
