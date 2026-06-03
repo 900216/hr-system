@@ -2556,6 +2556,70 @@ body.has-bottom-nav .sync-indicator { display: block; opacity: 0.92; transform: 
 .sync-indicator.error   { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
 @keyframes syncPulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(0) scale(1.06); } }
 
+/* 🔋 省電按鈕（放在同步指示器左側） */
+.power-save-btn {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 8px;
+    z-index: 9999; padding: 5px 11px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    border: 1px solid #e5e7eb; background: rgba(255,255,255,0.92); color: #6b7280;
+    cursor: pointer; user-select: none; transition: all .2s ease;
+    display: none; line-height: 1.2;
+}
+body.has-bottom-nav .power-save-btn { display: block; }
+.power-save-btn:active { transform: scale(0.94); }
+.power-save-btn.on { background: linear-gradient(135deg, #1e293b, #334155); color: #fcd34d; border-color: #475569; }
+
+/* 同步指示器：有省電按鈕時往左讓位（兩顆並排，省電在右、同步在左） */
+body.has-power-toggle .sync-indicator { right: 92px; }
+
+/* 🔋🔋 省電模式啟用：關閉所有動畫特效（降低 GPU/CPU 負載與發熱） */
+body.power-save *,
+body.power-save *::before,
+body.power-save *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+}
+/* 省電模式：停用掃描線、脈動、過場等裝飾性偽元素 */
+body.power-save .ocr-scanning::before,
+body.power-save .ocr-scanning::after,
+body.power-save .sync-indicator.syncing { animation: none !important; }
+/* 省電模式：暗色 / 低亮度配色（降低 OLED 耗電與螢幕亮度需求） */
+body.power-save {
+    background: #0f172a !important;
+    filter: brightness(0.88) !important;
+}
+body.power-save .app-container,
+body.power-save .page,
+body.power-save .card,
+body.power-save .panel,
+body.power-save .modal-content,
+body.power-save table,
+body.power-save .data-row,
+body.power-save .list-item,
+body.power-save .employee-card {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+body.power-save th { background-color: #334155 !important; color: #f1f5f9 !important; }
+body.power-save td { border-color: #334155 !important; }
+/* 省電模式：移除耗電的大面積漸層與陰影 */
+body.power-save .card,
+body.power-save .panel,
+body.power-save .modal-content,
+body.power-save button {
+    box-shadow: none !important;
+    background-image: none !important;
+}
+body.power-save input,
+body.power-save select,
+body.power-save textarea {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #475569 !important;
+}
+
 /* 🐾 寵物樂園 */
 @keyframes petBounce {
     0%,100% { transform: translateY(0) scale(1); }
@@ -8700,6 +8764,9 @@ function setBottomNavActive(nav) {
 function showBottomNav() {
     var nav = document.getElementById('bottomNav');
     if (nav) { nav.classList.remove('hidden'); document.body.classList.add('has-bottom-nav'); }
+    // 🔋 顯示省電按鈕並套用已儲存的省電狀態
+    document.body.classList.add('has-power-toggle');
+    if (typeof applyPowerSave === 'function') applyPowerSave();
     setBottomNavActive('home');
 }
 function hideBottomNav() {
@@ -9505,7 +9572,9 @@ function getDaySlots(rawShift) {
             start: (rawShift.start && rawShift.start !== '-') ? rawShift.start : null,
             end: (rawShift.end && rawShift.end !== '-') ? rawShift.end : null,
             isHolidayCategory: false,
-            workStoreId: rawShift.workStoreId || null
+            workStoreId: rawShift.workStoreId || null,
+            leaveType: rawShift.leaveType || null,
+            leaveHours: (rawShift.leaveHours != null ? rawShift.leaveHours : null)
         }, emptySlot()];
     }
     return [emptySlot(), emptySlot()];
@@ -9540,9 +9609,46 @@ function empNumSortKey(emp) {
     return Number.MAX_SAFE_INTEGER - 1;
 }
 
+// 🔧 批次修補舊資料：把「請假但時數空/0/缺」的 slot 補成預設 8 小時並補扣額度
+// 只跑一次（用旗標記錄），避免每次渲染重複處理
+function repairLegacyLeaveSlots() {
+    if (localStorage.getItem('_leaveSlotsRepaired_v1') === '1') return;
+    var shifts = loadData('shifts', {});
+    var changed = false;
+    var _fk = Object.keys(LEAVE_TYPES)[0];
+    var _defName = (LEAVE_TYPES[_fk] && LEAVE_TYPES[_fk].name) || '特休假';
+    for (var dateKey in shifts) {
+        if (!shifts.hasOwnProperty(dateKey)) continue;
+        var byEmp = shifts[dateKey];
+        for (var empId in byEmp) {
+            if (!byEmp.hasOwnProperty(empId)) continue;
+            var rec = byEmp[empId];
+            if (!rec || !Array.isArray(rec.slots)) continue;
+            for (var si = 0; si < rec.slots.length; si++) {
+                var s = rec.slots[si];
+                if (!s || s.type !== 'leave') continue;
+                var fixed = false;
+                if (s.leaveType == null || s.leaveType === '') { s.leaveType = _defName; fixed = true; }
+                if (s.leaveHours == null || s.leaveHours === '' || parseFloat(s.leaveHours) === 0) { s.leaveHours = 8; fixed = true; }
+                if (fixed) {
+                    changed = true;
+                    // 補扣額度（applyLeaveDeduction 以 sourceRef 去重，安全）
+                    if (s.leaveHours > 0) {
+                        applyLeaveDeduction(empId, s.leaveType, s.leaveHours, '排班請假', dateKey + ':slot' + si);
+                    }
+                }
+            }
+        }
+    }
+    if (changed) saveData('shifts', shifts);
+    localStorage.setItem('_leaveSlotsRepaired_v1', '1');
+}
+
 function renderScheduleTable() {
     // 🤖 自動同步正職加班轉代休（每次渲染前執行一次）
     syncAllAutoCompTransfers();
+    // 🔧 自動修補舊資料：請假但時數空/0/缺的 slot 補預設並補扣額度
+    repairLegacyLeaveSlots();
     
     var dates = getWeekDates(currentWeekStart);
     var employees = loadData('employees', defaultEmployees);
@@ -10055,8 +10161,12 @@ function renderScheduleCell(empId, dateKey, slots, isAdmin, stores, currentStore
             // 🆕 請假顯示時數
             if (slot.type === 'leave') {
                 var leaveType = slot.leaveType || '其他';
-                var leaveHours = slot.leaveHours || 0;
-                html += '<div class="mini-time" style="font-size:10px;">' + leaveType + ' ' + leaveHours + 'h</div>';
+                var leaveHours = parseFloat(slot.leaveHours) || 0;
+                if (leaveHours > 0) {
+                    html += '<div class="mini-time" style="font-size:10px;">' + leaveType + ' ' + leaveHours + 'h</div>';
+                } else {
+                    html += '<div class="mini-time" style="font-size:10px; color:#dc2626; font-weight:bold;">' + leaveType + ' ⚠️未設時數</div>';
+                }
             }
             html += '</div>';
         }
@@ -10182,6 +10292,38 @@ function openEditShiftModal(empId, dateKey) {
     var shifts = loadData('shifts', {});
     var rawShift = shifts[dateKey] && shifts[dateKey][empId];
     var slots = getDaySlots(rawShift);
+
+    // 🔧 修補舊資料：請假 slot 缺 leaveHours/leaveType 時補預設值並套用扣除
+    var _repaired = false;
+    for (var _si = 0; _si < slots.length; _si++) {
+        var _s = slots[_si];
+        if (_s && _s.type === 'leave') {
+            if (_s.leaveType == null || _s.leaveType === '') {
+                var _fk = Object.keys(LEAVE_TYPES)[0];
+                _s.leaveType = (LEAVE_TYPES[_fk] && LEAVE_TYPES[_fk].name) || '特休假';
+                _repaired = true;
+            }
+            if (_s.leaveHours == null || _s.leaveHours === '' || _s.leaveHours === 0) {
+                _s.leaveHours = 8;
+                _repaired = true;
+            }
+        }
+    }
+    if (_repaired) {
+        if (!shifts[dateKey]) shifts[dateKey] = {};
+        var _ex = shifts[dateKey][empId];
+        if (!_ex || !_ex.slots) _ex = { slots: slots };
+        else _ex.slots = slots;
+        shifts[dateKey][empId] = _ex;
+        saveData('shifts', shifts);
+        // 套用扣除
+        for (var _si2 = 0; _si2 < slots.length; _si2++) {
+            var _s2 = slots[_si2];
+            if (_s2 && _s2.type === 'leave' && _s2.leaveHours > 0) {
+                applyLeaveDeduction(empId, _s2.leaveType, _s2.leaveHours, '排班請假', dateKey + ':slot' + _si2);
+            }
+        }
+    }
     
     var info = document.getElementById('shiftEditInfo');
     info.innerHTML = '<strong>👤 員工：</strong>' + emp.name + ' (' + emp.num + ') ' + 
@@ -10262,6 +10404,38 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
             html += '<option value="' + _lt.name + '"' + lsel + '>' + (_lt.icon || '') + ' ' + _lt.name + '</option>';
         }
         html += '</select></div>';
+
+        // 🆕 顯示所選假別的剩餘額度（排除本筆扣除，避免自己扣自己）
+        var _selName = slot.leaveType || (LEAVE_TYPES[_leaveKeys[0]] && LEAVE_TYPES[_leaveKeys[0]].name);
+        var _selKey = leaveNameToKey(_selName);
+        if (_selKey && editingShift) {
+            var _bal = getLeaveRemaining(editingShift.empId, _selKey);
+            // 扣掉「本筆排班這一格」目前已記的扣除，得到「不含本筆」的可用額度
+            var _thisRef = editingShift.dateKey + ':slot' + slotIndex;
+            var _thisDeduct = 0;
+            var _sd = loadData('leaveShiftDeductions', []);
+            if (Array.isArray(_sd)) {
+                _sd.forEach(function(a) {
+                    if (a.sourceRef === _thisRef && leaveNameToKey(a.leaveType) === _selKey && a.hours < 0) _thisDeduct += (-a.hours);
+                });
+            }
+            var _availBefore = _bal.remaining + _thisDeduct; // 不含本筆的剩餘
+            var _after = _availBefore - (parseFloat(slot.leaveHours) || 0);
+            var _afterColor = _after < 0 ? '#dc2626' : '#059669';
+            html += '<div style="background:#ffffff; border:1px solid #fca5a5; border-radius:6px; padding:8px 10px; margin:6px 0; font-size:12px;">';
+            html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+            html += '<span style="color:#374151;">' + (LEAVE_TYPES[_selKey].icon || '') + ' ' + LEAVE_TYPES[_selKey].name + ' 目前剩餘：</span>';
+            html += '<strong style="color:#0ea5e9; font-size:15px;">' + _availBefore.toFixed(1) + ' H</strong>';
+            html += '</div>';
+            html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dashed #e5e7eb;">';
+            html += '<span style="color:#6b7280;">本次請 ' + (parseFloat(slot.leaveHours)||0).toFixed(1) + ' H 後將剩：</span>';
+            html += '<strong style="color:' + _afterColor + '; font-size:15px;">' + _after.toFixed(1) + ' H</strong>';
+            html += '</div>';
+            if (_after < 0) {
+                html += '<div style="color:#dc2626; margin-top:4px; font-weight:bold;">⚠️ 已超出可用額度！</div>';
+            }
+            html += '</div>';
+        }
         
         html += '<div class="form-row"><label>請假時數：</label>';
         html += '<input type="number" step="0.5" min="0" max="24" value="' + (slot.leaveHours || 8) + '" onchange="modalUpdateLeaveSlot(' + slotIndex + ',\'leaveHours\',parseFloat(this.value)||0)" style="width:80px;">';
@@ -10288,16 +10462,37 @@ function modalChangeSlotType(slotIndex, newType) {
     var current = existing.slots[slotIndex] || emptySlot();
     var needTime = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(newType) !== -1;
     
-    existing.slots[slotIndex] = {
+    var newSlot = {
         type: newType,
         start: needTime ? (current.start || '08:00') : null,
         end: needTime ? (current.end || '17:00') : null,
         isHolidayCategory: current.isHolidayCategory || false,
         workStoreId: current.workStoreId || null
     };
+    // 🆕 切到「請假」時自動帶入預設假別與時數（避免欄位空白導致格子顯示 0、額度不扣）
+    if (newType === 'leave') {
+        var _firstKey = Object.keys(LEAVE_TYPES)[0];
+        newSlot.leaveType = current.leaveType || (LEAVE_TYPES[_firstKey] && LEAVE_TYPES[_firstKey].name) || '特休假';
+        newSlot.leaveHours = (current.leaveHours != null && current.leaveHours !== '') ? current.leaveHours : 8;
+    }
+    existing.slots[slotIndex] = newSlot;
     
     shifts[editingShift.dateKey][editingShift.empId] = existing;
     saveData('shifts', shifts);
+
+    // 🆕 切到請假 → 立即套用預設扣除；切離請假 → 還原先前扣除
+    var _ref = editingShift.dateKey + ':slot' + slotIndex;
+    if (newType === 'leave' && newSlot.leaveHours > 0) {
+        applyLeaveDeduction(editingShift.empId, newSlot.leaveType, newSlot.leaveHours, '排班請假', _ref);
+    } else if (newType !== 'leave' && current.type === 'leave') {
+        // 移除這格先前的請假扣除
+        var _sd = loadData('leaveShiftDeductions', []);
+        if (Array.isArray(_sd)) {
+            _sd = _sd.filter(function(a){ return a.sourceRef !== _ref; });
+            saveData('leaveShiftDeductions', _sd);
+        }
+    }
+
     recalculateCompLeave();
     
     // 重新整理 Modal 內容
@@ -10374,6 +10569,50 @@ function modalUpdateLeaveSlot(slotIndex, field, value) {
 // 🔑 從排班套用假別額度調整（用於拖拉複製）
 function applyLeaveDeductionFromShift(empId, leaveType, hours, dateKey) {
     applyLeaveDeduction(empId, leaveType, hours, '排班拖拉', dateKey);
+}
+
+// 🔑 計算某員工某假別的額度（total / used / remaining）
+// 與「假別額度管理」用同一套來源，確保排班 modal 顯示的剩餘額度與額度管理頁一致
+// leaveKey：LEAVE_TYPES 的 key（annual/sick/.../comp）
+function getLeaveRemaining(empId, leaveKey) {
+    if (!empId || !leaveKey || !LEAVE_TYPES[leaveKey]) return { total: 0, used: 0, remaining: 0 };
+
+    // ── 總額度 ──
+    var adjustments = loadData('leaveBalanceAdjustments', {});
+    var empAdj = (adjustments && adjustments[empId]) || {};
+    var adjH = parseFloat(empAdj[leaveKey] || 0);
+    var total;
+    if (leaveKey === 'comp') {
+        // 補休總額 = 累積代休 + 手動調整
+        var compLeaveByEmp = loadData('compLeaveByEmp', {});
+        var compH = (compLeaveByEmp[empId] && compLeaveByEmp[empId].totalHours) || 0;
+        total = compH + adjH;
+    } else {
+        total = (LEAVE_TYPES[leaveKey].total || 0) + adjH;
+    }
+
+    // ── 已使用 ──
+    var used = 0;
+    // 來源 1：請假申請清單
+    var leaveList = loadData('leaveList', []);
+    if (Array.isArray(leaveList)) {
+        leaveList.forEach(function(x) {
+            if (x.empId === empId && (x.status === 'approved' || x.status === 'pending') && x.type === leaveKey) {
+                used += (x.days || 0);
+            }
+        });
+    }
+    // 來源 2：排班自動扣假（中文名 → key）
+    var shiftAdjArr = loadData('leaveShiftDeductions', []);
+    if (Array.isArray(shiftAdjArr)) {
+        shiftAdjArr.forEach(function(a) {
+            if (a.empId !== empId) return;
+            if (leaveNameToKey(a.leaveType) !== leaveKey) return;
+            if (a.hours < 0) used += (-a.hours);
+        });
+    }
+
+    return { total: total, used: used, remaining: Math.max(0, total - used) };
 }
 
 // 🔑 套用假別額度調整（核心函數）
@@ -17778,10 +18017,39 @@ function preprocessImageForOCR(file, mode) {
                 
                 // ===== STEP 4: 二值化（依模式調整）=====
                 if (mode === 'document') {
-                    // 文件模式：純黑白
-                    for (var q = 0, qi = 0; q < pixels; q++, qi += 4) {
-                        var v2 = grayArr[q] > otsuThreshold ? 255 : 0;
-                        data[qi] = v2; data[qi+1] = v2; data[qi+2] = v2;
+                    // 📄 文件模式：自適應局部二值化（Bradley/Wellner）
+                    //    比全域 Otsu 更能處理收據照片的不均勻光照/陰影
+                    var integral = new Float64Array(pixels);
+                    // 建積分圖
+                    for (var iy = 0; iy < h; iy++) {
+                        var rowSum = 0;
+                        for (var ix = 0; ix < w; ix++) {
+                            var gi = iy * w + ix;
+                            rowSum += grayArr[gi];
+                            integral[gi] = (iy > 0 ? integral[gi - w] : 0) + rowSum;
+                        }
+                    }
+                    // 視窗大小約為寬度的 1/16，門檻容差 12%
+                    var S = Math.max(8, Math.floor(w / 16));
+                    var half = Math.floor(S / 2);
+                    var Tpct = 0.12;
+                    for (var by = 0; by < h; by++) {
+                        for (var bx = 0; bx < w; bx++) {
+                            var x1 = Math.max(0, bx - half), x2 = Math.min(w - 1, bx + half);
+                            var y1 = Math.max(0, by - half), y2 = Math.min(h - 1, by + half);
+                            var cnt = (x2 - x1) * (y2 - y1);
+                            if (cnt <= 0) cnt = 1;
+                            var A = (x1 > 0 && y1 > 0) ? integral[(y1 - 1) * w + (x1 - 1)] : 0;
+                            var Bv = (y1 > 0) ? integral[(y1 - 1) * w + x2] : 0;
+                            var Cv = (x1 > 0) ? integral[y2 * w + (x1 - 1)] : 0;
+                            var Dv = integral[y2 * w + x2];
+                            var sum = Dv - Bv - Cv + A;
+                            var gidx = by * w + bx;
+                            var qi = gidx * 4;
+                            // 像素低於區域平均 *(1-T) → 視為文字（黑）
+                            var v2 = (grayArr[gidx] * cnt <= sum * (1 - Tpct)) ? 0 : 255;
+                            data[qi] = v2; data[qi+1] = v2; data[qi+2] = v2;
+                        }
                     }
                 } else if (mode === 'label') {
                     // 標籤模式：保留灰階層次（過渡帶不二值化）
@@ -17910,11 +18178,13 @@ function processCashReportOCR() {
             {
                 // 🔑 PSM 6 = 假設文字為單一統一區塊（適合表格列）
                 tessedit_pageseg_mode: '6',
-                // OCR 引擎模式：3 = LSTM only（最準確）
+                // OCR 引擎模式：1 = LSTM only（最準確）
                 tessedit_ocr_engine_mode: '1',
-                // 字元白名單：數字+英文+標點（大幅提升準確度）
-                tessedit_char_whitelist: '0123456789,.-ABCDEFG',
+                // ⚠️ 不設字元白名單：現金日報含中文標籤，白名單會濾掉中文
+                //    導致筆畫被誤判成數字。改在解析階段做數字清理與驗證。
                 preserve_interword_spaces: '1',
+                // 數字優先：減少把數字當英文字母的機率
+                classify_bln_numeric_mode: '0',
                 logger: function(m) {
                     if (m.status === 'recognizing text') {
                         ocrProgress(statusEl, m.progress * 100, '步驟 3/3：辨識中');
@@ -17956,7 +18226,14 @@ function applyOcrToForm() {
     
     function setVal(id, v) {
         var el = document.getElementById(id);
-        if (el && v !== undefined && v !== null) { el.value = v; return true; }
+        if (el && v !== undefined && v !== null) {
+            el.value = v;
+            // 🟡 標記為 OCR 自動填入，提醒使用者核對
+            el.style.background = '#fef9c3';
+            el.style.borderColor = '#eab308';
+            el.classList.add('ocr-filled');
+            return true;
+        }
         return false;
     }
     
@@ -17999,7 +18276,7 @@ function applyOcrToForm() {
     if (count === 0) {
         alert('❌ 沒有辨識到任何欄位\n\n可能原因：\n1. 圖片不清晰，請拍清楚一點\n2. OCR 文字格式無法識別\n3. 請手動修改 OCR 文字後再試\n\n💡 建議：先在「OCR 辨識結果」框中檢查文字，必要時手動修正讓代碼（101、102 等）正確顯示');
     } else {
-        showNotif('✅ 已套用 ' + count + ' 個欄位，請逐項檢查');
+        showNotif('✅ 已套用 ' + count + ' 個欄位（黃底＝OCR 填入，請務必逐項核對）');
         console.log('OCR 解析結果：', debugInfo);
     }
 }
@@ -18026,53 +18303,97 @@ function parseOcrText(text) {
         var origLine = lines[i];
         if (!origLine || origLine.length < 3) continue;
         
-        // OCR 常見錯誤修正
-        var line = origLine.replace(/[Oo](?=\d)/g, '0').replace(/[Il](?=\d)/g, '1');
+        // 🔧 OCR 常見錯字修正（僅在數字情境下，避免誤傷代碼字母）
+        var line = ocrFixNumberChars(origLine);
         
-        // 找此行的代碼
+        // 找此行的代碼（只在「行首附近」找，代碼通常在每列最前面）
         var matchedCode = null;
         var codePos = -1;
         for (var j = 0; j < allCodes.length; j++) {
             var code = allCodes[j];
-            var idx = line.search(new RegExp('(?:^|[^A-Za-z0-9])' + code + '(?:[^A-Za-z0-9]|$)'));
-            if (idx !== -1) {
-                matchedCode = code;
-                codePos = idx;
-                break;
+            // 代碼前後須為非英數邊界，避免 101 命中 1011、2101 等
+            var re = new RegExp('(?:^|[^A-Za-z0-9])(' + code + ')(?:[^A-Za-z0-9]|$)');
+            var m = line.match(re);
+            if (m) {
+                var pos = line.indexOf(m[1], Math.max(0, m.index));
+                // 🔑 代碼必須靠近行首（前面雜訊不超過 6 字），降低誤命中
+                if (pos <= 8) {
+                    matchedCode = code;
+                    codePos = pos;
+                    break;
+                }
             }
         }
         
         if (!matchedCode) continue;
         if (data[matchedCode]) continue;
         
-        var afterCode = line.substring(codePos);
-        var numMatches = afterCode.match(/-?\d{1,3}(?:[,，]\d{3})+|-?\d{1,9}/g);
-        if (!numMatches || numMatches.length === 0) continue;
-        
-        var nums = [];
-        var seenCodeOnce = false;
-        for (var k = 0; k < numMatches.length; k++) {
-            var raw = numMatches[k].replace(/[,，]/g, '');
-            var n = parseFloat(raw);
-            if (isNaN(n)) continue;
-            // 第一次遇到代碼本身時跳過
-            if (!seenCodeOnce && String(n) === matchedCode.replace(/[A-Z]/g, '')) {
-                seenCodeOnce = true;
-                continue;
-            }
-            nums.push(n);
-        }
+        // 取代碼之後的字串來抓數字
+        var afterCode = line.substring(codePos + matchedCode.length);
+        var nums = extractNumbers(afterCode);
         
         if (nums.length === 0) continue;
         
-        // 🔑 關鍵改進：收銀機行取「最後 4 個」數字（最可靠）
+        // 🔑 收銀機行取「最後 4 個」數字（最可靠：張數/小計/折讓/淨額）
         if (registerCodes.indexOf(matchedCode) !== -1 && nums.length >= 4) {
-            nums = nums.slice(-4);  // 取末尾 4 個
+            nums = nums.slice(-4);
         }
+        
+        // 🔑 金額合理性過濾：移除明顯不合理的超大數（>9 位數通常是 OCR 黏連雜訊）
+        nums = nums.filter(function(n) {
+            return Math.abs(n) < 100000000; // 1 億以下
+        });
+        if (nums.length === 0) continue;
         
         data[matchedCode] = { nums: nums, rawLine: origLine };
     }
     return data;
+}
+
+// 🔧 OCR 數字情境錯字修正：把常被認錯的字母還原成數字
+//    僅針對「夾在數字之間或數字旁」的字母，避免破壞代碼（如 104A）
+//    ⚠️ 不使用 lookbehind（舊版 iOS Safari 不支援），改用逐字掃描
+function ocrFixNumberChars(s) {
+    if (!s) return s;
+    // 全形數字 → 半形；全形/中文逗號 → 半形逗號
+    s = s.replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+         .replace(/[，、]/g, ',');
+    // 逐字處理：字母緊鄰數字或逗號(千分位情境)時換成對應數字
+    var map = { 'O':'0','o':'0','I':'1','l':'1','|':'1','S':'5','s':'5','Z':'2','z':'2' };
+    var arr = s.split('');
+    for (var i = 0; i < arr.length; i++) {
+        var ch = arr[i];
+        if (map[ch] === undefined) continue;
+        var prev = i > 0 ? arr[i-1] : '';
+        var next = i < arr.length - 1 ? arr[i+1] : '';
+        // 數字、逗號、小數點都算「數字情境」鄰居（涵蓋 1,500 的 1）
+        var prevNum = /[\d,\.]/.test(prev);
+        var nextNum = /[\d,\.]/.test(next);
+        if (prevNum || nextNum) {
+            arr[i] = map[ch];
+        }
+    }
+    s = arr.join('');
+    // B→8（後接兩位以上數字）、G→6（數字前）
+    s = s.replace(/[Bb](\d{2})/g, '8$1').replace(/[Gg](\d)/g, '6$1');
+    return s;
+}
+
+// 🔢 從字串提取數字陣列，正確處理千分位與小數
+function extractNumbers(str) {
+    if (!str) return [];
+    // 匹配：含千分位的數 (1,234,567) 或 純整數 或 小數
+    var matches = str.match(/-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?/g);
+    if (!matches) return [];
+    var out = [];
+    for (var k = 0; k < matches.length; k++) {
+        var raw = matches[k].replace(/,/g, '');
+        var n = parseFloat(raw);
+        if (isNaN(n)) continue;
+        // 過濾單一 0（多半是格線雜訊），但保留有意義的 0 值需靠位置判斷，這裡先收
+        out.push(n);
+    }
+    return out;
 }
 
 // 🚀 預載入 Tesseract（加快首次 OCR）
@@ -20862,6 +21183,7 @@ var BACKUP_KEYS = [
     'compTransfers',
     'insuranceChangeLog',
     'salarySlipEmailLog',
+    'works', 'stockCounts', 'stockCategories', 'systemParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
@@ -23022,6 +23344,8 @@ function startAutoPull() {
     if (_syncPullInterval) clearInterval(_syncPullInterval);
     if (localStorage.getItem('_cs_autoPull') === '0') return;
     
+    // 🔋 省電模式：拉取間隔 30 秒 → 120 秒
+    var pullMs = isPowerSaveOn() ? 120000 : 30000;
     _syncPullInterval = setInterval(function() {
         // 🔑 正在輸入/編輯時，跳過這次同步，避免刷掉未存資料
         if (isUserActivelyEditing()) {
@@ -23037,7 +23361,7 @@ function startAutoPull() {
         } else if (_syncEnabled) {
             if (!isUserActivelyEditing()) manualPullFromCloud(true);
         }
-    }, 30000);  // 每 30 秒
+    }, pullMs);
 }
 
 // ╔══════════════════════════════════════════════╗
@@ -23067,7 +23391,7 @@ function setSyncIndicator(state) {
         verifying: { txt: '🔍 驗證中', cls: 'syncing' },
         synced:    { txt: '✅ 已同步', cls: 'synced' },
         error:     { txt: '⚠️ 同步失敗', cls: 'error' },
-        idle:      { txt: '☁️ 即時同步', cls: 'idle' }
+        idle:      { txt: (typeof isPowerSaveOn === 'function' && isPowerSaveOn()) ? '🔋 省電同步' : '☁️ 即時同步', cls: 'idle' }
     };
     var m = map[state] || map.idle;
     ind.textContent = m.txt;
@@ -23106,12 +23430,49 @@ function autoSync5sCycle() {
 function startAutoSync5s() {
     if (_autoSync5sTimer) clearInterval(_autoSync5sTimer);
     setSyncIndicator('idle');
-    _autoSync5sTimer = setInterval(autoSync5sCycle, 5000);
+    // 🔋 省電模式：自動同步間隔 5 秒 → 60 秒（大幅降低背景運算與發熱）
+    var syncMs = isPowerSaveOn() ? 60000 : 5000;
+    _autoSync5sTimer = setInterval(autoSync5sCycle, syncMs);
 }
 
 function stopAutoSync5s() {
     if (_autoSync5sTimer) clearInterval(_autoSync5sTimer);
     _autoSync5sTimer = null;
+}
+
+// ╔══════════════════════════════════════════════╗
+// ║  🔋 省電模式                                   ║
+// ╚══════════════════════════════════════════════╝
+// 效果：1) 關閉動畫/過場特效  2) 降低雲端同步頻率（5s→60s, 30s→120s）
+//       3) 暗色低亮度配色（省 OLED 耗電）— 三者共同降低手機發熱
+function isPowerSaveOn() {
+    return localStorage.getItem('_powerSave') === '1';
+}
+
+// 套用目前省電狀態到畫面與計時器（開 App 時呼叫）
+function applyPowerSave() {
+    var on = isPowerSaveOn();
+    document.body.classList.toggle('power-save', on);
+    var btn = document.getElementById('powerSaveBtn');
+    if (btn) {
+        btn.classList.toggle('on', on);
+        btn.textContent = on ? '🔋 省電中' : '🔋 省電';
+    }
+    // 重設同步計時器以套用新頻率
+    if (typeof startAutoSync5s === 'function') startAutoSync5s();
+    if (typeof startAutoPull === 'function') startAutoPull();
+}
+
+// 使用者點擊切換
+function togglePowerSave() {
+    var on = !isPowerSaveOn();
+    localStorage.setItem('_powerSave', on ? '1' : '0');
+    applyPowerSave();
+    if (typeof showNotif === 'function') {
+        showNotif(on
+            ? '🔋 已開啟省電模式（關閉動畫、降低同步頻率、暗色配色）'
+            : '☀️ 已關閉省電模式，恢復正常顯示與即時同步');
+    }
 }
 
 function updateAutoSyncSetting() {
@@ -27971,14 +28332,7 @@ function printSchedule() {
                 var hrs = calculateHours(slot.start, slot.end);
                 totalHrs += hrs;
                 
-                // 顏色標記（依時段）
-                var sh = parseInt(slot.start.split(':')[0]);
-                var bgClass = '';
-                if (sh >= 6 && sh < 11) bgClass = 'hl-yellow';
-                else if (sh >= 14 && sh < 18) bgClass = 'hl-purple';
-                else if (sh >= 7 && sh < 10) bgClass = 'hl-green';
-                
-                html += '<div class="' + bgClass + '" style="line-height:1.3;">';
+                html += '<div style="line-height:1.3;">';
                 html += slot.start + '-' + slot.end;
                 html += '<br>(' + hrs.toFixed(0) + ')';
                 if (slot.type === 'restWork') html += '<br><span style="color:#0d9488;">休上班</span>';
@@ -28254,7 +28608,7 @@ function printSchedule() {
     // 開新視窗列印（iOS Safari 相容）
     showNotif('🖨️ 開啟列印視窗...');
     
-    var printWin = window.open('', '_blank', 'width=1200,height=800');
+    var printWin = window.open('', '_blank', 'width=850,height=1100');
     if (!printWin) {
         // 彈出視窗被擋 → 退回原視窗列印
         alert('⚠️ 偵測到彈出視窗被擋。\n\n請允許彈出視窗或使用瀏覽器選單列印。');
@@ -28265,24 +28619,21 @@ function printSchedule() {
     var printHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
     printHTML += '<title>門市人員週排班表 - ' + viewStore.name + '</title>';
     printHTML += '<style>';
-    printHTML += '@page { size: A4 landscape; margin: 10mm; }';
-    printHTML += 'body { font-family: "Microsoft JhengHei", "微軟正黑體", serif; color:#000; font-size:12px; margin:0; padding:10px; }';
-    printHTML += '.print-header { position: relative; margin-bottom: 8px; }';
-    printHTML += '.print-page-num { position: absolute; top: 0; right: 0; font-size: 11px; }';
-    printHTML += '.print-title { font-weight: bold; font-size: 18px; text-align: center; text-decoration: underline; padding: 4px 0; }';
-    printHTML += '.print-info { margin-top: 6px; font-size: 12px; display: flex; justify-content: space-between; }';
-    printHTML += '.print-info-left, .print-info-right { line-height: 1.6; }';
-    printHTML += '.print-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }';
-    printHTML += '.print-table th, .print-table td { border: 1px solid #000; padding: 4px 3px; text-align: center; font-size: 11px; vertical-align: middle; }';
-    printHTML += '.print-table thead th { background: white; font-weight: bold; line-height: 1.3; }';
-    printHTML += '.print-table .col-empnum { width: 70px; }';
-    printHTML += '.print-table .col-name { width: 60px; }';
-    printHTML += '.print-total-row td { background: white; font-weight: bold; padding: 6px 3px; }';
-    printHTML += '.hl-yellow { background: #fef08a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }';
-    printHTML += '.hl-green  { background: #bbf7d0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }';
-    printHTML += '.hl-purple { background: #e9d5ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }';
-    printHTML += '.print-footer { margin-top: 10px; font-size: 11px; line-height: 1.6; padding: 5px 0; }';
-    printHTML += '.print-signature { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; min-height: 40px; }';
+    printHTML += '@page { size: A4 portrait; margin: 8mm; }';
+    printHTML += 'body { font-family: "Microsoft JhengHei", "微軟正黑體", serif; color:#000; font-size:10px; margin:0; padding:8px; }';
+    printHTML += '.print-header { position: relative; margin-bottom: 6px; }';
+    printHTML += '.print-page-num { position: absolute; top: 0; right: 0; font-size: 10px; }';
+    printHTML += '.print-title { font-weight: bold; font-size: 16px; text-align: center; text-decoration: underline; padding: 3px 0; }';
+    printHTML += '.print-info { margin-top: 5px; font-size: 11px; display: flex; justify-content: space-between; }';
+    printHTML += '.print-info-left, .print-info-right { line-height: 1.5; }';
+    printHTML += '.print-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; table-layout: fixed; }';
+    printHTML += '.print-table th, .print-table td { border: 1px solid #000; padding: 3px 1px; text-align: center; font-size: 9px; vertical-align: middle; word-break: break-word; overflow-wrap: break-word; line-height: 1.25; }';
+    printHTML += '.print-table thead th { background: white; font-weight: bold; line-height: 1.2; font-size: 9px; }';
+    printHTML += '.print-table .col-empnum { width: 8%; }';
+    printHTML += '.print-table .col-name { width: 8%; }';
+    printHTML += '.print-total-row td { background: white; font-weight: bold; padding: 4px 1px; }';
+    printHTML += '.print-footer { margin-top: 8px; font-size: 10px; line-height: 1.5; padding: 4px 0; }';
+    printHTML += '.print-signature { margin-top: 16px; border-top: 1px solid #000; padding-top: 8px; min-height: 36px; }';
     printHTML += '.btn-print-now { position: fixed; top: 10px; right: 10px; background:#22c55e; color:white; padding:10px 20px; border:none; border-radius:6px; font-size:14px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); z-index:9999; }';
     printHTML += '.btn-close { position: fixed; top: 10px; right: 130px; background:#6b7280; color:white; padding:10px 20px; border:none; border-radius:6px; font-size:14px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); z-index:9999; }';
     printHTML += '@media print { .btn-print-now, .btn-close { display:none !important; } }';
@@ -28447,6 +28798,8 @@ window.addEventListener('load', function() {
 <div id="bnavPopup" class="bnav-popup"></div>
 <!-- ☁️ 同步狀態指示器 -->
 <div id="syncIndicator" class="sync-indicator idle">☁️ 即時同步</div>
+<!-- 🔋 省電模式開關 -->
+<div id="powerSaveBtn" class="power-save-btn" onclick="togglePowerSave()" title="切換省電模式">🔋 省電</div>
 
 </body>
 </html>
