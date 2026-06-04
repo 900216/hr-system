@@ -2729,7 +2729,7 @@ body.power-save textarea {
    ╚══════════════════════════════════════════════╝ */
 
 /* 1️⃣ 統計數字：發光脈動（科技感）*/
-.hs-num, .sc-num, #petTodaySteps, #petTotalSteps, #petPoints {
+.hs-num, .sc-num, #petStreak, #petTotalExp, #petPoints {
     text-shadow: 0 0 10px rgba(245,158,11,0.35), 0 1px 0 rgba(255,255,255,0.5);
     animation: techNumGlow 3.5s ease-in-out infinite;
 }
@@ -3824,22 +3824,20 @@ body.view-desktop .work-list-panel:hover {
                     
                     <!-- 統計卡 -->
                     <div class="sc-stats" style="margin-top:14px;">
-                        <div class="sc-stat"><div class="sc-num" id="petTodaySteps" style="color:#2563eb;">0</div><div class="sc-lbl">👟 今日步數</div></div>
-                        <div class="sc-stat"><div class="sc-num" id="petTotalSteps" style="color:#16a34a;">0</div><div class="sc-lbl">🏃 累積步數</div></div>
-                        <div class="sc-stat"><div class="sc-num" id="petPoints" style="color:#dc2626;">0</div><div class="sc-lbl">⭐ 積分</div></div>
+                        <div class="sc-stat"><div class="sc-num" id="petStreak" style="color:#2563eb;">0</div><div class="sc-lbl">🔥 連續登入(天)</div></div>
+                        <div class="sc-stat"><div class="sc-num" id="petTotalExp" style="color:#16a34a;">0</div><div class="sc-lbl">⭐ 累積經驗</div></div>
+                        <div class="sc-stat"><div class="sc-num" id="petPoints" style="color:#dc2626;">0</div><div class="sc-lbl">🏆 積分</div></div>
                     </div>
                     
-                    <!-- 計步控制 -->
+                    <!-- 每日領取 -->
                     <div style="margin-top:16px; padding:16px; background:#fffdf8; border:1px solid #f0e3cc; border-radius:12px;">
-                        <div style="font-size:14px; color:#92400e; font-weight:bold; margin-bottom:10px;">🏃 自動計步（手機放口袋走路就會自動累積）</div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button id="stepBtn" class="btn-confirm" style="flex:1;" onclick="toggleStepCounter()">▶️ 啟動計步</button>
-                        </div>
-                        <div id="stepStatus" style="font-size:12px; color:#6b7280; margin-top:8px; text-align:center;"></div>
+                        <div style="font-size:14px; color:#92400e; font-weight:bold; margin-bottom:10px;">🎁 每日簽到領經驗</div>
+                        <button id="petClaimBtn" class="btn-confirm" style="width:100%;" onclick="claimDailyPetExp()">🎁 每日領取經驗</button>
+                        <div style="font-size:12px; color:#6b7280; margin-top:8px; text-align:center;">連續登入越久，每日可領的經驗越多（最多 +100）</div>
                     </div>
                     
                     <div class="alert-box info" style="margin-top:12px; font-size:13px;">
-                        💡 每 1 步 = 1 經驗 + 1 積分。手機放口袋走路，寵物自動累積經驗升級！
+                        💡 養成方式：① 每天登入簽到領經驗（連登加成）② 完成工作清單任務自動 +' + '經驗。寵物會隨經驗升級進化！
                     </div>
                 </div>
             </div>
@@ -4146,8 +4144,10 @@ body.view-desktop .work-list-panel:hover {
                         <select id="compSelect" style="padding:8px 10px; border-radius:8px; flex:1; min-width:180px;" onchange="renderCompDetail()"></select>
                         <button id="compEditBtn" class="btn-edit" style="padding:6px 12px; font-size:12px; display:none;" onclick="openCompEditModal()">✏️ 編輯</button>
                         <button id="compDeleteBtn" class="btn-danger" style="padding:6px 12px; font-size:12px; display:none;" onclick="deleteCompetition()">🗑️</button>
+                        <button id="compSettleBtn" class="btn-confirm" style="padding:6px 12px; font-size:12px; display:none; background:#8b5cf6;" onclick="settleSelectedCompetition()">🐾 結算寵物積分</button>
                     </div>
                     <div id="compInfo" style="margin-top:10px;"></div>
+                    <div id="compSettleHint" style="margin-top:8px; font-size:12px; color:#7c3aed; display:none;">💡 結算後，前 3 名門市的員工將獲得寵物積分，其餘有得分門市的員工也會加分（0 分門市不列入）。</div>
                 </div>
             </div>
             
@@ -4548,7 +4548,8 @@ body.view-desktop .work-list-panel:hover {
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 👥 員工資料 &gt; <strong>⚖️ 員工處罰表</strong></div>
         <div class="main-content"><div class="work-list-panel"><div class="panel-header">
             <h3>⚖️ 員工處罰紀錄</h3>
-            <div><button id="penaltyAddBtn" class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="openPenaltyModal()">➕ 新增處罰</button></div>
+            <div><button id="penaltySettleBtn" class="btn-confirm" style="padding:6px 14px; font-size:13px; background:#8b5cf6; display:none;" onclick="settlePenaltyPoints()">🐾 結算寵物扣分</button>
+            <button id="penaltyAddBtn" class="btn-confirm" style="padding:6px 14px; font-size:13px;" onclick="openPenaltyModal()">➕ 新增處罰</button></div>
         </div><div class="panel-body">
             <div style="background:linear-gradient(135deg,#fef9c3,#fde68a); padding:10px; border-radius:8px; margin-bottom:12px; font-size:12px; color:#854d0e;">
                 💡 此表記錄員工違規與獎懲。可作為績效考核、勞資爭議佐證。請客觀記錄事實。
@@ -6716,6 +6717,51 @@ body.view-desktop .work-list-panel:hover {
         <div style="text-align:center; margin-top:16px; display:flex; gap:8px; justify-content:center;">
             <button class="btn-secondary" onclick="closeModal('penaltyModal')">取消</button>
             <button class="btn-confirm" onclick="savePenalty()">💾 儲存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🐾 競賽結算寵物積分設定 -->
+<div id="compSettleModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:460px;">
+        <div class="modal-title">🐾 結算競賽寵物積分</div>
+        <div id="compSettleRankPreview" style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:10px; margin-bottom:12px; font-size:13px; color:#5b21b6;"></div>
+        <table class="form-table">
+            <tr><td class="label-col">🥇 第 1 名門市：</td><td><input type="number" id="csRank1" value="100" style="width:100px;"> 分/人</td></tr>
+            <tr><td class="label-col">🥈 第 2 名門市：</td><td><input type="number" id="csRank2" value="60" style="width:100px;"> 分/人</td></tr>
+            <tr><td class="label-col">🥉 第 3 名門市：</td><td><input type="number" id="csRank3" value="30" style="width:100px;"> 分/人</td></tr>
+            <tr><td class="label-col">🎯 其餘有分門市：</td><td><input type="number" id="csAttend" value="10" style="width:100px;"> 分/人</td></tr>
+        </table>
+        <div style="font-size:12px; color:#7c3aed; margin-top:8px;">💡 0 分門市不列入。前 3 名門市的所有員工加對應積分。</div>
+        <div style="text-align:center; margin-top:16px; display:flex; gap:8px; justify-content:center;">
+            <button class="btn-secondary" onclick="closeModal('compSettleModal')">取消</button>
+            <button class="btn-confirm" style="background:#8b5cf6;" onclick="confirmCompSettle()">✅ 確認結算</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🐾 處罰結算寵物扣分設定 -->
+<div id="penaltySettleModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:460px;">
+        <div class="modal-title">🐾 結算處罰寵物扣分</div>
+        <table class="form-table">
+            <tr><td class="label-col">排名依據：</td><td>
+                <select id="psBasis" style="min-width:160px;" onchange="renderPenaltySettlePreview()">
+                    <option value="count">處罰次數</option>
+                    <option value="amount">扣薪金額</option>
+                </select>
+            </td></tr>
+        </table>
+        <div id="penaltySettlePreview" style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; color:#991b1b;"></div>
+        <table class="form-table">
+            <tr><td class="label-col">🥇 第 1 名：</td><td>扣 <input type="number" id="psDeduct1" value="100" style="width:100px;"> 分</td></tr>
+            <tr><td class="label-col">🥈 第 2 名：</td><td>扣 <input type="number" id="psDeduct2" value="60" style="width:100px;"> 分</td></tr>
+            <tr><td class="label-col">🥉 第 3 名：</td><td>扣 <input type="number" id="psDeduct3" value="30" style="width:100px;"> 分</td></tr>
+        </table>
+        <div style="font-size:12px; color:#b91c1c; margin-top:8px;">💡 「獎勵」類型不列入。輸入正數，系統會扣除對應積分。</div>
+        <div style="text-align:center; margin-top:16px; display:flex; gap:8px; justify-content:center;">
+            <button class="btn-secondary" onclick="closeModal('penaltySettleModal')">取消</button>
+            <button class="btn-confirm" style="background:#8b5cf6;" onclick="confirmPenaltySettle()">✅ 確認結算</button>
         </div>
     </div>
 </div>
@@ -9080,7 +9126,15 @@ function saveWork() {
     var works = loadData('works', defaultWorks);
     if (editingWorkId) {
         var idx = works.findIndex(function(x) { return x.id === editingWorkId; });
-        if (idx !== -1) works[idx] = Object.assign({}, works[idx], data);
+        if (idx !== -1) {
+            // 🐾 工作首次完成 → 給寵物經驗（用 expRewarded 旗標防重複）
+            var wasDone = works[idx].status === 'done';
+            works[idx] = Object.assign({}, works[idx], data);
+            if (data.status === 'done' && !works[idx].expRewarded) {
+                works[idx].expRewarded = true;
+                if (typeof rewardPetForTask === 'function') rewardPetForTask();
+            }
+        }
         showNotif('✅ 已更新');
     } else {
         var newId = works.length > 0 ? Math.max.apply(null, works.map(function(x) { return x.id; })) + 1 : 1;
@@ -19510,6 +19564,8 @@ function renderPenaltyList() {
     // 控制「新增處罰」按鈕：非主管隱藏
     var addBtn = document.getElementById('penaltyAddBtn');
     if (addBtn) addBtn.style.display = isEditor ? '' : 'none';
+    var settleBtn = document.getElementById('penaltySettleBtn');
+    if (settleBtn) settleBtn.style.display = isEditor ? '' : 'none';
     
     var kw = (document.getElementById('penaltySearchInput') || {value:''}).value.toLowerCase();
     var typeF = (document.getElementById('penaltyTypeFilter') || {value:''}).value;
@@ -21183,7 +21239,7 @@ var BACKUP_KEYS = [
     'compTransfers',
     'insuranceChangeLog',
     'salarySlipEmailLog',
-    'works', 'stockCounts', 'stockCategories', 'systemParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements',
+    'works', 'stockCounts', 'stockCategories', 'systemParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements', 'petSettlements',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
@@ -26357,6 +26413,9 @@ var PET_STAGES = [
     { name: '進化體', minExp: 18000 },
     { name: '神獸', minExp: 35000, emojiSuffix: '✨' }
 ];
+// 🆕 成長經驗設定
+var PET_DAILY_BASE = 50;   // 每日領取基礎經驗
+var PET_TASK_EXP = 30;     // 完成一項工作的經驗
 
 function getMyPet() {
     var pets = loadData('petData', {});
@@ -26365,10 +26424,22 @@ function getMyPet() {
         pets[key] = {
             empId: key,
             type: '🐱', name: '小寶',
-            todaySteps: 0, totalSteps: 0, points: 0,
-            lastStepDate: new Date().toISOString().slice(0,10),
+            exp: 0, points: 0,
+            streak: 0,                // 連續登入天數
+            lastClaimDate: '',        // 上次每日領取日期
+            lastLoginDate: '',        // 上次登入日期（算連續）
             createdAt: new Date().toISOString()
         };
+        saveData('petData', pets);
+    }
+    // 舊資料相容：把舊的 totalSteps 轉成 exp
+    var p = pets[key];
+    if (p.exp === undefined) {
+        p.exp = p.totalSteps || 0;
+        if (p.points === undefined) p.points = p.totalSteps || 0;
+        if (p.streak === undefined) p.streak = 0;
+        if (p.lastClaimDate === undefined) p.lastClaimDate = '';
+        if (p.lastLoginDate === undefined) p.lastLoginDate = '';
         saveData('petData', pets);
     }
     return pets[key];
@@ -26381,33 +26452,344 @@ function savePet(pet) {
     saveData('petData', pets);
 }
 
-function getPetStageInfo(totalSteps) {
+function getPetStageInfo(exp) {
     var stageIdx = 0;
     for (var i = PET_STAGES.length - 1; i >= 0; i--) {
-        if (totalSteps >= PET_STAGES[i].minExp) { stageIdx = i; break; }
+        if (exp >= PET_STAGES[i].minExp) { stageIdx = i; break; }
     }
     var current = PET_STAGES[stageIdx];
     var next = PET_STAGES[stageIdx + 1];
     var progressMin = current.minExp;
     var progressMax = next ? next.minExp : current.minExp;
-    var pct = next ? Math.min(100, ((totalSteps - progressMin) / (progressMax - progressMin)) * 100) : 100;
-    return { idx: stageIdx, name: current.name, override: current.emojiOverride, suffix: current.emojiSuffix || '', pct: pct, current: totalSteps, next: progressMax };
+    var pct = next ? Math.min(100, ((exp - progressMin) / (progressMax - progressMin)) * 100) : 100;
+    return { idx: stageIdx, name: current.name, override: current.emojiOverride, suffix: current.emojiSuffix || '', pct: pct, current: exp, next: progressMax };
+}
+
+// 🆕 統一加經驗（含升級提示）。reason 用於提示文字
+function addPetExp(n, reason, silent) {
+    if (!n || n <= 0) return;
+    var pet = getMyPet();
+    var oldStage = getPetStageInfo(pet.exp).idx;
+    pet.exp += n;
+    pet.points += n;
+    savePet(pet);
+    var newStage = getPetStageInfo(pet.exp).idx;
+    if (newStage > oldStage && !silent) {
+        setTimeout(function(){
+            alert('🎉 寵物升級了！\n進化為「' + PET_STAGES[newStage].name + '」！');
+        }, 250);
+    }
+    // 若正在寵物頁面，即時刷新
+    if (typeof renderPetPage === 'function' && document.getElementById('page-petGame') && !document.getElementById('page-petGame').classList.contains('hidden')) {
+        renderPetPage();
+    }
+}
+
+// 🆕 工作完成時呼叫：給寵物經驗
+function rewardPetForTask() {
+    addPetExp(PET_TASK_EXP, '完成工作', true);
+    if (typeof showNotif === 'function') showNotif('🐾 寵物獲得 ' + PET_TASK_EXP + ' 經驗（完成工作）');
+}
+
+// 🆕 對「指定員工」調整寵物積分（競賽加分 / 處罰扣分用）
+//    delta 可正可負。積分允許為負（顯示時自然呈現）
+function adjustPetPoints(empId, delta) {
+    if (!empId || !delta) return;
+    var pets = loadData('petData', {});
+    if (!pets[empId]) {
+        // 該員工尚無寵物資料 → 建立預設
+        pets[empId] = {
+            empId: empId, type: '🐱', name: '小寶',
+            exp: 0, points: 0, streak: 0,
+            lastClaimDate: '', lastLoginDate: '',
+            createdAt: new Date().toISOString()
+        };
+    }
+    var p = pets[empId];
+    if (p.points === undefined) p.points = p.totalSteps || 0;
+    if (p.exp === undefined) p.exp = p.totalSteps || 0;
+    p.points += delta;
+    saveData('petData', pets);
+}
+
+// ============================================================
+// 🏆 競賽 / 處罰 → 寵物積分結算
+// ============================================================
+// 結算記錄存於 petSettlements，用 sourceKey 防止同一來源重複結算
+function getPetSettlements() { return loadData('petSettlements', {}); }
+function isSettled(sourceKey) {
+    var s = getPetSettlements();
+    return !!s[sourceKey];
+}
+function markSettled(sourceKey, detail) {
+    var s = getPetSettlements();
+    s[sourceKey] = Object.assign({ at: new Date().toISOString() }, detail || {});
+    saveData('petSettlements', s);
+}
+function unmarkSettled(sourceKey) {
+    var s = getPetSettlements();
+    delete s[sourceKey];
+    saveData('petSettlements', s);
+}
+
+// 🏆 門市競賽結算：開啟設定 modal（取代連續 prompt，iOS 相容）
+var _settlingCompId = null;
+function settleCompetitionPoints(compId) {
+    if (!isCompManager()) return alert('⚠️ 僅管理員/店長可執行結算');
+    var comps = getCompetitions();
+    var c = comps.find(function(x){ return x.id === compId; });
+    if (!c) return alert('⚠️ 找不到競賽');
+
+    // 先算門市排名做預覽
+    var ranked = calcCompStoreRanking(c);
+    if (ranked.length === 0) return alert('⚠️ 此競賽目前沒有任何門市得分，無法結算');
+
+    _settlingCompId = compId;
+
+    // 帶入上次設定
+    var ps = c.petPointSettings || { rank1: 100, rank2: 60, rank3: 30, attend: 10 };
+    document.getElementById('csRank1').value = ps.rank1;
+    document.getElementById('csRank2').value = ps.rank2;
+    document.getElementById('csRank3').value = ps.rank3;
+    document.getElementById('csAttend').value = ps.attend;
+
+    // 排名預覽
+    var stores = loadData('stores', defaultStores);
+    var previewEl = document.getElementById('compSettleRankPreview');
+    var lines = ['<strong>📊 目前門市排名：</strong>'];
+    ranked.forEach(function(row, idx){
+        var sName = (stores.find(function(s){return s.id===row.sid;})||{}).name || row.sid;
+        var label = idx < 3 ? ['🥇','🥈','🥉'][idx] : '🎯';
+        lines.push(label + ' ' + sName + '（總分 ' + row.total + '，' + row.empCount + ' 人）');
+    });
+    if (isSettled('comp:' + compId)) {
+        lines.push('<div style="color:#dc2626; margin-top:6px;">⚠️ 此競賽已結算過，確認後會先撤銷上次結算再重新發放。</div>');
+    }
+    previewEl.innerHTML = lines.join('<br>');
+
+    document.getElementById('compSettleModal').classList.remove('hidden');
+}
+
+// 計算競賽的門市排名（總分>0，由高到低）
+function calcCompStoreRanking(c) {
+    var stats = calcCompScores(c);
+    var employees = loadData('employees', defaultEmployees);
+    var storeTotals = {}, storeEmps = {};
+    employees.forEach(function(e){
+        if (c.storeId !== 'all' && e.homeStoreId !== c.storeId) return;
+        var sid = e.homeStoreId || 'none';
+        if (!storeTotals[sid]) { storeTotals[sid] = 0; storeEmps[sid] = []; }
+        storeTotals[sid] += (stats[e.id] || 0);
+        storeEmps[sid].push(e.id);
+    });
+    return Object.keys(storeTotals)
+        .map(function(sid){ return { sid: sid, total: storeTotals[sid], emps: storeEmps[sid], empCount: storeEmps[sid].length }; })
+        .filter(function(x){ return x.total > 0; })
+        .sort(function(a,b){ return b.total - a.total; });
+}
+
+// 確認結算（從 modal 讀值）
+function confirmCompSettle() {
+    var compId = _settlingCompId;
+    if (!compId) return;
+    var comps = getCompetitions();
+    var c = comps.find(function(x){ return x.id === compId; });
+    if (!c) return alert('⚠️ 找不到競賽');
+
+    var sourceKey = 'comp:' + compId;
+    if (isSettled(sourceKey)) {
+        revertCompetitionSettlement(compId);
+    }
+
+    var pts = {
+        rank1: parseInt(document.getElementById('csRank1').value) || 0,
+        rank2: parseInt(document.getElementById('csRank2').value) || 0,
+        rank3: parseInt(document.getElementById('csRank3').value) || 0,
+        attend: parseInt(document.getElementById('csAttend').value) || 0
+    };
+
+    var ranked = calcCompStoreRanking(c);
+    if (ranked.length === 0) { closeModal('compSettleModal'); return alert('⚠️ 沒有門市得分'); }
+
+    var awarded = {};
+    var stores = loadData('stores', defaultStores);
+    var summaryLines = [];
+    ranked.forEach(function(row, idx){
+        var give = (idx === 0) ? pts.rank1 : (idx === 1) ? pts.rank2 : (idx === 2) ? pts.rank3 : pts.attend;
+        if (give === 0) return;
+        var sName = (stores.find(function(s){return s.id===row.sid;})||{}).name || row.sid;
+        var rankLabel = idx < 3 ? ['🥇第1名','🥈第2名','🥉第3名'][idx] : '🎯參加';
+        row.emps.forEach(function(empId){
+            adjustPetPoints(empId, give);
+            awarded[empId] = (awarded[empId] || 0) + give;
+        });
+        summaryLines.push(rankLabel + ' ' + sName + '（總分 ' + row.total + '）× ' + row.empCount + ' 人，各 +' + give + ' 分');
+    });
+
+    c.petPointSettings = pts;
+    saveCompetitions(comps);
+    markSettled(sourceKey, { type: 'competition', compName: c.name, awarded: awarded, settings: pts });
+
+    closeModal('compSettleModal');
+    _settlingCompId = null;
+    if (typeof renderStoreLeaderboard === 'function') renderStoreLeaderboard();
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    alert('✅ 競賽積分結算完成！\n\n' + (summaryLines.join('\n') || '（無人加分）') + '\n\n寵物樂園排行榜已更新。');
+}
+
+function revertCompetitionSettlement(compId) {
+    var sourceKey = 'comp:' + compId;
+    var s = getPetSettlements();
+    var rec = s[sourceKey];
+    if (!rec || !rec.awarded) return;
+    // 扣回上次發放
+    Object.keys(rec.awarded).forEach(function(empId){
+        adjustPetPoints(empId, -rec.awarded[empId]);
+    });
+    unmarkSettled(sourceKey);
+}
+
+// ⚖️ 員工處罰結算：開啟設定 modal（取代 prompt）
+function settlePenaltyPoints() {
+    var isEditor = currentUser && ['admin','manager','deputy'].indexOf(currentUser.role) !== -1;
+    if (!isEditor) return alert('⚠️ 僅管理員/店長可執行結算');
+    var list = loadData('penaltyList', []);
+    if (list.length === 0) return alert('⚠️ 目前沒有處罰紀錄');
+
+    // 預設依次數
+    document.getElementById('psBasis').value = 'count';
+    document.getElementById('psDeduct1').value = 100;
+    document.getElementById('psDeduct2').value = 60;
+    document.getElementById('psDeduct3').value = 30;
+    renderPenaltySettlePreview();
+    document.getElementById('penaltySettleModal').classList.remove('hidden');
+}
+
+// 計算處罰排名（依次數或金額）
+function calcPenaltyRanking(byAmount) {
+    var list = loadData('penaltyList', []);
+    var stat = {};
+    list.forEach(function(p){
+        if (p.type === '獎勵') return;
+        if (!stat[p.empId]) stat[p.empId] = { count: 0, amount: 0, name: p.empName || p.empId };
+        stat[p.empId].count += 1;
+        stat[p.empId].amount += (p.amount || 0);
+    });
+    return Object.keys(stat).map(function(empId){
+        return { empId: empId, name: stat[empId].name, count: stat[empId].count, amount: stat[empId].amount };
+    }).filter(function(x){ return byAmount ? x.amount > 0 : x.count > 0; })
+      .sort(function(a,b){ return byAmount ? (b.amount - a.amount) : (b.count - a.count); });
+}
+
+function renderPenaltySettlePreview() {
+    var byAmount = document.getElementById('psBasis').value === 'amount';
+    var ranked = calcPenaltyRanking(byAmount).slice(0, 3);
+    var el = document.getElementById('penaltySettlePreview');
+    if (!el) return;
+    if (ranked.length === 0) {
+        el.innerHTML = '⚠️ 沒有可列入排名的處罰紀錄';
+        return;
+    }
+    var lines = ['<strong>📊 處罰前 3 名：</strong>'];
+    ranked.forEach(function(row, idx){
+        var basis = byAmount ? ('扣薪 ' + row.amount + ' 元') : (row.count + ' 次');
+        lines.push(['🥇','🥈','🥉'][idx] + ' ' + row.name + '（' + basis + '）');
+    });
+    if (isSettled('penalty:' + (byAmount ? 'amount' : 'count'))) {
+        lines.push('<div style="color:#dc2626; margin-top:6px;">⚠️ 此排名方式已結算過，確認後會先撤銷上次再重新扣分。</div>');
+    }
+    el.innerHTML = lines.join('<br>');
+}
+
+function confirmPenaltySettle() {
+    var byAmount = document.getElementById('psBasis').value === 'amount';
+    var ranked = calcPenaltyRanking(byAmount);
+    if (ranked.length === 0) { closeModal('penaltySettleModal'); return alert('⚠️ 沒有可列入排名的處罰紀錄'); }
+
+    var sourceKey = 'penalty:' + (byAmount ? 'amount' : 'count');
+    if (isSettled(sourceKey)) {
+        revertPenaltySettlement(sourceKey);
+    }
+
+    var deduct = [
+        parseInt(document.getElementById('psDeduct1').value) || 0,
+        parseInt(document.getElementById('psDeduct2').value) || 0,
+        parseInt(document.getElementById('psDeduct3').value) || 0
+    ];
+
+    var awarded = {};
+    var summaryLines = [];
+    ranked.slice(0, 3).forEach(function(row, idx){
+        if (deduct[idx] === 0) return;
+        adjustPetPoints(row.empId, -deduct[idx]);
+        awarded[row.empId] = (awarded[row.empId] || 0) - deduct[idx];
+        var basis = byAmount ? ('扣薪 ' + row.amount + ' 元') : (row.count + ' 次');
+        summaryLines.push(['🥇','🥈','🥉'][idx] + ' ' + row.name + '（' + basis + '）扣 ' + deduct[idx] + ' 分');
+    });
+
+    markSettled(sourceKey, { type: 'penalty', basis: byAmount ? 'amount' : 'count', awarded: awarded });
+
+    closeModal('penaltySettleModal');
+    if (typeof renderStoreLeaderboard === 'function') renderStoreLeaderboard();
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    alert('✅ 處罰扣分結算完成！\n\n' + (summaryLines.join('\n') || '（無人扣分）') + '\n\n寵物樂園排行榜已更新。');
+}
+
+function revertPenaltySettlement(sourceKey) {
+    var s = getPetSettlements();
+    var rec = s[sourceKey];
+    if (!rec || !rec.awarded) return;
+    Object.keys(rec.awarded).forEach(function(empId){
+        adjustPetPoints(empId, -rec.awarded[empId]);  // awarded 是負數，扣回即加正
+    });
+    unmarkSettled(sourceKey);
+}
+
+// 🆕 記錄登入並更新連續登入天數（每次進入寵物頁或登入時呼叫）
+function updatePetLoginStreak() {
+    var pet = getMyPet();
+    var today = new Date().toISOString().slice(0,10);
+    if (pet.lastLoginDate === today) return; // 今天已記錄
+    // 判斷是否連續（昨天有登入）
+    var yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    if (pet.lastLoginDate === yesterday) {
+        pet.streak = (pet.streak || 0) + 1;
+    } else {
+        pet.streak = 1; // 中斷，重新計算
+    }
+    pet.lastLoginDate = today;
+    savePet(pet);
+}
+
+// 🆕 每日領取經驗（連續登入越久領越多，上限封頂）
+function claimDailyPetExp() {
+    var pet = getMyPet();
+    var today = new Date().toISOString().slice(0,10);
+    if (pet.lastClaimDate === today) {
+        alert('📅 今天已經領取過囉！\n明天再來，連續登入可領更多經驗。');
+        return;
+    }
+    updatePetLoginStreak();
+    pet = getMyPet();
+    // 基礎 50 + 連續天數加成（每天 +10，最多加到第 10 天 = +100），上限 150
+    var bonus = Math.min((pet.streak - 1) * 10, 100);
+    var gain = PET_DAILY_BASE + bonus;
+    pet.lastClaimDate = today;
+    savePet(pet);
+    addPetExp(gain, '每日領取', true);
+    alert('🎁 每日領取成功！\n\n連續登入 ' + pet.streak + ' 天\n獲得經驗 +' + gain + '（基礎 ' + PET_DAILY_BASE + ' + 連登加成 ' + bonus + '）\n\n明天再來，連登越久領越多！');
+    renderPetPage();
 }
 
 function initPetGame() {
-    // 跨日重設今日步數
-    var pet = getMyPet();
-    var today = new Date().toISOString().slice(0,10);
-    if (pet.lastStepDate !== today) {
-        pet.todaySteps = 0; pet.lastStepDate = today; savePet(pet);
-    }
+    updatePetLoginStreak();  // 進入頁面即更新連登天數
     renderPetPage();
     renderStoreLeaderboard();
 }
 
 function renderPetPage() {
     var pet = getMyPet();
-    var stage = getPetStageInfo(pet.totalSteps);
+    var stage = getPetStageInfo(pet.exp);
     // 寵物表情：蛋階段顯示🥚，其餘顯示寵物類型+特效
     var emoji = stage.override || (pet.type + stage.suffix);
     var emojiEl = document.getElementById('petEmoji');
@@ -26417,15 +26799,32 @@ function renderPetPage() {
     var nameEl = document.getElementById('petName');
     if (nameEl) nameEl.textContent = pet.name;
     var expText = document.getElementById('petExpText');
-    if (expText) expText.textContent = '經驗：' + pet.totalSteps + ' / ' + stage.next + (stage.idx === PET_STAGES.length - 1 ? '（已滿級）' : '');
+    if (expText) expText.textContent = '經驗：' + pet.exp + ' / ' + stage.next + (stage.idx === PET_STAGES.length - 1 ? '（已滿級）' : '');
     var expBar = document.getElementById('petExpBar');
     if (expBar) expBar.style.width = stage.pct + '%';
-    var td = document.getElementById('petTodaySteps');
-    if (td) td.textContent = pet.todaySteps;
-    var tot = document.getElementById('petTotalSteps');
-    if (tot) tot.textContent = pet.totalSteps;
+    // 統計卡：連續登入天數、經驗、積分
+    var td = document.getElementById('petStreak');
+    if (td) td.textContent = pet.streak || 0;
+    var tot = document.getElementById('petTotalExp');
+    if (tot) tot.textContent = pet.exp;
     var pts = document.getElementById('petPoints');
     if (pts) pts.textContent = pet.points;
+    // 每日領取按鈕狀態
+    var today = new Date().toISOString().slice(0,10);
+    var claimBtn = document.getElementById('petClaimBtn');
+    if (claimBtn) {
+        if (pet.lastClaimDate === today) {
+            claimBtn.textContent = '✅ 今日已領取';
+            claimBtn.disabled = true;
+            claimBtn.classList.remove('btn-confirm');
+            claimBtn.classList.add('btn-secondary');
+        } else {
+            claimBtn.textContent = '🎁 每日領取經驗';
+            claimBtn.disabled = false;
+            claimBtn.classList.remove('btn-secondary');
+            claimBtn.classList.add('btn-confirm');
+        }
+    }
 }
 
 function renamePet() {
@@ -26446,75 +26845,6 @@ function changePetType() {
     pet.type = pick;
     savePet(pet);
     renderPetPage();
-}
-
-function addPetSteps(n) {
-    var pet = getMyPet();
-    var today = new Date().toISOString().slice(0,10);
-    if (pet.lastStepDate !== today) { pet.todaySteps = 0; pet.lastStepDate = today; }
-    var oldStage = getPetStageInfo(pet.totalSteps).idx;
-    pet.todaySteps += n;
-    pet.totalSteps += n;
-    pet.points += n;
-    savePet(pet);
-    var newStage = getPetStageInfo(pet.totalSteps).idx;
-    if (newStage > oldStage) {
-        setTimeout(function(){
-            alert('🎉 寵物升級了！\n進化為「' + PET_STAGES[newStage].name + '」！');
-        }, 200);
-    }
-    renderPetPage();
-}
-
-// ── 自動計步（加速度感應器）──
-var _stepWatch = { active: false, lastPeakTime: 0, threshold: 12, handler: null };
-function toggleStepCounter() {
-    if (_stepWatch.active) stopStepCounter();
-    else startStepCounter();
-}
-function startStepCounter() {
-    var statusEl = document.getElementById('stepStatus');
-    var btnEl = document.getElementById('stepBtn');
-    if (typeof DeviceMotionEvent === 'undefined') {
-        if (statusEl) statusEl.textContent = '❌ 本裝置不支援動作感應';
-        return;
-    }
-    var begin = function() {
-        _stepWatch.handler = function(e) {
-            var a = e.accelerationIncludingGravity || e.acceleration;
-            if (!a) return;
-            var mag = Math.sqrt((a.x||0)*(a.x||0) + (a.y||0)*(a.y||0) + (a.z||0)*(a.z||0));
-            var now = Date.now();
-            // 峰值偵測：超過閾值且距上次至少 280ms
-            if (mag > _stepWatch.threshold && now - _stepWatch.lastPeakTime > 280) {
-                _stepWatch.lastPeakTime = now;
-                addPetSteps(1);
-            }
-        };
-        window.addEventListener('devicemotion', _stepWatch.handler);
-        _stepWatch.active = true;
-        if (statusEl) statusEl.textContent = '🟢 計步中... 把手機放口袋走走看（再點一次停止）';
-        if (btnEl) { btnEl.textContent = '⏸️ 停止計步'; btnEl.classList.remove('btn-confirm'); btnEl.classList.add('btn-danger'); }
-    };
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        // iOS 13+ 需要授權
-        DeviceMotionEvent.requestPermission().then(function(res) {
-            if (res === 'granted') begin();
-            else { if (statusEl) statusEl.textContent = '❌ 需要動作感應權限才能計步，請到「設定→Safari→動作與方向存取權」開啟'; }
-        }).catch(function(err){
-            if (statusEl) statusEl.textContent = '❌ 啟動失敗：' + err.message;
-        });
-    } else {
-        begin();
-    }
-}
-function stopStepCounter() {
-    if (_stepWatch.handler) window.removeEventListener('devicemotion', _stepWatch.handler);
-    _stepWatch.active = false; _stepWatch.handler = null;
-    var statusEl = document.getElementById('stepStatus');
-    var btnEl = document.getElementById('stepBtn');
-    if (statusEl) statusEl.textContent = '⏸️ 已停止';
-    if (btnEl) { btnEl.textContent = '▶️ 啟動計步'; btnEl.classList.remove('btn-danger'); btnEl.classList.add('btn-confirm'); }
 }
 
 // ── 排行榜 ──
@@ -27115,6 +27445,8 @@ function renderCompDetail() {
         [itemsPanel, addScorePanel, rankPanel, myDetailPanel].forEach(function(el){ if(el) el.style.display = 'none'; });
         if (editBtn) editBtn.style.display = 'none';
         if (delBtn) delBtn.style.display = 'none';
+        var sb = document.getElementById('compSettleBtn'); if (sb) sb.style.display = 'none';
+        var sh = document.getElementById('compSettleHint'); if (sh) sh.style.display = 'none';
         return;
     }
     
@@ -27131,6 +27463,10 @@ function renderCompDetail() {
     
     if (editBtn) editBtn.style.display = isCompManager() ? '' : 'none';
     if (delBtn) delBtn.style.display = isCompManager() ? '' : 'none';
+    var settleBtn = document.getElementById('compSettleBtn');
+    var settleHint = document.getElementById('compSettleHint');
+    if (settleBtn) settleBtn.style.display = isCompManager() ? '' : 'none';
+    if (settleHint) settleHint.style.display = isCompManager() ? '' : 'none';
     [itemsPanel, addScorePanel, rankPanel, myDetailPanel].forEach(function(el){ if(el) el.style.display = ''; });
     
     renderCompItems(c);
@@ -27174,6 +27510,13 @@ function fillCompScoreSelects(c) {
         var sign = it.points > 0 ? '+' : '';
         return '<option value="' + it.id + '">' + it.name + ' (' + sign + it.points + '分)</option>';
     }).join('');
+}
+
+// 🐾 結算「目前選擇的」競賽（從下拉取得 ID）
+function settleSelectedCompetition() {
+    var c = getSelectedComp();
+    if (!c) return alert('⚠️ 請先選擇一個競賽');
+    settleCompetitionPoints(c.id);
 }
 
 function calcCompScores(c) {
