@@ -4619,7 +4619,12 @@ body.view-desktop .work-list-panel:hover {
     <div id="page-reviewMonth" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 📅 班表作業 &gt; <strong>✅ 審核作業</strong></div>
         <div class="main-content"><div class="work-list-panel"><div class="panel-header"><h3>📊 月度審核</h3></div><div class="panel-body">
-            <table class="work-table"><thead><tr><th>編號</th><th>姓名</th><th>出勤</th><th>狀態</th><th>操作</th></tr></thead>
+            <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap;">
+                <label style="font-size:13px; color:#4b5563; font-weight:bold;">📅 審核月份：</label>
+                <input type="month" id="reviewMonthPicker" style="padding:7px 10px; border:1px solid #d4c5a8; border-radius:8px;" onchange="renderReviewList()">
+                <span id="reviewMonthHint" style="font-size:12px; color:#6b7280;"></span>
+            </div>
+            <table class="work-table"><thead><tr><th>編號</th><th>姓名</th><th>類型</th><th>出勤</th><th>狀態</th><th>操作</th></tr></thead>
             <tbody id="reviewList"></tbody></table>
         </div></div></div>
     </div>
@@ -7975,8 +7980,10 @@ function showWelcomeAnimation(name, roleName) {
 
 // 🆕 登入時自動同步
 function triggerLoginSync() {
-    // 🔧 修正：只要有內建雲端網址（Firebase/Pantry）就自動啟用同步，免手動設定
-    var hasCloud = (typeof fbEnabled === 'function' && fbEnabled()) || (typeof pantryEnabled === 'function' && pantryEnabled());
+    // 🔧 修正：只要有內建雲端網址（GAS/Firebase/Pantry）就自動啟用同步，免手動設定
+    var hasCloud = (typeof gasEnabled === 'function' && gasEnabled())
+                || (typeof fbEnabled === 'function' && fbEnabled())
+                || (typeof pantryEnabled === 'function' && pantryEnabled());
     var enabled = localStorage.getItem('_cs_enabled') === '1' || hasCloud;
     if (hasCloud) localStorage.setItem('_cs_enabled', '1');  // 記住已啟用
     if (!enabled) {
@@ -11099,19 +11106,31 @@ function getCompLeaveForEmployee(empId) {
 }
 
 // 取得目前登入員工的代休假（admin 預設用 emp1）
+// 🔑 解析「目前登入者」對應的員工 ID
+//    帳號 ID(currentUser.id) 與員工 ID(emp.id) 不一定相同，
+//    需用工號(num)或姓名比對，否則查 compLeaveByEmp 等以 emp.id 為 key 的資料會落空
+function getCurrentEmpId() {
+    if (!currentUser) return null;
+    var employees = loadData('employees', defaultEmployees);
+    var emp = employees.find(function(e) {
+        return e.id === currentUser.id || e.num === currentUser.id || e.name === currentUser.name;
+    });
+    return emp ? emp.id : null;
+}
+
 function getCurrentUserCompLeave() {
-    var empId = (currentUser && currentUser.role === 'user') ? currentUser.id : 'emp1';
-    // 若不存在，回傳所有員工總和（管理員視圖）
+    var empId = getCurrentEmpId();
     var compLeave = loadData('compLeaveByEmp', {});
-    if (!compLeave[empId]) {
-        // 管理員看全部
-        var total = 0;
-        Object.keys(compLeave).forEach(function(k) {
-            total += compLeave[k].totalHours;
-        });
-        return total;
+    // 一般員工：回自己的；管理員/店長（找不到對應員工）：回全部總和
+    if (empId && compLeave[empId]) {
+        return compLeave[empId].totalHours;
     }
-    return compLeave[empId].totalHours;
+    if (currentUser && currentUser.role === 'user') {
+        return 0;  // 員工本人但無記錄 → 0（不要回傳全部總和，以免誤導）
+    }
+    var total = 0;
+    Object.keys(compLeave).forEach(function(k) { total += (compLeave[k].totalHours || 0); });
+    return total;
 }
 
 function renderEmployeePanel() {
@@ -19565,8 +19584,11 @@ function renderCompLeaveDetail() {
     var employees = loadData('employees', defaultEmployees);
     var isAdmin = currentUser && currentUser.role === 'admin';
     
-    // 取得目前要顯示的員工 ID
-    var targetEmpId = (currentUser && currentUser.role === 'user') ? currentUser.id : null;
+    // 取得目前要顯示的員工 ID（用工號/姓名正確解析，非帳號 ID）
+    var myEmpId = getCurrentEmpId();
+    // 顯示模式：解析到員工身份 → 看自己；否則（管理者/店長無員工記錄）→ 看全部
+    var showAllMode = !myEmpId;
+    var targetEmpId = myEmpId;
     
     var html = '';
     html += '<div style="background:#fef3c7; border:2px solid #f59e0b; border-radius:6px; padding:12px;">';
@@ -19575,8 +19597,8 @@ function renderCompLeaveDetail() {
     html += '代休假來源明細（超時工時自動轉換）';
     html += '</div>';
     
-    if (isAdmin) {
-        // 管理員顯示所有員工
+    if (showAllMode) {
+        // 看全部（管理員 / 店長等無員工身份者）
         var hasAny = false;
         Object.keys(compLeave).forEach(function(empId) {
             var data = compLeave[empId];
@@ -23178,6 +23200,10 @@ function ghRunDiagnostic() {
 
 // 取得目前啟用的同步端點（GitHub 優先）
 function getActiveSyncEndpoint() {
+    // 🔧 GAS（Google Apps Script）為主要同步，優先判斷
+    if (typeof gasEnabled === 'function' && gasEnabled()) {
+        return { type: 'gas', url: (typeof gasGetUrl === 'function') ? gasGetUrl() : '' };
+    }
     var gistId = ghGetGistId();
     var token = ghGetToken();
     if (gistId && token) {
@@ -23795,7 +23821,10 @@ function autoSync5sCycle() {
     if (_isAutoSyncing) return;
     if (!currentUser) return;
     if (typeof isUserActivelyEditing === 'function' && isUserActivelyEditing()) return;
-    if (!fbEnabled() && !pantryEnabled() && !(typeof ghGetGistId === 'function' && ghGetGistId())) return;
+    // 🔧 修正：GAS 為主要同步，需納入判斷（原本漏掉導致 GAS 用戶背景同步完全不運作）
+    if (!(typeof gasEnabled === 'function' && gasEnabled())
+        && !fbEnabled() && !pantryEnabled()
+        && !(typeof ghGetGistId === 'function' && ghGetGistId())) return;
     
     var snap = buildSyncSnapshot();
     if (snap === _lastPushedSnapshot) return;  // 無變動跳過
@@ -29031,22 +29060,85 @@ function renderReviewList() {
     var tbody = document.getElementById('reviewList');
     if (!tbody) return;
     
+    // 🔒 非管理員只看自家門市員工
+    if (!canViewAllStores()) {
+        var mySid = getUserStoreId();
+        if (mySid) employees = employees.filter(function(e){ return !e.homeStoreId || e.homeStoreId === mySid; });
+    }
+    
     if (employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">📭 尚無員工資料</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">📭 尚無員工資料</td></tr>';
         return;
     }
     
+    // 取得選擇的月份（預設當月）
+    var picker = document.getElementById('reviewMonthPicker');
+    var ym;
+    if (picker && picker.value) {
+        ym = picker.value;  // 'YYYY-MM'
+    } else {
+        var now = new Date();
+        ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+        if (picker) picker.value = ym;
+    }
+    var hint = document.getElementById('reviewMonthHint');
+    if (hint) hint.textContent = '（顯示 ' + ym + ' 各員工實際出勤）';
+    
+    // 審核狀態用「員工+月份」當 key，讓每月獨立審核
     var html = '';
     for (var i = 0; i < employees.length; i++) {
         var emp = employees[i];
-        var isReviewed = reviewStatus[emp.id];
+        var stats = calcEmpMonthStats(emp.id, ym);
+        var attendDays = stats ? calcAttendanceDays(emp.id, ym) : 0;
+        var totalH = stats ? stats.totalHours : 0;
+        var empTypeLabel = (emp.empType === 'parttime') ? '<span style="color:#0891b2;">工讀</span>' : '<span style="color:#7c3aed;">正職</span>';
+        
+        var reviewKey = emp.id + '_' + ym;
+        var isReviewed = reviewStatus[reviewKey];
         var statusHtml = isReviewed ? '<span class="status-tag status-done">✓ 已審核</span>' : '<span class="status-tag status-review">⏳ 待審核</span>';
         var opBtn = isReviewed
-            ? '<button class="btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="cancelReview(\'' + emp.id + '\')">取消審核</button>'
-            : '<button class="btn-confirm" style="padding:5px 12px; font-size:12px;" onclick="doReview(\'' + emp.id + '\')">審核</button>';
-        html += '<tr><td>' + emp.num + '</td><td>' + emp.name + '</td><td>20 天</td><td>' + statusHtml + '</td><td>' + opBtn + '</td></tr>';
+            ? '<button class="btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="cancelReview(\'' + reviewKey + '\')">取消審核</button>'
+            : '<button class="btn-confirm" style="padding:5px 12px; font-size:12px;" onclick="doReview(\'' + reviewKey + '\')">審核</button>';
+        
+        // 出勤顯示：天數 + 時數
+        var attendStr = attendDays + ' 天 / ' + totalH.toFixed(1) + ' H';
+        
+        html += '<tr><td data-label="編號">' + emp.num + '</td>' +
+                '<td data-label="姓名">' + emp.name + '</td>' +
+                '<td data-label="類型">' + empTypeLabel + '</td>' +
+                '<td data-label="出勤">' + attendStr + '</td>' +
+                '<td data-label="狀態">' + statusHtml + '</td>' +
+                '<td data-label="操作">' + opBtn + '</td></tr>';
     }
     tbody.innerHTML = html;
+}
+
+// 🆕 計算某員工某月「實際出勤天數」（當月有上班班別的不重複天數）
+function calcAttendanceDays(empId, yearMonth) {
+    var parts = yearMonth.split('-');
+    var year = parseInt(parts[0]);
+    var month = parseInt(parts[1]);
+    var shifts = loadData('shifts', {});
+    var days = 0;
+    Object.keys(shifts).forEach(function(dateKey) {
+        var p = dateKey.split('/');
+        if (parseInt(p[0]) !== year || parseInt(p[1]) !== month) return;
+        var s = shifts[dateKey][empId];
+        if (!s) return;
+        var slots = (Array.isArray(s.slots)) ? s.slots : (s.type ? [{type:s.type, start:s.start, end:s.end}] : []);
+        // 當天只要有一個「上班類」slot 有有效時間，就算出勤 1 天
+        var worked = false;
+        for (var i = 0; i < slots.length; i++) {
+            var slot = slots[i];
+            if (!slot) continue;
+            if (['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1
+                && slot.start && slot.end && slot.start !== '-') {
+                worked = true; break;
+            }
+        }
+        if (worked) days++;
+    });
+    return days;
 }
 
 function doReview(empId) {
