@@ -1241,6 +1241,65 @@ body.view-mobile .panel-header h3 { font-size: 16px; }
 body.view-mobile table { font-size: 12px; }
 body.view-mobile .work-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
 body.view-mobile .work-list-panel { overflow-x: hidden; }
+
+/* 📱 員工處罰表：手機改為卡片式（每筆一張卡，欄位垂直堆疊，解決文字疊在一起）*/
+body.view-mobile .penalty-table { display: block; overflow: visible; white-space: normal; border: none; }
+body.view-mobile .penalty-table thead { display: none; }  /* 隱藏表頭 */
+body.view-mobile .penalty-table tbody { display: block; }
+body.view-mobile .penalty-table tr {
+    display: block;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+body.view-mobile .penalty-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 4px 0;
+    border: none;
+    white-space: normal;
+    word-break: break-word;
+    max-width: none !important;
+    text-align: left !important;
+    font-size: 13px !important;
+}
+/* 欄位標籤（用 data-label）顯示在左側 */
+body.view-mobile .penalty-table td::before {
+    content: attr(data-label);
+    flex: 0 0 64px;
+    font-weight: 700;
+    color: #64748b;
+    font-size: 12px;
+}
+/* 事由、處置這類長文字靠右但允許換行 */
+body.view-mobile .penalty-table td[data-label="事由"],
+body.view-mobile .penalty-table td[data-label="處置"] {
+    flex-direction: column;
+    gap: 2px;
+}
+body.view-mobile .penalty-table td[data-label="事由"]::before,
+body.view-mobile .penalty-table td[data-label="處置"]::before {
+    flex: none;
+}
+/* 操作鈕列置中、按鈕加大好點 */
+body.view-mobile .penalty-table td[data-label="操作"] {
+    justify-content: center;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed #e5e7eb;
+}
+body.view-mobile .penalty-table td[data-label="操作"]::before { display: none; }
+body.view-mobile .penalty-table td[data-label="操作"] button {
+    flex: 1;
+    padding: 8px 4px !important;
+    font-size: 13px !important;
+}
 /* 🔑 表單表格（label+input）保持正常排版，不可橫向捲動 */
 body.view-mobile .form-table { display: table; width: 100%; white-space: normal; }
 body.view-mobile .form-table td { white-space: normal; word-break: break-word; }
@@ -4570,7 +4629,7 @@ body.view-desktop .work-list-panel:hover {
             </div>
             <!-- 統計卡 -->
             <div id="penaltyStats" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;"></div>
-            <table class="work-table"><thead><tr><th>日期</th><th>姓名</th><th>類型</th><th>事由</th><th>處置</th><th>扣款</th><th>處理人</th><th>操作</th></tr></thead>
+            <table class="work-table penalty-table"><thead><tr><th>日期</th><th>姓名</th><th>類型</th><th>事由</th><th>處置</th><th>扣款</th><th>處理人</th><th>操作</th></tr></thead>
             <tbody id="penaltyList"></tbody></table>
         </div></div></div>
     </div>
@@ -9539,28 +9598,48 @@ function syncAllAutoCompTransfers() {
         var quotas = loadData('leaveQuotas', {});
         var changed = false;
         
+        // 🚀 效能優化：只處理「目前顯示週」的日期（最多 7 天），
+        //    而非遍歷所有歷史班表（過去這裡是 O(員工×全部日期)，員工多、班表久會當機）
+        var weekDates = getWeekDates(currentWeekStart).map(function(d){ return formatDate(d); });
+        
+        // 🚀 用 Map 建立 transfers 索引，避免每次 findIndex（O(n) → O(1)）
+        var transferIdx = {};  // key = empId|date → transfers 陣列索引
+        for (var ti = 0; ti < transfers.length; ti++) {
+            var t = transfers[ti];
+            if (t.autoFromOT) transferIdx[t.empId + '|' + t.date] = ti;
+        }
+        var removeIdxs = [];  // 待移除的索引
+        
         employees.forEach(function(emp){
-            // 只處理正職
-            if (emp.empType !== 'fulltime' && emp.empType) return;
-            if (!emp.empType) {
-                // 預設視為正職（沒指定類型者）
-            }
+            // 只處理正職（沒指定類型者預設視為正職）
+            if (emp.empType && emp.empType !== 'fulltime') return;
             if (!quotas[emp.id]) quotas[emp.id] = {};
             if (typeof quotas[emp.id]['特代休'] !== 'number') quotas[emp.id]['特代休'] = 0;
             
-            Object.keys(shifts).forEach(function(dateKey){
-                if (!shifts[dateKey] || !shifts[dateKey][emp.id]) return;
+            weekDates.forEach(function(dateKey){
+                if (!shifts[dateKey] || !shifts[dateKey][emp.id]) {
+                    // 此日無班，但若先前有自動記錄需清除
+                    var ek0 = emp.id + '|' + dateKey;
+                    if (transferIdx[ek0] !== undefined) {
+                        var oi = transferIdx[ek0];
+                        var oOT = parseFloat(transfers[oi].hours) || 0;
+                        quotas[emp.id]['特代休'] = Math.max(0, (quotas[emp.id]['特代休'] || 0) - oOT);
+                        removeIdxs.push(oi);
+                        delete transferIdx[ek0];
+                        changed = true;
+                    }
+                    return;
+                }
                 var raw = shifts[dateKey][emp.id];
                 var slots = getDaySlots(raw);
                 var date = new Date(dateKey);
                 if (isNaN(date.getTime())) return;
                 var r = calcDayLaborCost(slots, emp, date);
                 var newOT = r.ot134Hours + r.ot167Hours + r.restOT134 + r.restOT167 + r.restOT267 + r.holidayWorkHours;
-                newOT = Math.round(newOT * 10) / 10;  // 保留 1 位小數
+                newOT = Math.round(newOT * 10) / 10;
                 
-                var oldIdx = transfers.findIndex(function(t){ 
-                    return t.empId === emp.id && t.date === dateKey && t.autoFromOT; 
-                });
+                var ek = emp.id + '|' + dateKey;
+                var oldIdx = transferIdx[ek] !== undefined ? transferIdx[ek] : -1;
                 var oldOT = oldIdx >= 0 ? (parseFloat(transfers[oldIdx].hours) || 0) : 0;
                 var delta = newOT - oldOT;
                 
@@ -9569,8 +9648,7 @@ function syncAllAutoCompTransfers() {
                         if (Math.abs(delta) > 0.01) {
                             transfers[oldIdx].hours = newOT;
                             transfers[oldIdx].addedAt = new Date().toISOString();
-                            quotas[emp.id]['特代休'] = (quotas[emp.id]['特代休'] || 0) + delta;
-                            if (quotas[emp.id]['特代休'] < 0) quotas[emp.id]['特代休'] = 0;
+                            quotas[emp.id]['特代休'] = Math.max(0, (quotas[emp.id]['特代休'] || 0) + delta);
                             changed = true;
                         }
                     } else {
@@ -9585,18 +9663,24 @@ function syncAllAutoCompTransfers() {
                             addedBy: '系統',
                             addedAt: new Date().toISOString()
                         });
-                        quotas[emp.id]['特代休'] = (quotas[emp.id]['特代休'] || 0) + newOT;
+                        transferIdx[ek] = transfers.length - 1;
+                        quotas[emp.id]['特代休'] = Math.max(0, (quotas[emp.id]['特代休'] || 0) + newOT);
                         changed = true;
                     }
                 } else if (oldIdx >= 0) {
-                    // 沒有 OT 了，移除舊自動記錄並扣回額度
-                    quotas[emp.id]['特代休'] = (quotas[emp.id]['特代休'] || 0) - oldOT;
-                    if (quotas[emp.id]['特代休'] < 0) quotas[emp.id]['特代休'] = 0;
-                    transfers.splice(oldIdx, 1);
+                    quotas[emp.id]['特代休'] = Math.max(0, (quotas[emp.id]['特代休'] || 0) - oldOT);
+                    removeIdxs.push(oldIdx);
+                    delete transferIdx[ek];
                     changed = true;
                 }
             });
         });
+        
+        // 一次性移除待刪項（由大到小，避免索引位移）
+        if (removeIdxs.length) {
+            removeIdxs.sort(function(a,b){ return b - a; });
+            removeIdxs.forEach(function(i){ transfers.splice(i, 1); });
+        }
         
         if (changed) {
             saveData('compTransfers', transfers);
@@ -19614,18 +19698,18 @@ function renderPenaltyList() {
     tbody.innerHTML = filtered.map(function(p){
         var color = _penaltyTypeColor(p.type);
         var actionCell = isEditor ?
-            ('<td style="white-space:nowrap;">' +
-                '<button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="openPenaltyModal(\'' + p.id + '\')">✏️</button> ' +
-                '<button class="btn-secondary" style="padding:3px 8px; font-size:11px; background:#fee2e2; color:#b91c1c;" onclick="deletePenalty(\'' + p.id + '\')">🗑️</button>' +
+            ('<td data-label="操作" style="white-space:nowrap;">' +
+                '<button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="openPenaltyModal(\'' + p.id + '\')">✏️ 編輯</button> ' +
+                '<button class="btn-secondary" style="padding:3px 8px; font-size:11px; background:#fee2e2; color:#b91c1c;" onclick="deletePenalty(\'' + p.id + '\')">🗑️ 刪除</button>' +
             '</td>') : '';
         return '<tr>' +
-            '<td>' + (p.date||'') + '</td>' +
-            '<td><strong>' + (p.empName||'') + '</strong></td>' +
-            '<td><span style="background:' + color + '; color:#fff; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700;">' + p.type + '</span></td>' +
-            '<td style="max-width:160px; font-size:12px;">' + (p.reason||'') + '</td>' +
-            '<td style="max-width:140px; font-size:12px; color:#6b7280;">' + (p.detail||'-') + '</td>' +
-            '<td style="text-align:right;">' + (p.amount ? '-' + p.amount.toLocaleString() : '-') + '</td>' +
-            '<td style="font-size:12px;">' + (p.handler||'-') + '</td>' +
+            '<td data-label="日期">' + (p.date||'') + '</td>' +
+            '<td data-label="姓名"><strong>' + (p.empName||'') + '</strong></td>' +
+            '<td data-label="類型"><span style="background:' + color + '; color:#fff; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700;">' + p.type + '</span></td>' +
+            '<td data-label="事由" style="max-width:160px; font-size:12px;">' + (p.reason||'') + '</td>' +
+            '<td data-label="處置" style="max-width:140px; font-size:12px; color:#6b7280;">' + (p.detail||'-') + '</td>' +
+            '<td data-label="扣款" style="text-align:right;">' + (p.amount ? '-' + p.amount.toLocaleString() : '-') + '</td>' +
+            '<td data-label="處理人" style="font-size:12px;">' + (p.handler||'-') + '</td>' +
             actionCell +
         '</tr>';
     }).join('');
