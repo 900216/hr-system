@@ -9830,8 +9830,12 @@ function getEmpHomeStore(emp) {
 // 切換顯示門市
 function onSchedStoreChange() {
     var sel = document.getElementById('schedStore');
-    if (sel) {
+    if (sel && sel.value) {
         currentSchedStoreId = sel.value;
+        // 反向同步全域門市（讓其他頁面、頂部跟著變）
+        saveData('currentStoreId', sel.value);
+        saveData('currentSchedStoreId', sel.value);
+        if (typeof updateHeaderStore === 'function') updateHeaderStore();
         showNotif('🏬 已切換顯示門市');
     }
     renderScheduleTable();
@@ -9921,6 +9925,13 @@ function renderScheduleTable() {
     if (storeSel) {
         // 🔒 管理員看全部；店長/員工只看自家門市
         var activeStores = stores.filter(function(s) { return s.status !== 'closed'; });
+        // 🌐 管理員：排班門市跟隨全域 currentStoreId（頂部選擇）
+        if (canViewAllStores()) {
+            var gStore = loadData('currentStoreId', null);
+            if (gStore && activeStores.some(function(s){ return s.id === gStore; })) {
+                currentSchedStoreId = gStore;
+            }
+        }
         if (!canViewAllStores()) {
             var mySid = getUserStoreId();
             if (mySid) {
@@ -16507,6 +16518,10 @@ function onPurchaseReceiptStoreChange() {
     document.getElementById('prStoreCode').value = store.code || '';
     document.getElementById('prStoreName').value = store.name || '';
     showNotif('🏬 已選擇門市：' + store.name);
+    // 🆕 同步全域門市 + 頂部
+    saveData('currentStoreId', sel.value);
+    saveData('currentSchedStoreId', sel.value);
+    if (typeof updateHeaderStore === 'function') updateHeaderStore();
 }
 
 // 渲染明細表
@@ -17480,8 +17495,10 @@ function onCashReportStoreChange() {
     document.getElementById('crStoreCode').value = store.code || '';
     document.getElementById('crStoreName').value = store.name || '';
     showNotif('🏬 已選擇門市：' + store.name);
-    // 🆕 同時更新全域當前門市
+    // 🆕 同時更新全域當前門市 + 頂部顯示
     try { localStorage.setItem('currentStoreId', JSON.stringify(storeId)); } catch(e){}
+    saveData('currentSchedStoreId', storeId);
+    if (typeof updateHeaderStore === 'function') updateHeaderStore();
     // 🆕 重新載入該門市該日的資料（避免顯示其他門市的舊資料）
     if (typeof loadCashReport === 'function') loadCashReport();
 }
@@ -28599,16 +28616,43 @@ function updateHeaderStore() {
 // 🏬 從頂部下拉切換門市（管理員）：更新全域當前門市並刷新畫面
 function switchHeaderStore(storeId) {
     if (!storeId) return;
+    setGlobalStore(storeId, true);
+}
+
+// 🌐 全域門市切換中心：所有切換點都呼叫此函式
+//    1) 更新全域 currentStoreId + 排班 currentSchedStoreId
+//    2) 同步所有頁面的門市下拉顯示
+//    3) 刷新目前頁面內容
+//    notify=true 時顯示提示
+function setGlobalStore(storeId, notify) {
+    if (!storeId) return;
     saveData('currentStoreId', storeId);
-    // 排班頁的門市也一起同步（讓切換後班表跟著換）
     saveData('currentSchedStoreId', storeId);
-    var stores = loadData('stores', defaultStores);
-    var s = stores.find(function(x) { return x.id === storeId; });
-    if (s) {
-        showNotif('🏬 已切換至：' + s.region + ' / ' + s.name);
-        if (typeof logAction === 'function') logAction('store', '切換門市：' + s.name);
+    // 同步排班頁全域變數
+    if (typeof currentSchedStoreId !== 'undefined') {
+        try { currentSchedStoreId = storeId; } catch(e){}
     }
-    // 刷新目前頁面內容（讓資料跟著切換的門市更新）
+    // 同步所有頁面的門市下拉（存在才設定）
+    var dropdownIds = ['schedStore', 'crStoreSelect', 'prStoreSelect', 'toOutStoreSelect', 'layoutStoreSel', 'headerStore'];
+    dropdownIds.forEach(function(id){
+        var el = document.getElementById(id);
+        if (!el) return;
+        // headerStore 內是 select
+        var sel = (id === 'headerStore') ? el.querySelector('select') : el;
+        if (sel && sel.tagName === 'SELECT') {
+            // 確認該下拉有此選項才設定
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === storeId) { sel.value = storeId; break; }
+            }
+        }
+    });
+    if (notify) {
+        var stores = loadData('stores', defaultStores);
+        var s = stores.find(function(x) { return x.id === storeId; });
+        if (s) showNotif('🏬 已切換至：' + s.region + ' / ' + s.name);
+        if (typeof logAction === 'function' && s) logAction('store', '切換門市：' + s.name);
+    }
+    // 刷新目前頁面
     if (typeof refreshCurrentPage === 'function') {
         try { refreshCurrentPage(); } catch(e){}
     }
@@ -29126,10 +29170,13 @@ function printSchedule() {
             if (!ddata.total || ddata.total <= 0) return;
             var dStore = stores.find(function(s) { return s.id === sId; });
             var dName = dStore ? dStore.name : '其他';
+            // 🔑 姓名下方標示員工「原屬門市」（本店），而非去支援的門市
+            var dempHomeStore = stores.find(function(s) { return s.id === (demp.homeStoreId || stores[0].id); });
+            var dempHomeName = dempHomeStore ? dempHomeStore.name : '本店';
             
             var dRow = '<tr>';
             dRow += '<td>' + demp.num + '</td>';
-            dRow += '<td>' + demp.name + '<br><span style="font-size:9px;color:#1d4ed8;">(' + dName + ')</span></td>';
+            dRow += '<td>' + demp.name + '<br><span style="font-size:9px;color:#1d4ed8;">(' + dempHomeName + ')</span></td>';
             
             for (var dx = 0; dx < dates.length; dx++) {
                 var slotsForDay = ddata.days[dx];
