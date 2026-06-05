@@ -844,10 +844,37 @@ input.time24.invalid {
     margin-bottom: 6px;
     border-bottom: 1px solid #e5e7eb;
 }
-.ps-table {
-    width: 100%;
-    font-size: 12px;
+/* 📱 薪資單編輯表格（手機）：4欄擠壓 → 改為標籤在上、輸入在下的堆疊式 */
+body.view-mobile .ps-table,
+body.view-mobile .ps-table tbody,
+body.view-mobile .ps-table tr { display: block; width: 100%; }
+body.view-mobile .ps-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 8px;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed #eee;
 }
+body.view-mobile .ps-table td {
+    display: block;
+    width: auto !important;
+    text-align: left !important;
+    padding: 1px 2px;
+}
+/* 奇數格(標籤)：小字灰色，靠左 */
+body.view-mobile .ps-table td:nth-child(odd) {
+    text-align: left !important;
+    color: #6b7280;
+    font-size: 11px;
+    width: auto !important;
+    align-self: end;
+}
+body.view-mobile .ps-table input,
+body.view-mobile .ps-table select { width: 100% !important; }
+/* 薪層/職等那格有兩個小 input，維持並排 */
+body.view-mobile .ps-table td input[style*="width:48px"] { width: 44px !important; display: inline-block; }
+
 .ps-table td {
     padding: 3px 4px;
 }
@@ -7051,9 +7078,9 @@ body.view-desktop .work-list-panel:hover {
             <div class="ps-section-title">📋 基本資料</div>
             <table class="ps-table">
                 <tr><td>頁次：</td><td><input type="number" id="psPageNum" value="1"></td>
-                    <td>單位名稱：</td><td><input type="text" id="psUnitName" value="RC 金門醫院"></td></tr>
+                    <td>單位名稱：</td><td><select id="psUnitName" style="width:100%;"></select></td></tr>
                 <tr><td>轉帳日：</td><td><input type="date" id="psTransferDate"></td>
-                    <td>薪層 / 職等：</td><td><input type="text" id="psSalaryLevel" value="01" style="width:50px;"> / <input type="text" id="psJobLevel" value="01" style="width:50px;"></td></tr>
+                    <td>薪層 / 職等：</td><td><input type="text" id="psSalaryLevel" value="01" style="width:48px;"> / <input type="text" id="psJobLevel" value="01" style="width:48px;"></td></tr>
             </table>
         </div>
         
@@ -7062,7 +7089,7 @@ body.view-desktop .work-list-panel:hover {
             <div class="ps-section-title">💰 應稅所得（系統自動帶入基本薪資，其餘請手動輸入）</div>
             <table class="ps-table">
                 <tr><td>特別假工資：</td><td><input type="number" id="psSpecialLeaveWage" value="0"></td>
-                    <td>時薪工薪資：<span style="color:#059669;font-size:10px;">(自動)</span></td><td><input type="number" id="psHourlyWage" value="0"></td></tr>
+                    <td class="pt-only">時薪工薪資：<span style="color:#059669;font-size:10px;">(自動)</span></td><td class="pt-only"><input type="number" id="psHourlyWage" value="0"></td></tr>
                 <tr><td>假日津貼：</td><td><input type="number" id="psHolidayAllowance" value="0"></td>
                     <td>小計：</td><td><input type="number" id="psSubtotal" value="0" readonly style="background:#f3f4f6;"></td></tr>
                 <tr><td>自提退休免稅 (-)：</td><td><input type="number" id="psPensionTaxFree" value="0"></td>
@@ -7103,8 +7130,8 @@ body.view-desktop .work-list-panel:hover {
                 <tr><td>剩餘代休假：</td><td><input type="number" id="psCompLeaveRemain" value="0" step="0.1"></td>
                     <td>所得稅代扣累計：</td><td><input type="number" id="psIncomeTaxCum" value="0"></td></tr>
                 <tr><td>加班時薪：</td><td><input type="number" id="psOvertimeWage" value="0" step="0.001"></td>
-                    <td>時薪：</td><td><input type="number" id="psHourlyRate" value="0" step="0.001"></td></tr>
-                <tr><td>PT 特別津貼：</td><td><input type="number" id="psPtAllowance" value="0"></td>
+                    <td class="pt-only">時薪：</td><td class="pt-only"><input type="number" id="psHourlyRate" value="0" step="0.001"></td></tr>
+                <tr><td class="pt-only">PT 特別津貼：</td><td class="pt-only"><input type="number" id="psPtAllowance" value="0"></td>
                     <td>福利金額度：</td><td><input type="number" id="psWelfareAmount" value="0"></td></tr>
                 <tr><td>福儲累積單位數：</td><td><input type="number" id="psSavingsUnits" value="0" step="0.01"></td>
                     <td>福儲單位淨值：</td><td><input type="number" id="psSavingsUnitValue" value="0" step="0.01"></td></tr>
@@ -24216,6 +24243,7 @@ function calcEmpMonthStats(empId, yearMonth) {
     var totalHours = 0;
     var holidayHours = 0;
     var leaveHours = 0;
+    var compLeaveHours = 0;   // 補休使用時數
     
     Object.keys(shifts).forEach(function(dateKey) {
         var p = dateKey.split('/');
@@ -24236,10 +24264,22 @@ function calcEmpMonthStats(empId, yearMonth) {
                     holidayHours += h;
                 }
             } else if (slot.type === 'leave') {
-                leaveHours += 8;
+                var lh = parseFloat(slot.leaveHours) || 8;  // 用實際請假時數
+                leaveHours += lh;
+                // 補休：leaveType 為「補休」或別名
+                var lt = slot.leaveType || '';
+                if (lt.indexOf('補休') >= 0 || lt.indexOf('代休') >= 0) {
+                    compLeaveHours += lh;
+                }
             }
         }
     });
+    
+    // 補休「剩餘」額度（取自額度系統）
+    var compRemain = 0;
+    if (typeof getLeaveRemaining === 'function') {
+        try { compRemain = getLeaveRemaining(empId, 'comp').remaining || 0; } catch(e){}
+    }
     
     var empType = emp.empType || 'fulltime';
     var basicPay;
@@ -24255,6 +24295,8 @@ function calcEmpMonthStats(empId, yearMonth) {
         totalHours: totalHours,
         holidayHours: holidayHours,
         leaveHours: leaveHours,
+        compLeaveHours: compLeaveHours,
+        compRemain: compRemain,
         hourlyRate: hourlyRate,
         monthlySalary: monthlySalary,
         basicPay: basicPay
@@ -24393,7 +24435,7 @@ function openPayrollEditor(empId, yearMonth) {
         // 統計
         specLeaveCarry: 0,
         specLeaveRemain: 0,
-        compLeaveRemain: 0,
+        compLeaveRemain: stats.compRemain || 0,
         incomeTaxCum: 0,
         overtimeWage: 0,
         hourlyRate: stats.hourlyRate,
@@ -24439,6 +24481,7 @@ function openPayrollEditor(empId, yearMonth) {
         '<strong>👤 員工：</strong>' + emp.name + ' (' + emp.num + ') ' + (emp.empType === 'parttime' ? '[工讀]' : '[正職]') +
         '<br><strong>📅 薪資年月：</strong>' + yearMonth +
         '<br><strong>⏰ 系統統計：</strong>本月出勤 ' + stats.totalHours.toFixed(1) + ' 小時 ｜ 假日工作 ' + stats.holidayHours.toFixed(1) + ' 小時' +
+        '<br><strong>💼 補休：</strong>本月使用 ' + (stats.compLeaveHours||0).toFixed(1) + ' 小時 ｜ 剩餘 ' + (stats.compRemain||0).toFixed(1) + ' 小時' +
         '<br><strong>💵 基本薪資：</strong>$' + stats.basicPay.toLocaleString() + 
         (emp.empType === 'parttime' ? '（時薪 $' + stats.hourlyRate + ' × ' + stats.totalHours.toFixed(1) + ' H）' : '（月薪）');
     
@@ -24446,10 +24489,25 @@ function openPayrollEditor(empId, yearMonth) {
     document.getElementById('psEmpId').value = empId;
     document.getElementById('psYearMonth').value = yearMonth;
     
+    // 🏬 單位名稱：建立門市下拉選單，預設選員工所屬門市
+    var unitSel = document.getElementById('psUnitName');
+    if (unitSel) {
+        var allStores = loadData('stores', defaultStores);
+        var savedUnit = defaultSlip.unitName || '';
+        var empHome = emp.homeStoreId || (allStores[0] && allStores[0].id);
+        var optHtml = '';
+        allStores.forEach(function(s) {
+            // 已存的單位名可能是門市名或門市代碼，盡量比對
+            var isSel = (savedUnit && (savedUnit === s.name || savedUnit === s.id || savedUnit === s.code))
+                        || (!savedUnit && s.id === empHome);
+            optHtml += '<option value="' + s.name + '"' + (isSel ? ' selected' : '') + '>' + s.name + '</option>';
+        });
+        unitSel.innerHTML = optHtml;
+    }
+    
     // 填入所有欄位
     var fields = {
         'psPageNum': defaultSlip.pageNum,
-        'psUnitName': defaultSlip.unitName,
         'psTransferDate': defaultSlip.transferDate,
         'psSalaryLevel': defaultSlip.salaryLevel,
         'psJobLevel': defaultSlip.jobLevel,
@@ -24494,6 +24552,13 @@ function openPayrollEditor(empId, yearMonth) {
     });
     
     recalcPayrollSlip();
+    
+    // 💼 正職不顯示時薪相關欄位（時薪工薪資、時薪、PT津貼）
+    var isPartTime = (emp.empType === 'parttime');
+    var ptCells = document.querySelectorAll('#payrollEditModal .pt-only');
+    for (var pi = 0; pi < ptCells.length; pi++) {
+        ptCells[pi].style.display = isPartTime ? '' : 'none';
+    }
     
     document.getElementById('payrollEditModal').classList.remove('hidden');
 }
