@@ -28724,9 +28724,9 @@ function printSchedule() {
                 var isWorkSlot = ['work','business','fcCounsel','restWork','holidayWork'].indexOf(slot.type) !== -1;
                 var isOffSlot = ['rest','holiday','national','leave'].indexOf(slot.type) !== -1;
                 
-                if (isWorkSlot && slotStoreId === targetStoreId) {
+                if (isWorkSlot && slotStoreId === targetStoreId && slot.start && slot.end) {
                     matchingSlots.push(slot);
-                    if (slot.start && slot.end) weekTotal += calculateHours(slot.start, slot.end);
+                    weekTotal += calculateHours(slot.start, slot.end);
                 } else if (isOffSlot && (emp.homeStoreId || stores[0].id) === targetStoreId) {
                     // 休假類顯示在本店
                     matchingSlots.push(slot);
@@ -28831,25 +28831,30 @@ function printSchedule() {
                 var dslot = dslots[dsi];
                 if (!dslot || dslot.type === 'empty') continue;
                 var dStoreId = dslot.workStoreId;
-                if (!dStoreId || dStoreId === currentSchedStoreId) continue;
+                var dempHome = demp.homeStoreId || stores[0].id;
+                // 🔑 派駐他店判斷：workStoreId 必須存在，且「不等於目前檢視門市」「也不等於員工本店」
+                if (!dStoreId || dStoreId === currentSchedStoreId || dStoreId === dempHome) continue;
+                // 必須是上班類別
                 if (['work','business','fcCounsel','restWork','holidayWork'].indexOf(dslot.type) === -1) continue;
+                // 🔑 必須有有效上班時間（start+end），否則視為無效派駐、不收集
+                if (!dslot.start || !dslot.end) continue;
                 
                 if (!dispatchByStore[dStoreId]) {
                     dispatchByStore[dStoreId] = { days: [], total: 0 };
                     for (var x = 0; x < 7; x++) dispatchByStore[dStoreId].days.push([]);
                 }
                 dispatchByStore[dStoreId].days[ddi].push(dslot);
-                if (dslot.start && dslot.end) {
-                    dispatchByStore[dStoreId].total += calculateHours(dslot.start, dslot.end);
-                }
+                dispatchByStore[dStoreId].total += calculateHours(dslot.start, dslot.end);
             }
         }
         
         // 渲染每個派駐門市的列
         Object.keys(dispatchByStore).forEach(function(sId) {
+            var ddata = dispatchByStore[sId];
+            // 🔑 該員工在此派駐門市總工時為 0 則不顯示（避免空白列）
+            if (!ddata.total || ddata.total <= 0) return;
             var dStore = stores.find(function(s) { return s.id === sId; });
             var dName = dStore ? dStore.name : '其他';
-            var ddata = dispatchByStore[sId];
             
             var dRow = '<tr>';
             dRow += '<td>' + demp.num + '</td>';
