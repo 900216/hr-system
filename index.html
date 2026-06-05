@@ -10760,6 +10760,8 @@ function modalChangeSlotType(slotIndex, newType) {
     var _ref = editingShift.dateKey + ':slot' + slotIndex;
     if (newType === 'leave' && newSlot.leaveHours > 0) {
         applyLeaveDeduction(editingShift.empId, newSlot.leaveType, newSlot.leaveHours, '排班請假', _ref);
+        // 🆕 建立已核准的請假申請
+        syncShiftLeaveToApplication(editingShift.empId, editingShift.dateKey, slotIndex, newSlot.leaveType, newSlot.leaveHours);
     } else if (newType !== 'leave' && current.type === 'leave') {
         // 移除這格先前的請假扣除
         var _sd = loadData('leaveShiftDeductions', []);
@@ -10767,6 +10769,8 @@ function modalChangeSlotType(slotIndex, newType) {
             _sd = _sd.filter(function(a){ return a.sourceRef !== _ref; });
             saveData('leaveShiftDeductions', _sd);
         }
+        // 🆕 移除對應的請假申請紀錄
+        syncShiftLeaveToApplication(editingShift.empId, editingShift.dateKey, slotIndex, null, 0);
     }
 
     recalculateCompLeave();
@@ -10835,11 +10839,54 @@ function modalUpdateLeaveSlot(slotIndex, field, value) {
         if (newHours > 0 && newType) {
             applyLeaveDeduction(editingShift.empId, newType, newHours, '排班請假', editingShift.dateKey + ':slot' + slotIndex);
         }
+        // 🆕 自動建立「已核准」的請假申請紀錄（排班即請假，店長/管理員自動審核通過）
+        syncShiftLeaveToApplication(editingShift.empId, editingShift.dateKey, slotIndex, newType, newHours);
     }
     
     renderScheduleTable();
     // 重畫 modal 以更新顯示
     openEditShiftModal(editingShift.empId, editingShift.dateKey);
+}
+
+// 🆕 排班設假別 → 自動建立/更新一筆「已核准」的請假申請
+//    用 sourceRef 綁定排班 slot，避免重複建立；修改時更新、清除時移除
+function syncShiftLeaveToApplication(empId, dateKey, slotIndex, leaveTypeName, hours) {
+    var sourceRef = 'shift:' + dateKey + ':slot' + slotIndex;
+    var list = loadData('leaveList', []);
+    if (!Array.isArray(list)) list = [];
+    // 找出此排班 slot 先前自動建立的紀錄
+    var existIdx = list.findIndex(function(x){ return x.sourceRef === sourceRef; });
+    
+    var leaveKey = leaveNameToKey(leaveTypeName);
+    // 時數 0 或無假別 → 移除既有自動紀錄
+    if (!hours || hours <= 0 || !leaveKey) {
+        if (existIdx >= 0) { list.splice(existIdx, 1); saveData('leaveList', list); }
+        return;
+    }
+    
+    var lt = LEAVE_TYPES[leaveKey];
+    var approver = (currentUser && currentUser.name) ? currentUser.name : '系統';
+    var dateDisplay = dateKey.replace(/-/g, '/');
+    var record = {
+        id: existIdx >= 0 ? list[existIdx].id : genId(),
+        applyDate: nowDateStr(),
+        type: leaveKey,
+        typeName: lt ? lt.name : leaveTypeName,
+        start: dateDisplay,
+        end: dateDisplay,
+        agent: '',
+        reason: '排班登記（' + (lt ? lt.name : leaveTypeName) + '）',
+        days: hours,                    // 與系統一致：days 欄位存小時
+        status: 'approved',             // 🔑 自動審核通過
+        approvedBy: approver,
+        approvedAt: new Date().toISOString(),
+        autoFromShift: true,            // 標記來源為排班
+        sourceRef: sourceRef,
+        empId: empId
+    };
+    if (existIdx >= 0) list[existIdx] = record;
+    else list.unshift(record);
+    saveData('leaveList', list);
 }
 
 // 🔑 從排班套用假別額度調整（用於拖拉複製）
@@ -10869,10 +10916,11 @@ function getLeaveRemaining(empId, leaveKey) {
 
     // ── 已使用 ──
     var used = 0;
-    // 來源 1：請假申請清單
+    // 來源 1：請假申請清單（排除「排班自動建立」的紀錄，避免與來源2重複計算）
     var leaveList = loadData('leaveList', []);
     if (Array.isArray(leaveList)) {
         leaveList.forEach(function(x) {
+            if (x.autoFromShift) return;  // 排班來源已由 leaveShiftDeductions 計算
             if (x.empId === empId && (x.status === 'approved' || x.status === 'pending') && x.type === leaveKey) {
                 used += (x.days || 0);
             }
@@ -24244,6 +24292,7 @@ function calcEmpMonthStats(empId, yearMonth) {
     var holidayHours = 0;
     var leaveHours = 0;
     var compLeaveHours = 0;   // 補休使用時數
+    var leaveByType = {};     // 🆕 各假別使用時數 { '特休假': 8, '病假': 16, ... }
     
     Object.keys(shifts).forEach(function(dateKey) {
         var p = dateKey.split('/');
@@ -24266,8 +24315,9 @@ function calcEmpMonthStats(empId, yearMonth) {
             } else if (slot.type === 'leave') {
                 var lh = parseFloat(slot.leaveHours) || 8;  // 用實際請假時數
                 leaveHours += lh;
+                var lt = slot.leaveType || '其他';
+                leaveByType[lt] = (leaveByType[lt] || 0) + lh;   // 🆕 累計各假別
                 // 補休：leaveType 為「補休」或別名
-                var lt = slot.leaveType || '';
                 if (lt.indexOf('補休') >= 0 || lt.indexOf('代休') >= 0) {
                     compLeaveHours += lh;
                 }
@@ -24297,6 +24347,7 @@ function calcEmpMonthStats(empId, yearMonth) {
         leaveHours: leaveHours,
         compLeaveHours: compLeaveHours,
         compRemain: compRemain,
+        leaveByType: leaveByType,
         hourlyRate: hourlyRate,
         monthlySalary: monthlySalary,
         basicPay: basicPay
@@ -24476,12 +24527,23 @@ function openPayrollEditor(empId, yearMonth) {
         defaultSlip.incomeTax = calcIncomeTax(taxable);
     }
     
+    // 🆕 本月各假別使用明細
+    var leaveDetailStr = '';
+    if (stats.leaveByType && Object.keys(stats.leaveByType).length > 0) {
+        var parts = [];
+        Object.keys(stats.leaveByType).forEach(function(name){
+            parts.push(name + ' ' + stats.leaveByType[name].toFixed(1) + 'h');
+        });
+        leaveDetailStr = '<br><strong>🌴 本月請假：</strong>' + parts.join('　');
+    }
+    
     // 顯示員工資訊
     document.getElementById('payrollEditInfo').innerHTML = 
         '<strong>👤 員工：</strong>' + emp.name + ' (' + emp.num + ') ' + (emp.empType === 'parttime' ? '[工讀]' : '[正職]') +
         '<br><strong>📅 薪資年月：</strong>' + yearMonth +
         '<br><strong>⏰ 系統統計：</strong>本月出勤 ' + stats.totalHours.toFixed(1) + ' 小時 ｜ 假日工作 ' + stats.holidayHours.toFixed(1) + ' 小時' +
         '<br><strong>💼 補休：</strong>本月使用 ' + (stats.compLeaveHours||0).toFixed(1) + ' 小時 ｜ 剩餘 ' + (stats.compRemain||0).toFixed(1) + ' 小時' +
+        leaveDetailStr +
         '<br><strong>💵 基本薪資：</strong>$' + stats.basicPay.toLocaleString() + 
         (emp.empType === 'parttime' ? '（時薪 $' + stats.hourlyRate + ' × ' + stats.totalHours.toFixed(1) + ' H）' : '（月薪）');
     
