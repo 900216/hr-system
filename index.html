@@ -1242,11 +1242,11 @@ body.view-mobile table { font-size: 12px; }
 body.view-mobile .work-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
 body.view-mobile .work-list-panel { overflow-x: hidden; }
 
-/* 📱 員工處罰表：手機改為卡片式（每筆一張卡，欄位垂直堆疊，解決文字疊在一起）*/
-body.view-mobile .penalty-table { display: block; overflow: visible; white-space: normal; border: none; }
-body.view-mobile .penalty-table thead { display: none; }  /* 隱藏表頭 */
-body.view-mobile .penalty-table tbody { display: block; }
-body.view-mobile .penalty-table tr {
+/* 📱 通用卡片式表格（手機）：套用 .card-mobile 即生效，每列變一張卡、欄位垂直堆疊 */
+body.view-mobile table.card-mobile { display: block; overflow: visible; white-space: normal; border: none; min-width: 0 !important; }
+body.view-mobile table.card-mobile thead { display: none; }
+body.view-mobile table.card-mobile tbody { display: block; }
+body.view-mobile table.card-mobile tr {
     display: block;
     background: #fff;
     border: 1px solid #e2e8f0;
@@ -1255,51 +1255,74 @@ body.view-mobile .penalty-table tr {
     margin-bottom: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-body.view-mobile .penalty-table td {
+body.view-mobile table.card-mobile td {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
     padding: 4px 0;
     border: none;
     white-space: normal;
     word-break: break-word;
     max-width: none !important;
+    width: auto !important;
     text-align: left !important;
     font-size: 13px !important;
+    background: transparent !important;
 }
 /* 欄位標籤（用 data-label）顯示在左側 */
-body.view-mobile .penalty-table td::before {
+body.view-mobile table.card-mobile td[data-label]::before {
     content: attr(data-label);
-    flex: 0 0 64px;
+    flex: 0 0 84px;
     font-weight: 700;
     color: #64748b;
     font-size: 12px;
 }
-/* 事由、處置這類長文字靠右但允許換行 */
-body.view-mobile .penalty-table td[data-label="事由"],
-body.view-mobile .penalty-table td[data-label="處置"] {
+/* 欄位內的 input/select/textarea 佔滿右側，方便點按輸入 */
+body.view-mobile table.card-mobile td input,
+body.view-mobile table.card-mobile td select,
+body.view-mobile table.card-mobile td textarea {
+    flex: 1;
+    min-width: 0;
+    text-align: left !important;
+    font-size: 13px !important;
+}
+/* 長文字欄（事由/處置/品名/重點提示）改為標籤在上、內容在下 */
+body.view-mobile table.card-mobile td[data-label="事由"],
+body.view-mobile table.card-mobile td[data-label="處置"],
+body.view-mobile table.card-mobile td[data-label="重點提示"],
+body.view-mobile table.card-mobile td[data-label="備註"] {
     flex-direction: column;
+    align-items: flex-start;
     gap: 2px;
 }
-body.view-mobile .penalty-table td[data-label="事由"]::before,
-body.view-mobile .penalty-table td[data-label="處置"]::before {
-    flex: none;
-}
-/* 操作鈕列置中、按鈕加大好點 */
-body.view-mobile .penalty-table td[data-label="操作"] {
+body.view-mobile table.card-mobile td[data-label="事由"]::before,
+body.view-mobile table.card-mobile td[data-label="處置"]::before,
+body.view-mobile table.card-mobile td[data-label="重點提示"]::before,
+body.view-mobile table.card-mobile td[data-label="備註"]::before { flex: none; }
+/* 操作欄置中、按鈕加大好點 */
+body.view-mobile table.card-mobile td[data-label="操作"],
+body.view-mobile table.card-mobile td[data-label=""] {
     justify-content: center;
     gap: 12px;
     margin-top: 6px;
     padding-top: 8px;
     border-top: 1px dashed #e5e7eb;
 }
-body.view-mobile .penalty-table td[data-label="操作"]::before { display: none; }
-body.view-mobile .penalty-table td[data-label="操作"] button {
+body.view-mobile table.card-mobile td[data-label="操作"]::before { display: none; }
+body.view-mobile table.card-mobile td[data-label="操作"] button,
+body.view-mobile table.card-mobile td[data-label=""] button {
     flex: 1;
-    padding: 8px 4px !important;
-    font-size: 13px !important;
+    padding: 10px 4px !important;
+    font-size: 14px !important;
 }
+/* 空 data-label（純操作格）不顯示標籤 */
+body.view-mobile table.card-mobile td[data-label=""]::before { display: none; }
+/* 唯讀數字欄加粗易讀 */
+body.view-mobile table.card-mobile td[data-label="項次"],
+body.view-mobile table.card-mobile td[data-label="成本小計"],
+body.view-mobile table.card-mobile td[data-label="零售小計"],
+body.view-mobile table.card-mobile td[data-label="小計"] { font-weight: bold; }
 /* 🔑 表單表格（label+input）保持正常排版，不可橫向捲動 */
 body.view-mobile .form-table { display: table; width: 100%; white-space: normal; }
 body.view-mobile .form-table td { white-space: normal; word-break: break-word; }
@@ -5000,7 +5023,7 @@ body.view-desktop .work-list-panel:hover {
                             <button class="btn-confirm" style="padding:5px 12px; font-size:12px;" onclick="addTransferItem()">➕ 新增項目</button>
                         </div>
                         <div style="overflow-x:auto;">
-                            <table class="cr-table" style="min-width:900px; font-size:11px;">
+                            <table class="cr-table transfer-table" style="min-width:900px; font-size:11px;">
                                 <thead>
                                     <tr>
                                         <th style="width:50px;">項</th>
@@ -7711,7 +7734,84 @@ function applyViewMode() {
             ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
             : 'width=device-width, initial-scale=1.0');
     }
+    // 📱 手機版：自動把多欄表格轉成卡片式
+    autoEnhanceTables();
 }
+
+// 📱 自動卡片化：為多欄表格加 card-mobile，並從表頭自動填 data-label
+//    桌機不受影響（CSS 只在 view-mobile 生效）；此處只負責補標籤
+function autoEnhanceTables() {
+    try {
+        // 涵蓋系統主要表格類型；排除排班橫表(sched-h-table)與列印表(print-table)
+        var tables = document.querySelectorAll('table.work-table, table.cr-table');
+        for (var t = 0; t < tables.length; t++) {
+            var tbl = tables[t];
+            if (tbl.classList.contains('no-card')) continue;       // 可標記 no-card 排除
+            // 欄位數 < 5 的小表格不需卡片化
+            var headerCells = tbl.querySelectorAll('thead th');
+            if (headerCells.length < 5) continue;
+            tbl.classList.add('card-mobile');
+            // 取表頭文字
+            var labels = [];
+            for (var h = 0; h < headerCells.length; h++) {
+                labels.push((headerCells[h].textContent || '').trim());
+            }
+            // 為每列每格補 data-label（已有的不覆蓋）
+            var rows = tbl.querySelectorAll('tbody tr');
+            for (var r = 0; r < rows.length; r++) {
+                var cells = rows[r].children;
+                for (var c = 0; c < cells.length; c++) {
+                    if (!cells[c].hasAttribute('data-label')) {
+                        cells[c].setAttribute('data-label', labels[c] || '');
+                    }
+                }
+            }
+        }
+    } catch(e) { console.warn('autoEnhanceTables err:', e); }
+}
+
+// ⌨️ Enter（確認鍵）跳到下一個輸入格
+//    在表格或表單內，按 Enter 自動 focus 下一個 input/select/textarea
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    var el = e.target;
+    if (!el || !el.tagName) return;
+    var tag = el.tagName.toLowerCase();
+    // textarea 的 Enter 是換行，不攔截
+    if (tag === 'textarea') return;
+    // 只在輸入欄位生效
+    if (tag !== 'input' && tag !== 'select') return;
+    // 某些 type 不攔（按鈕、提交等）
+    var type = (el.type || '').toLowerCase();
+    if (['button','submit','checkbox','radio','file','reset'].indexOf(type) !== -1) return;
+    
+    // 找出同一容器（表格 or modal or 頁面）內所有可輸入欄位
+    var scope = el.closest('table') || el.closest('.modal-content') || el.closest('.modal-box') || el.closest('.page-content') || document.body;
+    var fields = scope.querySelectorAll('input, select, textarea');
+    var list = [];
+    for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        if (f.disabled || f.readOnly) continue;
+        if (f.offsetParent === null) continue; // 隱藏的跳過
+        var ft = (f.type || '').toLowerCase();
+        if (['button','submit','checkbox','radio','file','reset','hidden'].indexOf(ft) !== -1) continue;
+        list.push(f);
+    }
+    var idx = list.indexOf(el);
+    if (idx === -1) return;
+    e.preventDefault();
+    if (idx < list.length - 1) {
+        var next = list[idx + 1];
+        next.focus();
+        // 文字框順便選取內容，方便直接覆寫
+        if (next.select && (next.type === 'text' || next.type === 'number')) {
+            try { next.select(); } catch(_){}
+        }
+    } else {
+        // 已是最後一格 → 收起鍵盤
+        el.blur();
+    }
+});
 
 function handleLogin() {
     var u = document.getElementById('username').value.trim();
@@ -13118,23 +13218,23 @@ function renderTransferItems(items) {
     for (var i = 0; i < items.length; i++) {
         var it = items[i];
         html += '<tr data-idx="' + i + '">';
-        html += '<td style="text-align:center; background:#fef3c7; font-weight:bold;">' + String(i+1).padStart(4, '0') + '</td>';
-        html += '<td><input type="text" value="' + (it.barcode || '') + '" placeholder="條碼" oninput="updateTransferItem(' + i + ',\'barcode\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;"></td>';
-        html += '<td><input type="text" value="' + (it.pma || '88') + '" oninput="updateTransferItem(' + i + ',\'pma\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:center;"></td>';
-        html += '<td><select onchange="updateTransferItem(' + i + ',\'taxFree\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;">' +
+        html += '<td data-label="項次" style="text-align:center; background:#fef3c7; font-weight:bold;">' + String(i+1).padStart(4, '0') + '</td>';
+        html += '<td data-label="調入驗收條碼"><input type="text" value="' + (it.barcode || '') + '" placeholder="條碼" oninput="updateTransferItem(' + i + ',\'barcode\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;"></td>';
+        html += '<td data-label="PMA"><input type="text" value="' + (it.pma || '88') + '" oninput="updateTransferItem(' + i + ',\'pma\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:center;"></td>';
+        html += '<td data-label="稅"><select onchange="updateTransferItem(' + i + ',\'taxFree\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;">' +
                 '<option value="免" ' + (it.taxFree === '免' || !it.taxFree ? 'selected' : '') + '>免</option>' +
                 '<option value="應" ' + (it.taxFree === '應' ? 'selected' : '') + '>應</option>' +
                 '</select></td>';
-        html += '<td><input type="text" value="' + (it.productCode || '') + '" placeholder="品號" oninput="updateTransferItem(' + i + ',\'productCode\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;"></td>';
-        html += '<td><input type="text" value="' + (it.productName || '') + '" placeholder="品名" oninput="updateTransferItem(' + i + ',\'productName\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;"></td>';
-        html += '<td><input type="number" value="' + (it.quantity || 0) + '" oninput="updateTransferItem(' + i + ',\'quantity\',this.value);recalcTransferOrder()" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:right;"></td>';
-        html += '<td><input type="number" step="0.01" value="' + (it.costPrice || 0) + '" oninput="updateTransferItem(' + i + ',\'costPrice\',this.value);recalcTransferOrder()" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:right;"></td>';
-        html += '<td><input type="number" value="' + (it.retailPrice || 0) + '" oninput="updateTransferItem(' + i + ',\'retailPrice\',this.value);recalcTransferOrder()" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:right;"></td>';
+        html += '<td data-label="品號"><input type="text" value="' + (it.productCode || '') + '" placeholder="品號" oninput="updateTransferItem(' + i + ',\'productCode\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;"></td>';
+        html += '<td data-label="品名"><input type="text" value="' + (it.productName || '') + '" placeholder="品名" oninput="updateTransferItem(' + i + ',\'productName\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;"></td>';
+        html += '<td data-label="數量"><input type="number" value="' + (it.quantity || 0) + '" oninput="updateTransferItem(' + i + ',\'quantity\',this.value);recalcTransferOrder()" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:right;"></td>';
+        html += '<td data-label="成本價"><input type="number" step="0.01" value="' + (it.costPrice || 0) + '" oninput="updateTransferItem(' + i + ',\'costPrice\',this.value);recalcTransferOrder()" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:right;"></td>';
+        html += '<td data-label="零售價"><input type="number" value="' + (it.retailPrice || 0) + '" oninput="updateTransferItem(' + i + ',\'retailPrice\',this.value);recalcTransferOrder()" style="width:100%;border:1px solid #ddd;padding:3px;font-size:11px;text-align:right;"></td>';
         var costSub = (it.quantity || 0) * (it.costPrice || 0);
         var retailSub = (it.quantity || 0) * (it.retailPrice || 0);
-        html += '<td id="toCostSub_' + i + '" style="text-align:right; font-weight:bold; background:#fef3c7;">' + costSub.toFixed(2) + '</td>';
-        html += '<td id="toRetailSub_' + i + '" style="text-align:right; font-weight:bold; background:#dcfce7;">' + retailSub.toLocaleString() + '</td>';
-        html += '<td style="text-align:center;"><button type="button" onclick="deleteTransferItem(' + i + ')" style="padding:6px 10px;background:#dc2626;color:white;border:0;border-radius:4px;font-size:12px;cursor:pointer;font-weight:bold;">🗑️</button></td>';
+        html += '<td data-label="成本小計" id="toCostSub_' + i + '" style="text-align:right; font-weight:bold; background:#fef3c7;">' + costSub.toFixed(2) + '</td>';
+        html += '<td data-label="零售小計" id="toRetailSub_' + i + '" style="text-align:right; font-weight:bold; background:#dcfce7;">' + retailSub.toLocaleString() + '</td>';
+        html += '<td data-label="操作" style="text-align:center;"><button type="button" onclick="deleteTransferItem(' + i + ')" style="padding:6px 10px;background:#dc2626;color:white;border:0;border-radius:4px;font-size:12px;cursor:pointer;font-weight:bold;">🗑️ 刪除</button></td>';
         html += '</tr>';
     }
     tbody.innerHTML = html;
@@ -29213,6 +29313,19 @@ window.addEventListener('load', function() {
     
     // 🆕 套用上次選擇的版本（電腦/手機）
     applyViewMode();
+    
+    // 📱 監看 DOM 變化，動態產生的表格也自動卡片化（補 data-label）
+    try {
+        var _tblObserverTimer = null;
+        var _tblObserver = new MutationObserver(function() {
+            // debounce：避免短時間多次觸發
+            if (_tblObserverTimer) clearTimeout(_tblObserverTimer);
+            _tblObserverTimer = setTimeout(function() {
+                autoEnhanceTables();
+            }, 150);
+        });
+        _tblObserver.observe(document.body, { childList: true, subtree: true });
+    } catch(e) { console.warn('table observer err:', e); }
     
     // 🆕 內建雲端同步：未曾明確關閉則自動啟用（新裝置免設定）
     if (localStorage.getItem('_cs_enabled') === null) {
