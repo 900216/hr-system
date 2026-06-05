@@ -12425,8 +12425,8 @@ function renderMfDetail() {
     html += '<div style="background:white; padding:12px; border-radius:10px; margin-bottom:12px; overflow-x:auto;">';
     html += '<h3 style="color:#dc2626; margin:0 0 8px 0;">🎯 營銷聚焦商品</h3>';
     if (isEdit) html += '<button onclick="addMfItem(\'focus\')" style="margin-bottom:8px; padding:6px 12px; background:#10b981; color:white; border:0; border-radius:4px; cursor:pointer;">➕ 新增聚焦商品</button>';
-    html += '<table style="width:100%; border-collapse:collapse; font-size:12px; min-width:600px;"><thead><tr style="background:#dc2626; color:white;">';
-    html += '<th style="padding:6px; border:1px solid #ccc;">品名</th><th style="padding:6px; border:1px solid #ccc;">品號/頁數</th><th style="padding:6px; border:1px solid #ccc;">商品圖</th><th style="padding:6px; border:1px solid #ccc;">零售價</th><th style="padding:6px; border:1px solid #ccc;">重點提示</th><th style="padding:6px; border:1px solid #ccc;">目標</th>';
+    html += '<table style="width:100%; border-collapse:collapse; font-size:12px; min-width:680px;"><thead><tr style="background:#dc2626; color:white;">';
+    html += '<th style="padding:6px; border:1px solid #ccc;">品名</th><th style="padding:6px; border:1px solid #ccc;">品號</th><th style="padding:6px; border:1px solid #ccc;">頁數</th><th style="padding:6px; border:1px solid #ccc;">商品圖</th><th style="padding:6px; border:1px solid #ccc;">零售價</th><th style="padding:6px; border:1px solid #ccc;">重點提示</th><th style="padding:6px; border:1px solid #ccc;">目標</th>';
     if (isEdit) html += '<th style="padding:6px; border:1px solid #ccc;"></th>';
     html += '</tr></thead><tbody>';
     html += renderMfItemRows(c.focusItems||[], 'focus', isEdit);
@@ -12461,7 +12461,7 @@ function renderMfDetail() {
 function renderMfItemRows(items, type, isEdit) {
     var html = '';
     if (items.length === 0 && !isEdit) {
-        var cols = (type==='focus')?6:(type==='weekend')?5:5;
+        var cols = (type==='focus')?7:(type==='weekend')?5:5;
         return '<tr><td colspan="'+cols+'" style="text-align:center; padding:12px; color:#9ca3af;">無資料</td></tr>';
     }
     for (var i=0;i<items.length;i++){
@@ -12470,7 +12470,10 @@ function renderMfItemRows(items, type, isEdit) {
         if (type==='focus') {
             if (isEdit) {
                 html += '<td style="padding:3px; border:1px solid #ccc;"><input value="'+(it.name||'').replace(/"/g,'&quot;')+'" onchange="updateMfItem(\'focus\','+i+',\'name\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd;"></td>';
-                html += '<td style="padding:3px; border:1px solid #ccc;"><input value="'+(it.code||'')+'" onchange="updateMfItem(\'focus\','+i+',\'code\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; font-family:monospace;"></td>';
+                // 品號（含掃碼鈕）
+                html += '<td style="padding:3px; border:1px solid #ccc;"><div style="display:flex; gap:3px; align-items:center;"><input value="'+(it.code||'')+'" onchange="updateMfItem(\'focus\','+i+',\'code\',this.value)" placeholder="品號" style="flex:1; min-width:60px; padding:3px; border:1px solid #ddd; font-family:monospace;"><button type="button" onclick="scanMfCode(\'focus\','+i+')" title="掃描條碼" style="padding:3px 6px; background:#7c3aed; color:white; border:0; border-radius:4px; cursor:pointer; white-space:nowrap;">📷</button></div></td>';
+                // 頁數（獨立欄）
+                html += '<td style="padding:3px; border:1px solid #ccc;"><input value="'+(it.page||'')+'" onchange="updateMfItem(\'focus\','+i+',\'page\',this.value)" placeholder="頁數" style="width:100%; padding:3px; border:1px solid #ddd; text-align:center;"></td>';
                 html += '<td style="padding:3px; border:1px solid #ccc; text-align:center;">'+mfPhotoCell(it,'focus',i)+'</td>';
                 html += '<td style="padding:3px; border:1px solid #ccc;"><input value="'+(it.retailPrice||'')+'" onchange="updateMfItem(\'focus\','+i+',\'retailPrice\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd;"></td>';
                 html += '<td style="padding:3px; border:1px solid #ccc;"><textarea onchange="updateMfItem(\'focus\','+i+',\'keypoints\',this.value)" style="width:100%; padding:3px; border:1px solid #ddd; min-height:50px;">'+(it.keypoints||'')+'</textarea></td>';
@@ -12479,6 +12482,7 @@ function renderMfItemRows(items, type, isEdit) {
             } else {
                 html += '<td style="padding:6px; border:1px solid #ccc; font-weight:bold;">'+(it.name||'')+'</td>';
                 html += '<td style="padding:6px; border:1px solid #ccc; font-family:monospace;">'+(it.code||'')+'</td>';
+                html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;">'+(it.page||'')+'</td>';
                 html += '<td style="padding:6px; border:1px solid #ccc; text-align:center;">'+(it.photo?'<img src="'+it.photo+'" style="width:50px;height:50px;object-fit:cover;border-radius:4px;">':'')+'</td>';
                 html += '<td style="padding:6px; border:1px solid #ccc; text-align:center; color:#dc2626; font-weight:bold;">'+(it.retailPrice||'')+'</td>';
                 html += '<td style="padding:6px; border:1px solid #ccc; white-space:pre-wrap; font-size:11px;">'+(it.keypoints||'')+'</td>';
@@ -12531,7 +12535,7 @@ function addMfItem(type) {
     if (!_mfCurrent) return;
     var key = type+'Items';
     if (!_mfCurrent[key]) _mfCurrent[key] = [];
-    if (type==='focus') _mfCurrent[key].push({name:'',code:'',photo:'',retailPrice:'',keypoints:'',target:''});
+    if (type==='focus') _mfCurrent[key].push({name:'',code:'',page:'',photo:'',retailPrice:'',keypoints:'',target:''});
     else if (type==='addon') _mfCurrent[key].push({name:'',code:'',photo:'',originalPrice:'',salePrice:''});
     else _mfCurrent[key].push({period:'',code:'',name:'',originalPrice:'',salePrice:''});
     renderMfDetail();
@@ -12540,6 +12544,57 @@ function addMfItem(type) {
 function updateMfItem(type, idx, field, val) {
     var key = type+'Items';
     if (_mfCurrent[key] && _mfCurrent[key][idx]) _mfCurrent[key][idx][field] = val;
+}
+
+// 📷 掃描條碼填入聚焦商品品號，並一併存入條碼商品庫
+var _mfScanTarget = null;
+function scanMfCode(type, idx) {
+    if (typeof Html5Qrcode === 'undefined') return alert('⚠️ 掃描功能未載入，請檢查網路連線');
+    _mfScanTarget = { type: type, idx: idx };
+    window._scanMode = 'mfCode';
+    openBarcodeScanner();
+}
+
+// 處理聚焦商品掃碼結果
+function handleMfCodeScan(barcode) {
+    if (!barcode || barcode.length < 6) {
+        document.getElementById('scanResult').innerHTML = '<span style="color:#dc2626;">⚠️ 條碼太短（需至少 6 碼）</span>';
+        return;
+    }
+    var productCode = barcode.substring(0, 6);  // 品號取前 6 碼（與條碼庫一致）
+    var tgt = _mfScanTarget;
+    
+    // 1. 填入當前聚焦商品的品號
+    if (tgt && _mfCurrent) {
+        var key = tgt.type + 'Items';
+        if (_mfCurrent[key] && _mfCurrent[key][tgt.idx]) {
+            _mfCurrent[key][tgt.idx].code = productCode;
+            _mfCurrent[key][tgt.idx].barcode = barcode;  // 也保留完整條碼
+        }
+    }
+    
+    // 2. 一併存入條碼商品庫（若不存在則新增）
+    var products = loadData('productCodes', {});
+    var isNew = !products[productCode];
+    if (isNew) {
+        var pname = (tgt && _mfCurrent) ? ((_mfCurrent[tgt.type+'Items'][tgt.idx] || {}).name || '') : '';
+        products[productCode] = {
+            productName: pname,
+            barcode: barcode,
+            price: '',
+            addedAt: new Date().toISOString(),
+            source: '營銷聚焦掃碼'
+        };
+        saveData('productCodes', products);
+        if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    }
+    
+    // 3. 關閉掃描、刷新畫面
+    closeBarcodeScanner();
+    window._scanMode = null;
+    _mfScanTarget = null;
+    renderMfDetail();
+    showNotif('✅ 已填入品號 ' + productCode + (isNew ? '，並加入條碼商品庫' : '（條碼庫已有此品號）'));
 }
 
 function deleteMfItem(type, idx) {
@@ -13700,6 +13755,11 @@ function onBarcodeScanned(barcode) {
     if (window._scanMode === 'library') {
         // 商品庫新增模式
         handleLibraryScan(barcode);
+        return;
+    }
+    if (window._scanMode === 'mfCode') {
+        // 營銷聚焦商品品號掃碼模式
+        handleMfCodeScan(barcode);
         return;
     }
     
