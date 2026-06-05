@@ -10693,14 +10693,17 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         var _selKey = leaveNameToKey(_selName);
         if (_selKey && editingShift) {
             var _bal = getLeaveRemaining(editingShift.empId, _selKey);
-            // 扣掉「本筆排班這一格」目前已記的扣除，得到「不含本筆」的可用額度
-            var _thisRef = editingShift.dateKey + ':slot' + slotIndex;
+            // getLeaveRemaining 的 used 已含本格（從 shifts 掃描），
+            // 顯示「不含本格」的剩餘 = remaining + 本格目前已存的時數
             var _thisDeduct = 0;
-            var _sd = loadData('leaveShiftDeductions', []);
-            if (Array.isArray(_sd)) {
-                _sd.forEach(function(a) {
-                    if (a.sourceRef === _thisRef && leaveNameToKey(a.leaveType) === _selKey && a.hours < 0) _thisDeduct += (-a.hours);
-                });
+            var _shifts = loadData('shifts', {});
+            var _es = _shifts[editingShift.dateKey] && _shifts[editingShift.dateKey][editingShift.empId];
+            if (_es) {
+                var _eslots = (Array.isArray(_es.slots)) ? _es.slots : [];
+                var _eslot = _eslots[slotIndex];
+                if (_eslot && _eslot.type === 'leave' && leaveNameToKey(_eslot.leaveType) === _selKey) {
+                    _thisDeduct = parseFloat(_eslot.leaveHours) || 0;
+                }
             }
             var _availBefore = _bal.remaining + _thisDeduct; // 不含本筆的剩餘
             var _after = _availBefore - (parseFloat(slot.leaveHours) || 0);
@@ -10922,24 +10925,30 @@ function getLeaveRemaining(empId, leaveKey) {
     }
 
     // ── 已使用 ──
+    // 🔑 改為「直接從排班 shifts 掃描請假 slot」計算，與累積補休同一份資料源，
+    //    徹底避免 leaveShiftDeductions 與 shifts 不同步造成的額度錯亂
     var used = 0;
-    // 來源 1：請假申請清單（排除「排班自動建立」的紀錄，避免與來源2重複計算）
+    var shifts = loadData('shifts', {});
+    Object.keys(shifts).forEach(function(dateKey) {
+        var s = shifts[dateKey] && shifts[dateKey][empId];
+        if (!s) return;
+        var slots = (Array.isArray(s.slots)) ? s.slots : (s.type ? [{type:s.type, start:s.start, end:s.end, leaveType:s.leaveType, leaveHours:s.leaveHours}] : []);
+        for (var i = 0; i < slots.length; i++) {
+            var slot = slots[i];
+            if (!slot || slot.type !== 'leave') continue;
+            if (leaveNameToKey(slot.leaveType) !== leaveKey) continue;
+            used += parseFloat(slot.leaveHours) || 0;
+        }
+    });
+    // 來源 2：手動請假申請清單（非排班自動建立的，例如員工自己在請假頁申請）
     var leaveList = loadData('leaveList', []);
     if (Array.isArray(leaveList)) {
         leaveList.forEach(function(x) {
-            if (x.autoFromShift) return;  // 排班來源已由 leaveShiftDeductions 計算
+            if (x.autoFromShift) return;       // 排班來源已由上方 shifts 掃描計算
+            if (x.fromSchedule) return;         // 舊標記相容
             if (x.empId === empId && (x.status === 'approved' || x.status === 'pending') && x.type === leaveKey) {
                 used += (x.days || 0);
             }
-        });
-    }
-    // 來源 2：排班自動扣假（中文名 → key）
-    var shiftAdjArr = loadData('leaveShiftDeductions', []);
-    if (Array.isArray(shiftAdjArr)) {
-        shiftAdjArr.forEach(function(a) {
-            if (a.empId !== empId) return;
-            if (leaveNameToKey(a.leaveType) !== leaveKey) return;
-            if (a.hours < 0) used += (-a.hours);
         });
     }
 
