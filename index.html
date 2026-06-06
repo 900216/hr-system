@@ -10726,6 +10726,15 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
                 html += '<div style="color:#dc2626; margin-top:4px; font-weight:bold;">⚠️ 已超出可用額度！</div>';
             }
             html += '</div>';
+            
+            // 🔍 即時診斷：顯示這個員工在排班中實際掃到的請假（用來定位扣除問題）
+            var _diag = diagnoseEmpLeaveScan(editingShift.empId, _selKey);
+            html += '<div style="background:#1e293b; color:#cbd5e1; border-radius:6px; padding:6px 8px; margin:4px 0; font-size:10px; font-family:monospace; line-height:1.5;">';
+            html += '🔍 診斷：員工id=' + editingShift.empId + '<br>';
+            html += 'shifts中此人的key：' + (_diag.matchedKeys.length ? _diag.matchedKeys.join(',') : '<span style="color:#f87171;">❌找不到!key不符</span>') + '<br>';
+            html += '掃到' + _selName + '請假：' + _diag.count + '筆 共' + _diag.totalHours + 'h<br>';
+            html += '總額' + _bal.total + ' 已用' + _bal.used + ' 剩' + _bal.remaining;
+            html += '</div>';
         }
         
         html += '<div class="form-row"><label>請假時數：</label>';
@@ -10912,6 +10921,38 @@ function applyLeaveDeductionFromShift(empId, leaveType, hours, dateKey) {
 // 🔑 計算某員工某假別的額度（total / used / remaining）
 // 與「假別額度管理」用同一套來源，確保排班 modal 顯示的剩餘額度與額度管理頁一致
 // leaveKey：LEAVE_TYPES 的 key（annual/sick/.../comp）
+// 🔍 診斷：掃描 shifts，找出某員工實際用哪些 key 存、掃到幾筆某假別
+function diagnoseEmpLeaveScan(empId, leaveKey) {
+    var shifts = loadData('shifts', {});
+    var employees = loadData('employees', defaultEmployees);
+    var theEmp = employees.find(function(e){ return e.id === empId || e.num === empId || e.name === empId; });
+    var possibleKeys = {};
+    possibleKeys[empId] = true;
+    if (theEmp) { if(theEmp.id)possibleKeys[theEmp.id]=1; if(theEmp.num)possibleKeys[theEmp.num]=1; if(theEmp.name)possibleKeys[theEmp.name]=1; }
+    var matchedKeys = [];
+    var count = 0, totalHours = 0;
+    Object.keys(shifts).forEach(function(dateKey) {
+        var dayObj = shifts[dateKey];
+        if (!dayObj) return;
+        for (var k in possibleKeys) {
+            if (dayObj[k]) {
+                if (matchedKeys.indexOf(k) < 0) matchedKeys.push(k);
+                var s = dayObj[k];
+                var slots = (Array.isArray(s.slots)) ? s.slots : (s.type ? [s] : []);
+                for (var i = 0; i < slots.length; i++) {
+                    var slot = slots[i];
+                    if (slot && slot.type === 'leave' && leaveNameToKey(slot.leaveType) === leaveKey) {
+                        count++;
+                        totalHours += parseFloat(slot.leaveHours) || 0;
+                    }
+                }
+                break;
+            }
+        }
+    });
+    return { matchedKeys: matchedKeys, count: count, totalHours: totalHours };
+}
+
 // 🔑 讀取某員工某天某格的請假時數（key 容錯：id/工號/姓名）
 function getSlotLeaveHours(empId, dateKey, slotIndex, leaveKey) {
     var shifts = loadData('shifts', {});
