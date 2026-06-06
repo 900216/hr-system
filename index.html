@@ -6432,6 +6432,10 @@ body.view-desktop .work-list-panel:hover {
                         <strong>📌 級距表用途：</strong>員工的「投保金額」會依其薪資自動對應到下方級距；薪資單的勞保費、健保費、勞退提繳都依此級距與費率自動計算，全系統一致。<br>
                         <strong>費率（2026 現行）：</strong>勞保 <input type="number" step="0.001" id="spLaborInsRate" value="0.025" style="width:70px;"> （勞保2.3%+就保0.2%＝員工自付率）｜健保 <input type="number" step="0.001" id="spHealthInsRate" value="0.01551" style="width:70px;"> ｜勞退雇主 <input type="number" step="0.01" id="spPensionEmployerRate" value="0.06" style="width:60px;">
                     </div>
+                    <div style="display:flex; gap:4px; margin-bottom:0;">
+                        <button id="insTabFulltime" onclick="switchInsBracketTab('fulltime')" style="padding:8px 16px;border:0;border-radius:6px 6px 0 0;cursor:pointer;font-weight:bold;font-size:13px;background:#2563eb;color:white;">👔 正職級距</button>
+                        <button id="insTabParttime" onclick="switchInsBracketTab('parttime')" style="padding:8px 16px;border:0;border-radius:6px 6px 0 0;cursor:pointer;font-weight:bold;font-size:13px;background:#e5e7eb;color:#6b7280;">🕐 時薪制級距</button>
+                    </div>
                     <div style="overflow-x:auto;">
                         <table class="work-table" id="insBracketTable" style="min-width:560px; font-size:13px;">
                             <thead><tr>
@@ -9504,27 +9508,53 @@ var DEFAULT_INS_BRACKETS = [
     { grade: 11, salaryMax: 99999999, insAmount: 45800 }  // 最高級（上限）
 ];
 
-// 取得目前的級距表（讀 localStorage，無則用法定預設）
-function getInsBrackets() {
-    var b = loadData('insBrackets', null);
-    if (!Array.isArray(b) || b.length === 0) return DEFAULT_INS_BRACKETS.slice();
-    // 依投保金額排序，確保由小到大
+// 🕐 時薪制（部分工時）勞健保投保級距表（2026 / 民國115年）
+// 規則：月薪<11,100→投保11,100；11,100~12,540→投保12,540；
+//       12,541~28,590→比照職訓機構分級；>28,590→比照全職第1級(29,500)
+// 簡化為 2 個部分工時專屬低級距 + 銜接全職級距（職訓分級級數多，取常用區間）
+var DEFAULT_INS_BRACKETS_PT = [
+    { grade: 1,  salaryMax: 11100, insAmount: 11100 },
+    { grade: 2,  salaryMax: 12540, insAmount: 12540 },
+    { grade: 3,  salaryMax: 13500, insAmount: 13500 },
+    { grade: 4,  salaryMax: 15840, insAmount: 15840 },
+    { grade: 5,  salaryMax: 16500, insAmount: 16500 },
+    { grade: 6,  salaryMax: 17280, insAmount: 17280 },
+    { grade: 7,  salaryMax: 17880, insAmount: 17880 },
+    { grade: 8,  salaryMax: 19047, insAmount: 19047 },
+    { grade: 9,  salaryMax: 20008, insAmount: 20008 },
+    { grade: 10, salaryMax: 21009, insAmount: 21009 },
+    { grade: 11, salaryMax: 22000, insAmount: 22000 },
+    { grade: 12, salaryMax: 23100, insAmount: 23100 },
+    { grade: 13, salaryMax: 24000, insAmount: 24000 },
+    { grade: 14, salaryMax: 25250, insAmount: 25250 },
+    { grade: 15, salaryMax: 26400, insAmount: 26400 },
+    { grade: 16, salaryMax: 27600, insAmount: 27600 },
+    { grade: 17, salaryMax: 28590, insAmount: 28590 },
+    { grade: 18, salaryMax: 99999999, insAmount: 29500 }  // 超過 → 比照全職第1級
+];
+
+// 取得目前的級距表（empType: 'parttime' 用時薪制表，否則用一般表）
+function getInsBrackets(empType) {
+    var key = (empType === 'parttime') ? 'insBracketsPT' : 'insBrackets';
+    var def = (empType === 'parttime') ? DEFAULT_INS_BRACKETS_PT : DEFAULT_INS_BRACKETS;
+    var b = loadData(key, null);
+    if (!Array.isArray(b) || b.length === 0) return def.slice();
     return b.slice().sort(function(x, y){ return (x.insAmount||0) - (y.insAmount||0); });
 }
 
-// 🔑 依「薪資」找出對應級距 → 回傳該級的投保金額與自付額
-function lookupInsBracket(salary) {
-    var brackets = getInsBrackets();
+// 🔑 依「薪資」找出對應級距（依 empType 選表）
+function lookupInsBracket(salary, empType) {
+    var brackets = getInsBrackets(empType);
     salary = parseFloat(salary) || 0;
     for (var i = 0; i < brackets.length; i++) {
         if (salary <= (brackets[i].salaryMax || 0)) return brackets[i];
     }
-    return brackets[brackets.length - 1];  // 超過全部 → 最高級
+    return brackets[brackets.length - 1];
 }
 
-// 🔑 依「投保金額」找出對應級距（員工已設定投保金額時用）
-function lookupInsBracketByAmount(insAmount) {
-    var brackets = getInsBrackets();
+// 🔑 依「投保金額」找出對應級距（依 empType 選表）
+function lookupInsBracketByAmount(insAmount, empType) {
+    var brackets = getInsBrackets(empType);
     insAmount = parseFloat(insAmount) || 0;
     for (var i = 0; i < brackets.length; i++) {
         if ((brackets[i].insAmount || 0) >= insAmount) return brackets[i];
@@ -9546,35 +9576,60 @@ function bracketHealthSelf(bracket) {
     return Math.round((bracket ? bracket.insAmount : 0) * rate);
 }
 
-// ── 後台：渲染級距表 ──
+// ── 後台：渲染級距表（支援正職/時薪制兩張表切換）──
+var _insBracketTab = 'fulltime';  // 'fulltime' | 'parttime'
+function switchInsBracketTab(tab) {
+    _insBracketTab = tab;
+    _insBracketsEditing = null;     // 切換時清空編輯暫存，改讀對應表
+    renderInsBracketTable();
+}
 function renderInsBracketTable() {
     var tbody = document.getElementById('insBracketBody');
     if (!tbody) return;
-    var brackets = getInsBrackets();
+    var isPT = (_insBracketTab === 'parttime');
+    // tab 樣式
+    var tabFt = document.getElementById('insTabFulltime');
+    var tabPt = document.getElementById('insTabParttime');
+    if (tabFt && tabPt) {
+        tabFt.style.cssText = 'padding:8px 16px;border:0;border-radius:6px 6px 0 0;cursor:pointer;font-weight:bold;font-size:13px;' + (!isPT ? 'background:#2563eb;color:white;' : 'background:#e5e7eb;color:#6b7280;');
+        tabPt.style.cssText = 'padding:8px 16px;border:0;border-radius:6px 6px 0 0;cursor:pointer;font-weight:bold;font-size:13px;' + (isPT ? 'background:#2563eb;color:white;' : 'background:#e5e7eb;color:#6b7280;');
+    }
+    var brackets = _insBracketsEditing || getInsBrackets(isPT ? 'parttime' : 'fulltime');
+    // 費率（用於自動算自付額顯示）
+    var sys = {}; try { sys = getSysParams() || {}; } catch(e){}
+    var rLabor = parseFloat((document.getElementById('spLaborInsRate')||{}).value) || parseFloat(sys.laborInsRate) || 0.025;
+    var rHealth = parseFloat((document.getElementById('spHealthInsRate')||{}).value) || parseFloat(sys.healthInsRate) || 0.01551;
     var html = '';
     for (var i = 0; i < brackets.length; i++) {
         var b = brackets[i];
         var isLast = (i === brackets.length - 1);
+        // 🔑 自付額：有設固定值就用，否則自動算（直接顯示算出的數字）
+        var laborSelf = (b.laborSelf != null && b.laborSelf !== '') ? parseFloat(b.laborSelf) : Math.round((b.insAmount||0) * rLabor);
+        var healthSelf = (b.healthSelf != null && b.healthSelf !== '') ? parseFloat(b.healthSelf) : Math.round((b.insAmount||0) * rHealth);
+        var laborAuto = (b.laborSelf == null || b.laborSelf === '');
+        var healthAuto = (b.healthSelf == null || b.healthSelf === '');
         html += '<tr>';
         html += '<td data-label="級" style="text-align:center;font-weight:bold;">' + (b.grade || (i+1)) + '</td>';
         html += '<td data-label="月薪資上限">' + (isLast ? '<span style="color:#6b7280;">上限（最高級）</span>' : '<input type="number" value="' + (b.salaryMax||0) + '" onchange="updateInsBracket(' + i + ',\'salaryMax\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;">') + '</td>';
         html += '<td data-label="投保金額"><input type="number" value="' + (b.insAmount||0) + '" onchange="updateInsBracket(' + i + ',\'insAmount\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;font-weight:bold;"></td>';
-        html += '<td data-label="勞保自付"><input type="number" value="' + (b.laborSelf != null ? b.laborSelf : '') + '" placeholder="自動" onchange="updateInsBracket(' + i + ',\'laborSelf\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;"></td>';
-        html += '<td data-label="健保自付"><input type="number" value="' + (b.healthSelf != null ? b.healthSelf : '') + '" placeholder="自動" onchange="updateInsBracket(' + i + ',\'healthSelf\',this.value)" style="width:100%;border:1px solid #ddd;padding:3px;"></td>';
+        // 勞保自付：顯示自動算出的值，可覆寫
+        html += '<td data-label="勞保自付"><input type="number" value="' + laborSelf + '" onchange="updateInsBracket(' + i + ',\'laborSelf\',this.value)" style="width:100%;border:1px solid ' + (laborAuto?'#bfdbfe':'#f59e0b') + ';padding:3px;background:' + (laborAuto?'#eff6ff':'#fffbeb') + ';" title="' + (laborAuto?'自動計算（投保×'+rLabor+'）':'手動設定值') + '">' + (laborAuto?'<div style="font-size:9px;color:#3b82f6;">自動</div>':'<div style="font-size:9px;color:#d97706;">手動</div>') + '</td>';
+        html += '<td data-label="健保自付"><input type="number" value="' + healthSelf + '" onchange="updateInsBracket(' + i + ',\'healthSelf\',this.value)" style="width:100%;border:1px solid ' + (healthAuto?'#bfdbfe':'#f59e0b') + ';padding:3px;background:' + (healthAuto?'#eff6ff':'#fffbeb') + ';" title="' + (healthAuto?'自動計算（投保×'+rHealth+'）':'手動設定值') + '">' + (healthAuto?'<div style="font-size:9px;color:#3b82f6;">自動</div>':'<div style="font-size:9px;color:#d97706;">手動</div>') + '</td>';
         html += '<td data-label="操作" style="text-align:center;"><button onclick="deleteInsBracket(' + i + ')" style="padding:4px 8px;background:#ef4444;color:white;border:0;border-radius:4px;cursor:pointer;">🗑️</button></td>';
         html += '</tr>';
     }
     tbody.innerHTML = html;
     // 載入費率欄位
-    var sys = {}; try { sys = getSysParams() || {}; } catch(e){}
     if (document.getElementById('spLaborInsRate')) document.getElementById('spLaborInsRate').value = sys.laborInsRate || 0.025;
     if (document.getElementById('spHealthInsRate')) document.getElementById('spHealthInsRate').value = sys.healthInsRate || 0.01551;
     if (document.getElementById('spPensionEmployerRate')) document.getElementById('spPensionEmployerRate').value = sys.pensionEmployerRate || 0.06;
 }
 
 var _insBracketsEditing = null;
+function _curBracketKey() { return (_insBracketTab === 'parttime') ? 'insBracketsPT' : 'insBrackets'; }
+function _curBracketDefault() { return (_insBracketTab === 'parttime') ? DEFAULT_INS_BRACKETS_PT : DEFAULT_INS_BRACKETS; }
 function _ensureBracketsEditing() {
-    if (!_insBracketsEditing) _insBracketsEditing = getInsBrackets();
+    if (!_insBracketsEditing) _insBracketsEditing = getInsBrackets(_insBracketTab === 'parttime' ? 'parttime' : 'fulltime');
     return _insBracketsEditing;
 }
 function updateInsBracket(idx, field, val) {
@@ -9585,36 +9640,36 @@ function updateInsBracket(idx, field, val) {
     } else {
         arr[idx][field] = parseFloat(val) || 0;
     }
+    renderInsBracketTable();  // 重繪，讓自動算的自付額即時更新
 }
 function addInsBracket() {
     var arr = _ensureBracketsEditing();
     arr.push({ grade: arr.length + 1, salaryMax: 0, insAmount: 0, laborSelf: null, healthSelf: null });
     _insBracketsEditing = arr;
-    saveData('insBrackets', arr);
+    saveData(_curBracketKey(), arr);
     renderInsBracketTable();
 }
 function deleteInsBracket(idx) {
     var arr = _ensureBracketsEditing();
     arr.splice(idx, 1);
-    // 重編級數
     for (var i = 0; i < arr.length; i++) arr[i].grade = i + 1;
     _insBracketsEditing = arr;
-    saveData('insBrackets', arr);
+    saveData(_curBracketKey(), arr);
     renderInsBracketTable();
 }
 function resetInsBracketsDefault() {
-    if (!confirm('⚠️ 載入 2026 年法定級距表？\n這會覆蓋目前的級距設定。')) return;
-    _insBracketsEditing = DEFAULT_INS_BRACKETS.slice();
-    saveData('insBrackets', _insBracketsEditing);
+    var label = (_insBracketTab === 'parttime') ? '時薪制' : '正職';
+    if (!confirm('⚠️ 載入 2026 年法定「' + label + '」級距表？\n這會覆蓋目前的' + label + '級距設定。')) return;
+    _insBracketsEditing = _curBracketDefault().slice();
+    saveData(_curBracketKey(), _insBracketsEditing);
     renderInsBracketTable();
-    showNotif('✅ 已載入 2026 法定級距表');
+    showNotif('✅ 已載入 2026 法定' + label + '級距表');
 }
 function saveInsBrackets() {
     var arr = _ensureBracketsEditing();
-    // 重編級數 + 依投保金額排序
     arr.sort(function(x, y){ return (x.insAmount||0) - (y.insAmount||0); });
     for (var i = 0; i < arr.length; i++) arr[i].grade = i + 1;
-    saveData('insBrackets', arr);
+    saveData(_curBracketKey(), arr);
     // 同步儲存費率到系統參數
     var sys = {}; try { sys = getSysParams() || {}; } catch(e){}
     sys.laborInsRate = parseFloat((document.getElementById('spLaborInsRate')||{}).value) || 0.025;
@@ -9624,8 +9679,9 @@ function saveInsBrackets() {
     if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
     _insBracketsEditing = null;
     renderInsBracketTable();
-    showNotif('✅ 級距表已儲存，全系統薪資計算將套用');
-    alert('✅ 勞健保級距表已儲存！\n薪資單的勞保費、健保費、勞退提繳將依此級距自動計算。');
+    var label = (_insBracketTab === 'parttime') ? '時薪制' : '正職';
+    showNotif('✅ ' + label + '級距表已儲存，全系統薪資計算將套用');
+    alert('✅ ' + label + '勞健保級距表已儲存！\n薪資單的勞保費、健保費、勞退提繳將依此級距自動計算。');
 }
 
 // 🏛️ 勞健保員工自付額自動計算（依公告費率）
@@ -9654,9 +9710,11 @@ function calcEmpInsurance(emp, info) {
     // 🔑 投保金額決定方式：
     //   1) 員工已設投保金額 → 用級距表把它「歸入」對應級距（確保是合法級距金額）
     //   2) 未設 → 用員工薪資(月薪或時薪×推估)自動找級距
+    //   依員工類型選用對應級距表（工讀用時薪制表）
+    var _et = emp.empType;
     var bracket;
     if (laborAmt > 0) {
-        bracket = lookupInsBracketByAmount(laborAmt);
+        bracket = lookupInsBracketByAmount(laborAmt, _et);
     } else {
         // 用薪資推估：正職用月薪，工讀用時薪×240（推估月投保）
         var estSalary;
@@ -9666,13 +9724,13 @@ function calcEmpInsurance(emp, info) {
         } else {
             estSalary = parseFloat(emp.monthlySalary) || parseFloat(sys.fulltimeMonthly) || 29500;
         }
-        bracket = lookupInsBracket(estSalary);
+        bracket = lookupInsBracket(estSalary, _et);
         laborAmt = bracket.insAmount;
     }
     // 健保投保金額：員工有設就用其級距，否則跟勞保同級
     var healthBracket;
     if (healthAmt > 0) {
-        healthBracket = lookupInsBracketByAmount(healthAmt);
+        healthBracket = lookupInsBracketByAmount(healthAmt, _et);
     } else {
         healthBracket = bracket;
         healthAmt = bracket.insAmount;
@@ -22031,7 +22089,7 @@ var BACKUP_KEYS = [
     'insuranceChangeLog',
     'salarySlipEmailLog',
     'works', 'stockCounts', 'stockCategories', 'systemParams', 'sysParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements', 'petSettlements',
-    'petData', 'systemLogs', 'insBrackets',
+    'petData', 'systemLogs', 'insBrackets', 'insBracketsPT',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
