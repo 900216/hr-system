@@ -6940,13 +6940,13 @@ body.view-desktop .work-list-panel:hover {
                 <div style="font-size:11px;color:#6b7280;margin-top:3px;">📌 員工主要工作的門市（可派駐其他門市支援）</div>
             </td></tr>
             <tr><td class="label-col">員工類型：</td><td>
-                <label style="display:inline-flex; align-items:center; margin-right:18px; white-space:nowrap;"><input type="radio" name="empfType" value="fulltime" checked onchange="toggleSalaryFields('fulltime')"> 正職（月薪）</label>
-                <label style="display:inline-flex; align-items:center; white-space:nowrap;"><input type="radio" name="empfType" value="parttime" onchange="toggleSalaryFields('parttime')"> 工讀（時薪）</label>
+                <label style="display:inline-flex; align-items:center; margin-right:18px; white-space:nowrap;"><input type="radio" name="empfType" value="fulltime" checked onchange="toggleSalaryFields('fulltime', true)"> 正職（月薪）</label>
+                <label style="display:inline-flex; align-items:center; white-space:nowrap;"><input type="radio" name="empfType" value="parttime" onchange="toggleSalaryFields('parttime', true)"> 工讀（時薪）</label>
             </td></tr>
-            <tr id="empfMonthlyRow"><td class="label-col">月薪：</td><td>NT$ <input type="number" id="empfMonthlySalary" value="28000" style="width:130px;"></td></tr>
-            <tr id="empfHourlyRow" class="hidden"><td class="label-col">時薪：</td><td>NT$ <input type="number" id="empfHourlyRate" value="183" style="width:130px;"></td></tr>
-            <tr><td class="label-col" style="background:#fef3c7;">🏛️ 勞保投保：</td><td>NT$ <input type="number" id="empfLaborInsAmt" value="0" placeholder="例：45800" style="width:130px;" oninput="updateInsPreview()"> <span style="font-size:11px;color:#6b7280;">員工自付≈ <span id="empfLaborInsPreview">0</span>/月</span></td></tr>
-            <tr><td class="label-col" style="background:#fef3c7;">🏥 健保投保：</td><td>NT$ <input type="number" id="empfHealthInsAmt" value="0" placeholder="例：45800" style="width:130px;" oninput="updateInsPreview()"> <span style="font-size:11px;color:#6b7280;">員工自付≈ <span id="empfHealthInsPreview">0</span>/月</span></td></tr>
+            <tr id="empfMonthlyRow"><td class="label-col">月薪：</td><td>NT$ <input type="number" id="empfMonthlySalary" value="28000" style="width:130px;" oninput="autoFillInsByZero()"></td></tr>
+            <tr id="empfHourlyRow" class="hidden"><td class="label-col">時薪：</td><td>NT$ <input type="number" id="empfHourlyRate" value="183" style="width:130px;" oninput="autoFillInsByZero()"></td></tr>
+            <tr><td class="label-col" style="background:#fef3c7;">🏛️ 勞保投保：</td><td>NT$ <input type="number" id="empfLaborInsAmt" value="0" placeholder="0=依薪資自動" style="width:130px;" oninput="updateInsPreview()"> <span style="font-size:11px;color:#6b7280;">員工自付≈ <span id="empfLaborInsPreview">0</span>/月</span> <button type="button" onclick="autoFillInsByZero(true)" style="font-size:10px;padding:2px 6px;background:#3b82f6;color:white;border:0;border-radius:4px;cursor:pointer;margin-left:4px;">↻ 依薪資帶入</button></td></tr>
+            <tr><td class="label-col" style="background:#fef3c7;">🏥 健保投保：</td><td>NT$ <input type="number" id="empfHealthInsAmt" value="0" placeholder="0=依薪資自動" style="width:130px;" oninput="updateInsPreview()"> <span style="font-size:11px;color:#6b7280;">員工自付≈ <span id="empfHealthInsPreview">0</span>/月</span></td></tr>
             <tr><td class="label-col" style="background:#ede9fe;">👨‍👩‍👧 撫養親屬：</td><td><input type="number" id="empfDependents" value="0" min="0" max="3" style="width:80px;" oninput="updateInsPreview()"> 人 <span style="font-size:11px;color:#6b7280;">（健保眷屬最多 3 人計費，每人加 1 倍健保自付）</span></td></tr>
             <tr><td class="label-col" style="background:#dbeafe;">🏦 勞退自提：</td><td><input type="number" id="empfPensionSelfPct" value="0" min="0" max="6" step="0.5" style="width:80px;" oninput="updateInsPreview()"> % <span style="font-size:11px;color:#6b7280;">（雇主強制 6%，員工 0~6% 自願；員工自提≈ <span id="empfPensionPreview">0</span>/月）</span></td></tr>
             <tr><td class="label-col">職位：</td><td>
@@ -9756,15 +9756,61 @@ function calcEmpInsurance(emp, info) {
 }
 
 // 🎯 員工編輯彈窗即時預覽自付額
+// 依薪資自動帶入勞健保投保金額（force=true 強制重算覆蓋；否則只在投保=0時帶入）
+function autoFillInsByZero(force) {
+    var laborField = document.getElementById('empfLaborInsAmt');
+    var healthField = document.getElementById('empfHealthInsAmt');
+    if (force) {
+        // 強制：清 0 後重算
+        if (laborField) laborField.value = 0;
+        if (healthField) healthField.value = 0;
+    }
+    updateInsPreview();
+}
+
 function updateInsPreview() {
-    var labor = parseFloat((document.getElementById('empfLaborInsAmt')||{}).value) || 0;
-    var health = parseFloat((document.getElementById('empfHealthInsAmt')||{}).value) || 0;
+    // 判斷員工類型（radio name=empfType）→ 決定用哪張級距表
+    var isPT = false;
+    var radios = document.getElementsByName('empfType');
+    for (var r = 0; r < radios.length; r++) { if (radios[r].checked && radios[r].value === 'parttime') isPT = true; }
+    var et = isPT ? 'parttime' : 'fulltime';
+    
+    var laborField = document.getElementById('empfLaborInsAmt');
+    var healthField = document.getElementById('empfHealthInsAmt');
+    var labor = parseFloat((laborField||{}).value) || 0;
+    var health = parseFloat((healthField||{}).value) || 0;
+    
+    // 🔑 投保金額為 0 → 依員工薪資自動帶入對應級距金額，並填回欄位
+    if (labor === 0) {
+        var estSalary;
+        if (isPT) {
+            var hr = parseFloat((document.getElementById('empfHourlyRate')||{}).value) || 196;
+            estSalary = hr * 240;
+        } else {
+            estSalary = parseFloat((document.getElementById('empfMonthlySalary')||{}).value) || 29500;
+        }
+        var b = (typeof lookupInsBracket === 'function') ? lookupInsBracket(estSalary, et) : null;
+        if (b) {
+            labor = b.insAmount;
+            if (laborField) laborField.value = labor;
+        }
+    }
+    if (health === 0 && labor > 0) {
+        health = labor;  // 健保預設跟勞保同級
+        if (healthField) healthField.value = health;
+    }
+    
     var pensionPct = parseFloat((document.getElementById('empfPensionSelfPct')||{}).value) || 0;
     var depCount = Math.min(Math.max(0, parseInt((document.getElementById('empfDependents')||{}).value) || 0), 3);
-    var laborSelf = Math.round(labor * (0.023 + 0.002));   // 勞保 + 就保
-    var healthSelfOnly = Math.round(health * 0.01551);     // 健保本人
-    var healthSelf = healthSelfOnly * (1 + depCount);      // 含眷屬
+    
+    // 用級距表函式算自付額（會套用級距固定值或費率）
+    var laborBracket = (typeof lookupInsBracketByAmount === 'function') ? lookupInsBracketByAmount(labor, et) : null;
+    var healthBracket = (typeof lookupInsBracketByAmount === 'function') ? lookupInsBracketByAmount(health, et) : null;
+    var laborSelf = (laborBracket && typeof bracketLaborSelf === 'function') ? bracketLaborSelf(laborBracket) : Math.round(labor * 0.025);
+    var healthSelfOnly = (healthBracket && typeof bracketHealthSelf === 'function') ? bracketHealthSelf(healthBracket) : Math.round(health * 0.01551);
+    var healthSelf = healthSelfOnly * (1 + depCount);
     var pensionSelf = Math.round(labor * (pensionPct/100));
+    
     var lp = document.getElementById('empfLaborInsPreview');
     var hp = document.getElementById('empfHealthInsPreview');
     var pp = document.getElementById('empfPensionPreview');
@@ -21179,8 +21225,8 @@ function openEmployeeFullModal() {
     document.getElementById('empfHealthInsAmt').value = 0;
     document.getElementById('empfDependents').value = 0;
     document.getElementById('empfPensionSelfPct').value = 0;
-    updateInsPreview();
     toggleSalaryFields('fulltime');
+    updateInsPreview();
     renderEmpfPermissions('', '時薪人員', 'fulltime');  // 🆕 新員工權限（依預設職位）
     document.getElementById('empFullModal').classList.remove('hidden');
 }
@@ -21239,8 +21285,8 @@ function openEditEmployeeModal(id) {
     document.getElementById('empfHealthInsAmt').value = info.healthInsAmount || 0;
     document.getElementById('empfDependents').value = info.dependentsCount || 0;
     document.getElementById('empfPensionSelfPct').value = info.pensionSelfPct || 0;
-    updateInsPreview();
     toggleSalaryFields(empType);
+    updateInsPreview();
     renderEmpfPermissions(emp.num, info.position || '時薪人員', empType);  // 🆕 載入此員工權限
     document.getElementById('empFullModal').classList.remove('hidden');
 }
@@ -21409,7 +21455,9 @@ function saveEmployeeFull() {
 }
 
 // 員工 Modal 切換薪資欄位
-function toggleSalaryFields(type) {
+// fromUserSwitch=true：使用者手動切換類型 → 清0重算投保（級距表不同）
+// 開窗載入時(false)：保留員工原本投保金額，不覆蓋
+function toggleSalaryFields(type, fromUserSwitch) {
     var monthlyRow = document.getElementById('empfMonthlyRow');
     var hourlyRow = document.getElementById('empfHourlyRow');
     if (type === 'fulltime') {
@@ -21419,6 +21467,14 @@ function toggleSalaryFields(type) {
         monthlyRow.classList.add('hidden');
         hourlyRow.classList.remove('hidden');
     }
+    if (fromUserSwitch) {
+        // 切換正職/工讀 → 投保級距表不同，清 0 後依新類型薪資重新自動帶入
+        var laborField = document.getElementById('empfLaborInsAmt');
+        var healthField = document.getElementById('empfHealthInsAmt');
+        if (laborField) laborField.value = 0;
+        if (healthField) healthField.value = 0;
+    }
+    if (typeof updateInsPreview === 'function') updateInsPreview();
 }
 
 // 🛡️ 通用刪除確認 Modal（iOS 完美相容）
