@@ -10700,40 +10700,31 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         }
         html += '</select></div>';
 
-        // 🆕 顯示所選假別的剩餘額度
+        // 🆕 顯示所選假別的剩餘額度（直接顯示 getLeaveRemaining 的真實結果）
         var _selName = slot.leaveType || (LEAVE_TYPES[_leaveKeys[0]] && LEAVE_TYPES[_leaveKeys[0]].name);
         var _selKey = leaveNameToKey(_selName);
         if (_selKey && editingShift) {
-            // 「目前剩餘」= 總額 − 本格以外其他所有請假的已用
-            //   做法：先取總已用(_bal.used，已含本格)，再扣掉本格目前已存的時數，得到「不含本格的已用」
             var _bal = getLeaveRemaining(editingShift.empId, _selKey);
-            // 本格目前已存的時數（用同一套 key 容錯讀取）
-            var _thisDeduct = getSlotLeaveHours(editingShift.empId, editingShift.dateKey, slotIndex, _selKey);
-            var _usedExcl = Math.max(0, _bal.used - _thisDeduct);        // 不含本格的已用
-            var _availBefore = Math.max(0, _bal.total - _usedExcl);      // 不含本格的剩餘
-            var _after = _availBefore - (parseFloat(slot.leaveHours) || 0);  // 填入本格後
+            // _bal.remaining 已扣掉所有請假（含本格），即真實剩餘
+            var _availNow = _bal.remaining;
+            // 「本次請 X 後將剩」：還原本格目前已存時數、再套用輸入框新值
+            var _storedThis = getSlotLeaveHours(editingShift.empId, editingShift.dateKey, slotIndex, _selKey);
+            var _inputThis = parseFloat(slot.leaveHours) || 0;
+            var _after = _availNow + _storedThis - _inputThis;
             var _afterColor = _after < 0 ? '#dc2626' : '#059669';
             html += '<div style="background:#ffffff; border:1px solid #fca5a5; border-radius:6px; padding:8px 10px; margin:6px 0; font-size:12px;">';
             html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
             html += '<span style="color:#374151;">' + (LEAVE_TYPES[_selKey].icon || '') + ' ' + LEAVE_TYPES[_selKey].name + ' 目前剩餘：</span>';
-            html += '<strong style="color:#0ea5e9; font-size:15px;">' + _availBefore.toFixed(1) + ' H</strong>';
+            html += '<strong style="color:#0ea5e9; font-size:15px;">' + _availNow.toFixed(1) + ' H</strong>';
             html += '</div>';
             html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dashed #e5e7eb;">';
-            html += '<span style="color:#6b7280;">本次請 ' + (parseFloat(slot.leaveHours)||0).toFixed(1) + ' H 後將剩：</span>';
+            html += '<span style="color:#6b7280;">本次請 ' + _inputThis.toFixed(1) + ' H 後將剩：</span>';
             html += '<strong style="color:' + _afterColor + '; font-size:15px;">' + _after.toFixed(1) + ' H</strong>';
             html += '</div>';
+            html += '<div style="font-size:10px; color:#9ca3af; margin-top:3px;">（總額 ' + _bal.total.toFixed(1) + 'H ｜ 已用 ' + _bal.used.toFixed(1) + 'H）</div>';
             if (_after < 0) {
                 html += '<div style="color:#dc2626; margin-top:4px; font-weight:bold;">⚠️ 已超出可用額度！</div>';
             }
-            html += '</div>';
-            
-            // 🔍 即時診斷：顯示這個員工在排班中實際掃到的請假（用來定位扣除問題）
-            var _diag = diagnoseEmpLeaveScan(editingShift.empId, _selKey);
-            html += '<div style="background:#1e293b; color:#cbd5e1; border-radius:6px; padding:6px 8px; margin:4px 0; font-size:10px; font-family:monospace; line-height:1.5;">';
-            html += '🔍 診斷：員工id=' + editingShift.empId + '<br>';
-            html += 'shifts中此人的key：' + (_diag.matchedKeys.length ? _diag.matchedKeys.join(',') : '<span style="color:#f87171;">❌找不到!key不符</span>') + '<br>';
-            html += '掃到' + _selName + '請假：' + _diag.count + '筆 共' + _diag.totalHours + 'h<br>';
-            html += '總額' + _bal.total + ' 已用' + _bal.used + ' 剩' + _bal.remaining;
             html += '</div>';
         }
         
