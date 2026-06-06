@@ -10925,10 +10925,12 @@ function getLeaveRemaining(empId, leaveKey) {
     var adjH = parseFloat(empAdj[leaveKey] || 0);
     var total;
     if (leaveKey === 'comp') {
-        // 補休總額 = 累積代休 + 手動調整
-        var compLeaveByEmp = loadData('compLeaveByEmp', {});
-        var compH = (compLeaveByEmp[empId] && compLeaveByEmp[empId].totalHours) || 0;
-        total = compH + adjH;
+        // 🔑 補休總額：統一用 leaveQuotas['特代休']（與排班左側徽章、額度管理同一來源）
+        //    這是員工的「可用補休總額」（加班轉入、手動轉入都累加在此）
+        //    過去用 compLeaveByEmp 導致三套數字不一致、扣除錯亂，已改為單一來源
+        var quotas = loadData('leaveQuotas', {});
+        var quotaComp = (quotas[empId] && parseFloat(quotas[empId]['特代休'])) || 0;
+        total = quotaComp + adjH;
     } else {
         total = (LEAVE_TYPES[leaveKey].total || 0) + adjH;
     }
