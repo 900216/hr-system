@@ -18696,13 +18696,14 @@ function applyOcrToForm() {
         return false;
     }
     
-    // 套用收銀機項目
+    // 套用收銀機項目（表格為 3 台收銀機 + 合計；OCR 行通常為「代碼 收銀機1 收銀機2 收銀機3 (合計)」）
     var registerCodes = ['101','102','103','104','104A','104B','105A','105B','106A','106B',
                          '107','108','109','110','111','112','113','116','117','120'];
     for (var i = 0; i < registerCodes.length; i++) {
         var code = registerCodes[i];
         var d = parsed[code];
         if (d && d.nums && d.nums.length >= 3) {
+            // 取前 3 個 = 收銀機 1/2/3（第 4 個若有通常是合計，由系統自動計算，不填）
             if (setVal('cr_r1_' + code, d.nums[0])) count++;
             if (setVal('cr_r2_' + code, d.nums[1])) count++;
             if (setVal('cr_r3_' + code, d.nums[2])) count++;
@@ -18765,22 +18766,25 @@ function parseOcrText(text) {
         // 🔧 OCR 常見錯字修正（僅在數字情境下，避免誤傷代碼字母）
         var line = ocrFixNumberChars(origLine);
         
-        // 找此行的代碼（只在「行首附近」找，代碼通常在每列最前面）
+        // 找此行的代碼（取「位置最靠近行首」的代碼，而非陣列順序第一個）
+        // 🔑 修正：原本按 allCodes 順序命中即停，會選到行中後段的誤匹配代碼，
+        //         導致數字配對到錯誤欄位。改為掃描所有代碼、取 pos 最小者；
+        //         同位置時取較長代碼（104A 勝過 104）。
         var matchedCode = null;
         var codePos = -1;
+        var bestPos = 9999;
         for (var j = 0; j < allCodes.length; j++) {
             var code = allCodes[j];
-            // 代碼前後須為非英數邊界，避免 101 命中 1011、2101 等
             var re = new RegExp('(?:^|[^A-Za-z0-9])(' + code + ')(?:[^A-Za-z0-9]|$)');
             var m = line.match(re);
-            if (m) {
-                var pos = line.indexOf(m[1], Math.max(0, m.index));
-                // 🔑 代碼必須靠近行首（前面雜訊不超過 6 字），降低誤命中
-                if (pos <= 8) {
-                    matchedCode = code;
-                    codePos = pos;
-                    break;
-                }
+            if (!m) continue;
+            var pos = line.indexOf(m[1], Math.max(0, m.index));
+            if (pos > 8) continue;  // 代碼須靠近行首
+            // 取位置更前者；位置相同取較長代碼
+            if (pos < bestPos || (pos === bestPos && matchedCode && code.length > matchedCode.length)) {
+                matchedCode = code;
+                codePos = pos;
+                bestPos = pos;
             }
         }
         
@@ -18793,9 +18797,10 @@ function parseOcrText(text) {
         
         if (nums.length === 0) continue;
         
-        // 🔑 收銀機行取「最後 4 個」數字（最可靠：張數/小計/折讓/淨額）
-        if (registerCodes.indexOf(matchedCode) !== -1 && nums.length >= 4) {
-            nums = nums.slice(-4);
+        // 🔑 收銀機行：取代碼後「前 4 個」數字（收銀機1/2/3/合計）
+        //    原本取後4個會在行尾有雜訊時丟掉真正的收銀機1，造成位置錯位
+        if (registerCodes.indexOf(matchedCode) !== -1 && nums.length > 4) {
+            nums = nums.slice(0, 4);
         }
         
         // 🔑 金額合理性過濾：移除明顯不合理的超大數（>9 位數通常是 OCR 黏連雜訊）
