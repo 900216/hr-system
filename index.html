@@ -10700,25 +10700,18 @@ function renderSlotEditCard(slotIndex, slot, homeStoreId) {
         }
         html += '</select></div>';
 
-        // 🆕 顯示所選假別的剩餘額度（排除本筆扣除，避免自己扣自己）
+        // 🆕 顯示所選假別的剩餘額度
         var _selName = slot.leaveType || (LEAVE_TYPES[_leaveKeys[0]] && LEAVE_TYPES[_leaveKeys[0]].name);
         var _selKey = leaveNameToKey(_selName);
         if (_selKey && editingShift) {
+            // 「目前剩餘」= 總額 − 本格以外其他所有請假的已用
+            //   做法：先取總已用(_bal.used，已含本格)，再扣掉本格目前已存的時數，得到「不含本格的已用」
             var _bal = getLeaveRemaining(editingShift.empId, _selKey);
-            // getLeaveRemaining 的 used 已含本格（從 shifts 掃描），
-            // 顯示「不含本格」的剩餘 = remaining + 本格目前已存的時數
-            var _thisDeduct = 0;
-            var _shifts = loadData('shifts', {});
-            var _es = _shifts[editingShift.dateKey] && _shifts[editingShift.dateKey][editingShift.empId];
-            if (_es) {
-                var _eslots = (Array.isArray(_es.slots)) ? _es.slots : [];
-                var _eslot = _eslots[slotIndex];
-                if (_eslot && _eslot.type === 'leave' && leaveNameToKey(_eslot.leaveType) === _selKey) {
-                    _thisDeduct = parseFloat(_eslot.leaveHours) || 0;
-                }
-            }
-            var _availBefore = _bal.remaining + _thisDeduct; // 不含本筆的剩餘
-            var _after = _availBefore - (parseFloat(slot.leaveHours) || 0);
+            // 本格目前已存的時數（用同一套 key 容錯讀取）
+            var _thisDeduct = getSlotLeaveHours(editingShift.empId, editingShift.dateKey, slotIndex, _selKey);
+            var _usedExcl = Math.max(0, _bal.used - _thisDeduct);        // 不含本格的已用
+            var _availBefore = Math.max(0, _bal.total - _usedExcl);      // 不含本格的剩餘
+            var _after = _availBefore - (parseFloat(slot.leaveHours) || 0);  // 填入本格後
             var _afterColor = _after < 0 ? '#dc2626' : '#059669';
             html += '<div style="background:#ffffff; border:1px solid #fca5a5; border-radius:6px; padding:8px 10px; margin:6px 0; font-size:12px;">';
             html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
@@ -10919,6 +10912,26 @@ function applyLeaveDeductionFromShift(empId, leaveType, hours, dateKey) {
 // 🔑 計算某員工某假別的額度（total / used / remaining）
 // 與「假別額度管理」用同一套來源，確保排班 modal 顯示的剩餘額度與額度管理頁一致
 // leaveKey：LEAVE_TYPES 的 key（annual/sick/.../comp）
+// 🔑 讀取某員工某天某格的請假時數（key 容錯：id/工號/姓名）
+function getSlotLeaveHours(empId, dateKey, slotIndex, leaveKey) {
+    var shifts = loadData('shifts', {});
+    var dayObj = shifts[dateKey];
+    if (!dayObj) return 0;
+    var employees = loadData('employees', defaultEmployees);
+    var theEmp = employees.find(function(e){ return e.id === empId || e.num === empId || e.name === empId; });
+    var keys = [empId];
+    if (theEmp) { if(theEmp.id)keys.push(theEmp.id); if(theEmp.num)keys.push(theEmp.num); if(theEmp.name)keys.push(theEmp.name); }
+    var s = null;
+    for (var i = 0; i < keys.length; i++) { if (dayObj[keys[i]]) { s = dayObj[keys[i]]; break; } }
+    if (!s) return 0;
+    var slots = (Array.isArray(s.slots)) ? s.slots : [];
+    var slot = slots[slotIndex];
+    if (slot && slot.type === 'leave' && (!leaveKey || leaveNameToKey(slot.leaveType) === leaveKey)) {
+        return parseFloat(slot.leaveHours) || 0;
+    }
+    return 0;
+}
+
 function getLeaveRemaining(empId, leaveKey) {
     if (!empId || !leaveKey || !LEAVE_TYPES[leaveKey]) return { total: 0, used: 0, remaining: 0 };
 
@@ -10939,12 +10952,27 @@ function getLeaveRemaining(empId, leaveKey) {
     }
 
     // ── 已使用 ──
-    // 🔑 改為「直接從排班 shifts 掃描請假 slot」計算，與累積補休同一份資料源，
-    //    徹底避免 leaveShiftDeductions 與 shifts 不同步造成的額度錯亂
+    // 🔑 改為「直接從排班 shifts 掃描請假 slot」計算，與累積補休同一份資料源
+    //    ⚠️ shifts 的 key 可能是員工 id、工號(num) 或姓名，需全部比對才掃得到，
+    //       否則會出現「排班有請假但額度沒扣」（已使用算成 0）的錯誤
     var used = 0;
+    var employees = loadData('employees', defaultEmployees);
+    var theEmp = employees.find(function(e){ return e.id === empId || e.num === empId || e.name === empId; });
+    // 此員工在 shifts 裡所有可能的 key
+    var empKeys = {};
+    empKeys[empId] = true;
+    if (theEmp) {
+        if (theEmp.id) empKeys[theEmp.id] = true;
+        if (theEmp.num) empKeys[theEmp.num] = true;
+        if (theEmp.name) empKeys[theEmp.name] = true;
+    }
     var shifts = loadData('shifts', {});
     Object.keys(shifts).forEach(function(dateKey) {
-        var s = shifts[dateKey] && shifts[dateKey][empId];
+        var dayObj = shifts[dateKey];
+        if (!dayObj) return;
+        // 找出這天屬於此員工的記錄（任一 key 命中）
+        var s = null;
+        for (var k in empKeys) { if (dayObj[k]) { s = dayObj[k]; break; } }
         if (!s) return;
         var slots = (Array.isArray(s.slots)) ? s.slots : (s.type ? [{type:s.type, start:s.start, end:s.end, leaveType:s.leaveType, leaveHours:s.leaveHours}] : []);
         for (var i = 0; i < slots.length; i++) {
@@ -10960,7 +10988,8 @@ function getLeaveRemaining(empId, leaveKey) {
         leaveList.forEach(function(x) {
             if (x.autoFromShift) return;       // 排班來源已由上方 shifts 掃描計算
             if (x.fromSchedule) return;         // 舊標記相容
-            if (x.empId === empId && (x.status === 'approved' || x.status === 'pending') && x.type === leaveKey) {
+            var xEmpMatch = (x.empId === empId) || (theEmp && (x.empId === theEmp.id || x.empId === theEmp.num || x.empId === theEmp.name));
+            if (xEmpMatch && (x.status === 'approved' || x.status === 'pending') && x.type === leaveKey) {
                 used += (x.days || 0);
             }
         });
