@@ -4490,9 +4490,13 @@ body.view-desktop .work-list-panel:hover {
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⏰ 出勤管理 &gt; <strong>🌴 請假申請</strong></div>
         <div class="main-content">
             <div class="work-list-panel"><div class="panel-header"><h3>📊 假別餘額</h3>
-                <button class="btn-secondary" style="padding:5px 12px; font-size:12px; background:#8b5cf6; color:white;" onclick="recalcAndRefreshLeave()">🔄 重算補休額度</button>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="btn-secondary" style="padding:5px 12px; font-size:12px; background:#8b5cf6; color:white;" onclick="recalcAndRefreshLeave()">🔄 重算補休額度</button>
+                    <button class="btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="diagnoseLeave()">🔍 診斷</button>
+                </div>
             </div><div class="panel-body">
                 <div id="leaveBalanceCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;"></div>
+                <div id="leaveDiagnose" style="margin-top:10px;"></div>
                 <div id="compLeaveDetail" style="margin-top:12px;"></div>
             </div></div>
             <div class="work-list-panel"><div class="panel-header"><h3>🌴 新增請假</h3></div><div class="panel-body">
@@ -5805,8 +5809,11 @@ body.view-desktop .work-list-panel:hover {
                         <div id="crImagePreview" style="margin-top:10px; display:none;">
                             <img id="crPreviewImg" style="max-width:100%; max-height:200px; border:1px solid #d97706; border-radius:4px;">
                         </div>
-                        <textarea id="crOcrResult" rows="4" placeholder="OCR 辨識結果會顯示在這裡，您可以檢查後再點「套用到表格」" style="width:100%; margin-top:8px; padding:8px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:11px; display:none;"></textarea>
-                        <button id="crApplyOcrBtn" class="btn-primary" onclick="applyOcrToForm()" style="margin-top:8px; padding:8px 16px; font-size:13px; display:none;">✅ 套用到表格</button>
+                        <textarea id="crOcrResult" rows="10" placeholder="OCR 辨識結果會顯示在這裡，您可以檢查後再點「套用到表格」" style="width:100%; margin-top:8px; padding:8px; border:1px solid #999; border-radius:4px; font-family:monospace; font-size:11px; display:none;"></textarea>
+                        <div id="crOcrBtnRow" style="display:none; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            <button id="crApplyOcrBtn" class="btn-primary" onclick="applyOcrToForm()" style="padding:8px 16px; font-size:13px;">✅ 套用到表格</button>
+                            <button class="btn-secondary" onclick="copyOcrText()" style="padding:8px 16px; font-size:13px;">📋 複製辨識文字</button>
+                        </div>
                         <div style="margin-top:6px; font-size:11px; color:#6b7280;">💡 提示：第一次使用會下載中文辨識引擎（約 10MB），請耐心等候。建議圖片清晰、平整、無遮擋。</div>
                     </div>
                     
@@ -11112,6 +11119,68 @@ function recalculateCompLeave() {
         compLeaveEmps: Object.keys(compLeave).length,
         autoOTEmps: Object.keys(autoOT).length
     };
+}
+
+// 🔍 診斷假別額度：印出實際 shifts 請假記錄與額度計算，定位扣除問題
+function diagnoseLeave() {
+    var employees = loadData('employees', defaultEmployees);
+    var shifts = loadData('shifts', {});
+    var compLeaveByEmp = loadData('compLeaveByEmp', {});
+    var out = document.getElementById('leaveDiagnose');
+    if (!out) return;
+    
+    var html = '<div style="background:#1e293b; color:#e2e8f0; padding:12px; border-radius:8px; font-family:monospace; font-size:11px; overflow-x:auto; white-space:pre-wrap;">';
+    html += '<strong style="color:#fbbf24;">🔍 假別扣除診斷</strong>\n\n';
+    
+    // 掃描所有 shifts，找出請假 slot，依員工歸戶
+    var leaveByEmp = {};  // empKey → [ {date, type, hours} ]
+    Object.keys(shifts).forEach(function(dateKey) {
+        var dayObj = shifts[dateKey];
+        if (!dayObj) return;
+        Object.keys(dayObj).forEach(function(empKey) {
+            var s = dayObj[empKey];
+            if (!s) return;
+            var slots = (Array.isArray(s.slots)) ? s.slots : (s.type ? [s] : []);
+            for (var i = 0; i < slots.length; i++) {
+                var slot = slots[i];
+                if (!slot || slot.type !== 'leave') continue;
+                if (!leaveByEmp[empKey]) leaveByEmp[empKey] = [];
+                leaveByEmp[empKey].push({
+                    date: dateKey,
+                    type: slot.leaveType || '(無假別)',
+                    hours: slot.leaveHours != null ? slot.leaveHours : '(無時數)'
+                });
+            }
+        });
+    });
+    
+    var keys = Object.keys(leaveByEmp);
+    if (keys.length === 0) {
+        html += '⚠️ 排班中找不到任何「請假」slot。\n可能原因：請假沒存成 type=leave，或時數/假別沒填。\n';
+    } else {
+        keys.forEach(function(empKey) {
+            // 嘗試對應到員工
+            var emp = employees.find(function(e){ return e.id === empKey || e.num === empKey || e.name === empKey; });
+            var empLabel = emp ? (emp.name + '(' + emp.num + ', id=' + emp.id + ')') : ('⚠️ 找不到對應員工 key=' + empKey);
+            html += '<strong style="color:#34d399;">' + empLabel + '</strong>\n';
+            html += '  shifts key = "' + empKey + '"' + (emp && emp.id !== empKey ? ' ⚠️ 與員工id不符!' : '') + '\n';
+            leaveByEmp[empKey].forEach(function(r){
+                html += '  ' + r.date + '：' + r.type + ' ' + r.hours + 'h\n';
+            });
+            // 算各假別的額度
+            if (emp) {
+                ['comp','annual','sick','personal'].forEach(function(lk){
+                    var bal = getLeaveRemaining(emp.id, lk);
+                    if (bal.used > 0 || lk === 'comp') {
+                        html += '  → ' + (LEAVE_TYPES[lk] ? LEAVE_TYPES[lk].name : lk) + '：總' + bal.total + ' 用' + bal.used + ' 剩' + bal.remaining + '\n';
+                    }
+                });
+            }
+            html += '\n';
+        });
+    }
+    html += '</div>';
+    out.innerHTML = html;
 }
 
 // 取得單一員工的代休假
@@ -18659,7 +18728,8 @@ function processCashReportOCR() {
         ocrScanStop('crImagePreview');
         document.getElementById('crOcrResult').value = result.data.text;
         document.getElementById('crOcrResult').style.display = 'block';
-        document.getElementById('crApplyOcrBtn').style.display = 'inline-block';
+        var btnRow = document.getElementById('crOcrBtnRow');
+        if (btnRow) btnRow.style.display = 'flex';
         
         var parsed = parseOcrText(result.data.text);
         var detectedCodes = Object.keys(parsed);
@@ -18673,6 +18743,29 @@ function processCashReportOCR() {
         statusEl.textContent = '❌ 辨識失敗：' + err.message;
         console.error('OCR error:', err);
     });
+}
+
+// 📋 複製 OCR 辨識文字（方便回報問題）
+function copyOcrText() {
+    var text = document.getElementById('crOcrResult').value;
+    if (!text) return alert('⚠️ 沒有辨識文字可複製');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function(){
+            showNotif('📋 已複製辨識文字，可貼上回報');
+        }).catch(function(){
+            _fallbackCopy(text);
+        });
+    } else {
+        _fallbackCopy(text);
+    }
+}
+function _fallbackCopy(text) {
+    var ta = document.getElementById('crOcrResult');
+    ta.removeAttribute('readonly');
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try { document.execCommand('copy'); showNotif('📋 已複製辨識文字'); }
+    catch(e){ alert('請手動長按選取文字框內容複製'); }
 }
 
 function applyOcrToForm() {
