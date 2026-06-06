@@ -4489,7 +4489,9 @@ body.view-desktop .work-list-panel:hover {
     <div id="page-leaveApply" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⏰ 出勤管理 &gt; <strong>🌴 請假申請</strong></div>
         <div class="main-content">
-            <div class="work-list-panel"><div class="panel-header"><h3>📊 假別餘額</h3></div><div class="panel-body">
+            <div class="work-list-panel"><div class="panel-header"><h3>📊 假別餘額</h3>
+                <button class="btn-secondary" style="padding:5px 12px; font-size:12px; background:#8b5cf6; color:white;" onclick="recalcAndRefreshLeave()">🔄 重算補休額度</button>
+            </div><div class="panel-body">
                 <div id="leaveBalanceCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;"></div>
                 <div id="compLeaveDetail" style="margin-top:12px;"></div>
             </div></div>
@@ -11102,6 +11104,10 @@ function recalculateCompLeave() {
     saveData('compLeaveByEmp', compLeave);
     saveData('autoOvertimeByEmp', autoOT);
     
+    // 🧹 清理舊版殘留的 leaveShiftDeductions（已改為直接從 shifts 計算，此資料不再使用）
+    //    避免歷史髒資料殘留在雲端，造成額度顯示錯亂
+    saveData('leaveShiftDeductions', []);
+    
     return {
         compLeaveEmps: Object.keys(compLeave).length,
         autoOTEmps: Object.keys(autoOT).length
@@ -11113,6 +11119,41 @@ function getCompLeaveForEmployee(empId) {
     var compLeave = loadData('compLeaveByEmp', {});
     return compLeave[empId] || { totalHours: 0, byDate: {} };
 }
+
+// 🔄 重算補休額度並清理髒資料（修復歷史不一致）
+//    1) 重建 compLeaveByEmp（累積）並清空舊的 leaveShiftDeductions
+//    2) 移除 leaveList 中重複/孤兒的 autoFromShift 紀錄（同一 sourceRef 只留一筆）
+//    3) 刷新畫面
+function recalcAndRefreshLeave() {
+    // 1) 重算累積補休（內部會清空 leaveShiftDeductions）
+    recalculateCompLeave();
+    
+    // 2) 清理 leaveList：autoFromShift 紀錄依 sourceRef 去重，移除重複
+    var list = loadData('leaveList', []);
+    if (Array.isArray(list)) {
+        var seen = {};
+        var cleaned = [];
+        for (var i = 0; i < list.length; i++) {
+            var x = list[i];
+            if (x && x.autoFromShift && x.sourceRef) {
+                if (seen[x.sourceRef]) continue;  // 重複的排班自動紀錄，跳過
+                seen[x.sourceRef] = true;
+            }
+            cleaned.push(x);
+        }
+        if (cleaned.length !== list.length) {
+            saveData('leaveList', cleaned);
+        }
+    }
+    
+    // 3) 刷新畫面
+    if (typeof renderLeaveBalance === 'function') renderLeaveBalance();
+    if (typeof renderCompLeaveDetail === 'function') renderCompLeaveDetail();
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    showNotif('🔄 已重算補休額度並清理重複紀錄');
+}
+
+
 
 // 取得目前登入員工的代休假（admin 預設用 emp1）
 // 🔑 解析「目前登入者」對應的員工 ID
