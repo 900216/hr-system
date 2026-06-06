@@ -9464,7 +9464,7 @@ function calcEmpInsurance(emp, info) {
         try { info = (loadData('employeesFullInfo', {}) || {})[emp.id] || {}; } catch(e){ info = {}; }
     }
     var sys = {};
-    try { sys = loadData('sysParams', {}) || {}; } catch(e){}
+    try { sys = getSysParams() || {}; } catch(e){}
     var rLabor = parseFloat(sys.laborInsRate) || 0.023;
     var rEmp = parseFloat(sys.empInsRate) || 0.002;
     var rHealth = parseFloat(sys.healthInsRate) || 0.01551;
@@ -9525,7 +9525,7 @@ function updateInsPreview() {
 function calcIncomeTax(monthlyTaxable) {
     if (!monthlyTaxable || monthlyTaxable <= 0) return 0;
     var sys = {};
-    try { sys = loadData('sysParams', {}) || {}; } catch(e){}
+    try { sys = getSysParams() || {}; } catch(e){}
     var threshold = parseFloat(sys.incomeTaxThreshold) || 88501;
     var rate = parseFloat(sys.incomeTaxRate) || 0.05;
     if (monthlyTaxable <= threshold) return 0;
@@ -9539,7 +9539,7 @@ function calcPensionContrib(emp, info) {
         try { info = (loadData('employeesFullInfo', {}) || {})[emp.id] || {}; } catch(e){ info = {}; }
     }
     var sys = {};
-    try { sys = loadData('sysParams', {}) || {}; } catch(e){}
+    try { sys = getSysParams() || {}; } catch(e){}
     var employerRate = parseFloat(sys.pensionEmployerRate) || 0.06;
     var basis = parseFloat(info.laborInsAmount) || 0;
     if (basis === 0) basis = emp.empType === 'parttime' ? 28590 : 45800;
@@ -10347,12 +10347,15 @@ function renderEmpInfoCell(emp, stores) {
     html += '<span class="emp-num">' + emp.num + '</span><br>';
     html += '<span class="emp-type ' + typeClass + '">' + typeLabel + '</span>';
     html += '<span class="emp-home">🏬 ' + homeName + '</span>';
-    // 🤖 正職顯示代休餘額（可點擊查看明細）
+    // 🤖 正職顯示代休「剩餘」餘額（與編輯視窗、額度管理同一來源 getLeaveRemaining）
     if (emp.empType !== 'parttime') {
-        var quotas = loadData('leaveQuotas', {});
-        var compBal = (quotas[emp.id] && parseFloat(quotas[emp.id]['特代休'])) || 0;
-        if (compBal > 0) {
-            html += '<div class="emp-comp-bal" onclick="viewEmpCompHistory(\'' + emp.id + '\'); event.stopPropagation();" title="點擊查看代休明細" style="cursor:pointer; margin-top:4px; background:#d1fae5; color:#047857; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:bold; display:inline-block;">🔄 代休 ' + compBal.toFixed(1) + 'h</div>';
+        var compInfo = getLeaveRemaining(emp.id, 'comp');
+        var compBal = compInfo.remaining;
+        var compTotal = compInfo.total;
+        if (compTotal > 0 || compBal > 0) {
+            var badgeColor = compBal > 0 ? '#d1fae5' : '#fee2e2';
+            var badgeText = compBal > 0 ? '#047857' : '#b91c1c';
+            html += '<div class="emp-comp-bal" onclick="viewEmpCompHistory(\'' + emp.id + '\'); event.stopPropagation();" title="點擊查看代休明細" style="cursor:pointer; margin-top:4px; background:' + badgeColor + '; color:' + badgeText + '; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:bold; display:inline-block;">🔄 代休 ' + compBal.toFixed(1) + 'h<span style="opacity:0.6;"> / ' + compTotal.toFixed(1) + 'h</span></div>';
         }
     }
     html += '</td>';
@@ -21647,6 +21650,26 @@ var DEFAULT_SYS_PARAMS = {
     healthInsurancePT: 158
 };
 
+// 🔑 統一系統參數存取（修正歷史上 sysParams / systemParams 兩個 key 分裂的問題）
+//    讀：兩個 key 合併（systemParams 優先），確保任何地方讀到的都是同一份
+//    寫：兩個 key 同時寫入，向下相容舊程式碼
+function getSysParams() {
+    var a = {};
+    var b = {};
+    try { a = loadData('systemParams', {}) || {}; } catch(e){}
+    try { b = loadData('sysParams', {}) || {}; } catch(e){}
+    // 以 DEFAULT 為底，再疊 sysParams，再疊 systemParams（最新設定優先）
+    var merged = {};
+    Object.keys(DEFAULT_SYS_PARAMS).forEach(function(k){ merged[k] = DEFAULT_SYS_PARAMS[k]; });
+    Object.keys(b).forEach(function(k){ if (b[k] !== undefined && b[k] !== null && b[k] !== '') merged[k] = b[k]; });
+    Object.keys(a).forEach(function(k){ if (a[k] !== undefined && a[k] !== null && a[k] !== '') merged[k] = a[k]; });
+    return merged;
+}
+function saveSysParams(params) {
+    saveData('systemParams', params);
+    saveData('sysParams', params);  // 同步寫舊 key，讓讀舊 key 的程式碼也拿到最新值
+}
+
 function setVal(id, v) {
     var e = document.getElementById(id);
     if (e !== null) e.value = v;
@@ -21661,7 +21684,7 @@ function getIntVal(id, def) {
 }
 
 function loadSystemParams() {
-    var p = loadData('systemParams', DEFAULT_SYS_PARAMS);
+    var p = getSysParams();
     setVal('spCompany', p.company || DEFAULT_SYS_PARAMS.company);
     setVal('spDailyHours', p.dailyHours || DEFAULT_SYS_PARAMS.dailyHours);
     setVal('spShiftGap', p.shiftGap || DEFAULT_SYS_PARAMS.shiftGap);
@@ -21697,14 +21720,14 @@ function saveSystemParams() {
         laborInsurancePT: getIntVal('spLaborInsPT', 234),
         healthInsurancePT: getIntVal('spHealthInsPT', 158)
     };
-    saveData('systemParams', params);
+    saveSysParams(params);
     showNotif('✅ 系統參數已儲存');
     alert('✅ 設定已儲存！\n薪資計算將套用新參數。');
 }
 
 function resetSystemParams() {
     if (!confirm('⚠️ 確定還原為預設值？')) return;
-    saveData('systemParams', DEFAULT_SYS_PARAMS);
+    saveSysParams(DEFAULT_SYS_PARAMS);
     loadSystemParams();
     showNotif('🔄 已還原預設值');
 }
@@ -21747,7 +21770,8 @@ var BACKUP_KEYS = [
     'compTransfers',
     'insuranceChangeLog',
     'salarySlipEmailLog',
-    'works', 'stockCounts', 'stockCategories', 'systemParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements', 'petSettlements',
+    'works', 'stockCounts', 'stockCategories', 'systemParams', 'sysParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements', 'petSettlements',
+    'petData', 'systemLogs',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
@@ -24463,7 +24487,7 @@ function calcEmpMonthStats(empId, yearMonth) {
     var emp = employees.find(function(e) { return e.id === empId; });
     if (!emp) return null;
     
-    var sysParams = loadData('systemParams', {});
+    var sysParams = getSysParams();
     var hourlyRate = emp.hourlyRate || sysParams.hourlyRate || PAYROLL_DEFAULTS.hourlyRate;
     var monthlySalary = emp.monthlySalary || sysParams.fulltimeMonthly || PAYROLL_DEFAULTS.fulltimeMonthly;
     
@@ -25419,7 +25443,7 @@ function printAnnualWithholding(empId, year) {
     var sum = calcAnnualWithholding(empId, year);
     if (sum.slipCount === 0) return alert('⚠️ ' + year + ' 年度尚無已發放薪資單');
     
-    var sysParams = loadData('sysParams', {});
+    var sysParams = getSysParams();
     var companyName = sysParams.company || 'RC 金門醫院';
     
     var stores = loadData('stores', defaultStores);
@@ -25588,7 +25612,7 @@ function emailSalarySlip(empId, yearMonth) {
     if (!slip) return alert('⚠️ 該月薪資單不存在');
     
     var ym = yearMonth.split('-');
-    var subject = '【' + (loadData('sysParams', {}).company || '公司') + '】' + ym[0] + '年 ' + ym[1] + '月 薪資單 — ' + emp.name;
+    var subject = '【' + (getSysParams().company || '公司') + '】' + ym[0] + '年 ' + ym[1] + '月 薪資單 — ' + emp.name;
     var body =
 '親愛的 ' + emp.name + ' 您好：\n\n' +
 '以下是您 ' + ym[0] + '年 ' + ym[1] + '月 的薪資明細：\n' +
@@ -25611,7 +25635,7 @@ function emailSalarySlip(empId, yearMonth) {
 '💵 實發金額：$ ' + (slip.netSalary||0).toLocaleString() + '\n' +
 '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
 '⚠️ 如有疑問請於 3 個工作天內回覆此信，或聯絡人事單位。\n\n' +
-'此致\n' + (loadData('sysParams', {}).company || '公司') + ' 敬上\n' +
+'此致\n' + (getSysParams().company || '公司') + ' 敬上\n' +
 '寄發時間：' + new Date().toLocaleString('zh-TW');
     
     var mailto = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
@@ -25680,7 +25704,7 @@ function downloadAnnualAsPdf(empId, year) {
         // 改寫：直接產生隱藏元素，html2pdf 抓
         var sum = calcAnnualWithholding(empId, year);
         if (sum.slipCount === 0) return alert('⚠️ ' + year + ' 年度尚無已發放薪資單');
-        var sysParams = loadData('sysParams', {});
+        var sysParams = getSysParams();
         var companyName = sysParams.company || 'RC 金門醫院';
         var fullInfo = loadData('employeesFullInfo', {});
         var info = fullInfo[empId] || {};
