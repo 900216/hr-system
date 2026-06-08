@@ -1452,6 +1452,24 @@ body {
 .header-btn:active { transform: translateY(0); }
 .header-btn.logout { background: linear-gradient(135deg, #fb7185, #ef4444) !important; color: #fff !important; }
 
+/* 🎓 數位學習中心 */
+.el-tab { padding:9px 18px; border:0; border-radius:8px 8px 0 0; cursor:pointer; font-weight:bold; font-size:13px; background:#e5e7eb; color:#6b7280; }
+.el-tab-active { background:#2563eb; color:white; }
+.el-panel { background:white; border-radius:0 8px 8px 8px; padding:0; }
+.el-doc-layout { display:flex; gap:0; min-height:480px; }
+.el-sidebar { width:200px; flex-shrink:0; background:#f8fafc; border-right:1px solid #e5e7eb; padding:12px; border-radius:0 0 0 8px; }
+.el-content { flex:1; padding:16px; min-width:0; }
+.el-cat-item { padding:9px 10px; border-radius:6px; cursor:pointer; font-size:13px; color:#374151; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center; }
+.el-cat-item:hover { background:#e0e7ff; }
+.el-cat-item.active { background:#2563eb; color:white; font-weight:bold; }
+.el-doc-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px 14px; margin-bottom:8px; cursor:pointer; transition:all .15s; }
+.el-doc-card:hover { border-color:#2563eb; box-shadow:0 2px 8px rgba(37,99,235,.12); }
+.el-read-badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:bold; }
+.el-video-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+body.view-mobile .el-doc-layout { flex-direction:column; }
+body.view-mobile .el-sidebar { width:auto; border-right:0; border-bottom:1px solid #e5e7eb; border-radius:0; }
+body.view-mobile .el-sidebar #elCategoryList { display:flex; gap:6px; overflow-x:auto; flex-wrap:nowrap; }
+body.view-mobile .el-cat-item { white-space:nowrap; }
 /* ── 選單列 ── */
 .system-menu {
     background: linear-gradient(135deg, #3f4654, #2b313c) !important;
@@ -3908,33 +3926,69 @@ body.view-desktop .work-list-panel:hover {
     <div id="menuBackdrop" class="menu-backdrop" onclick="closeMenuDrawer()"></div>
     
     <!-- 工作清單 -->
-    <!-- 🎓 數位學習平台 -->
+    <!-- 🎓 數位學習中心 -->
     <div id="page-elearning" class="page-content hidden">
-        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>🎓 數位學習</strong></div>
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>🎓 數位學習中心</strong></div>
         <div class="main-content">
-            <div class="work-list-panel">
-                <div class="panel-header">
-                    <h3>🎓 統一超商數位學習平台</h3>
-                    <button class="btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="openELearningNewTab()">🔗 開新分頁</button>
+            <!-- 分頁標籤 -->
+            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:0;">
+                <button id="elTabDocs" onclick="switchELTab('docs')" class="el-tab el-tab-active">📚 知識文件</button>
+                <button id="elTabVideos" onclick="switchELTab('videos')" class="el-tab">🎬 影片 / 連結</button>
+                <button id="elTabQuiz" onclick="switchELTab('quiz')" class="el-tab">📝 學習測驗</button>
+            </div>
+
+            <!-- 📚 知識文件 -->
+            <div id="elPanelDocs" class="el-panel">
+                <div class="el-doc-layout">
+                    <!-- 左：分類目錄 -->
+                    <div class="el-sidebar">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <strong style="font-size:13px; color:#374151;">📂 分類目錄</strong>
+                            <button class="el-admin-btn" onclick="elAddCategory()" style="display:none;">➕</button>
+                        </div>
+                        <div id="elCategoryList"></div>
+                    </div>
+                    <!-- 右：文件清單與內容 -->
+                    <div class="el-content">
+                        <div id="elDocListView">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <strong id="elCurCatName" style="font-size:15px; color:#1e3a8a;">請選擇分類</strong>
+                                <button class="el-admin-btn" onclick="elAddDoc()" style="display:none; padding:5px 12px; background:#10b981; color:white; border:0; border-radius:6px; font-size:12px; cursor:pointer;">➕ 新增文件</button>
+                            </div>
+                            <div id="elDocList"></div>
+                        </div>
+                        <div id="elDocReadView" style="display:none;">
+                            <button onclick="elBackToList()" style="background:#e5e7eb; border:0; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; margin-bottom:12px;">← 返回清單</button>
+                            <div id="elDocReadContent"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="panel-body" style="padding:0;">
-                    <!-- 載入中提示 -->
-                    <div id="elearningLoading" style="text-align:center; padding:30px 16px; color:#6b7280;">
-                        <div style="font-size:36px; margin-bottom:10px;">🎓</div>
-                        <div style="font-size:14px;">正在嘗試於系統內開啟學習平台…</div>
+            </div>
+
+            <!-- 🎬 影片 / 連結 -->
+            <div id="elPanelVideos" class="el-panel" style="display:none;">
+                <div class="work-list-panel">
+                    <div class="panel-header">
+                        <h3>🎬 教學影片與連結</h3>
+                        <button class="el-admin-btn" onclick="elAddVideo()" style="display:none; padding:5px 12px; background:#10b981; color:white; border:0; border-radius:6px; font-size:12px; cursor:pointer;">➕ 新增</button>
                     </div>
-                    <!-- 無法嵌入時的備援畫面 -->
-                    <div id="elearningFallback" style="display:none; text-align:center; padding:30px 20px;">
-                        <div style="font-size:48px; margin-bottom:12px;">🎓</div>
-                        <h3 style="color:#1e3a8a; margin-bottom:8px;">統一超商數位學習平台</h3>
-                        <p style="color:#6b7280; font-size:13px; line-height:1.7; max-width:420px; margin:0 auto 18px;">
-                            此學習平台基於資安設定，無法直接嵌入於系統內顯示。<br>請點下方按鈕在新分頁開啟，使用您的公司帳號登入。
-                        </p>
-                        <button class="btn-confirm" style="font-size:15px; padding:12px 28px;" onclick="openELearningNewTab()">🚀 開啟數位學習平台</button>
-                        <div style="font-size:11px; color:#9ca3af; margin-top:14px;">💡 開啟後請以「行動版網站」登入（此平台僅支援手機版）</div>
+                    <div class="panel-body">
+                        <div id="elVideoList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px;"></div>
                     </div>
-                    <!-- iframe 容器（能嵌入時顯示） -->
-                    <iframe id="elearningFrame" style="display:none; width:100%; height:calc(100vh - 220px); min-height:480px; border:0;" referrerpolicy="no-referrer"></iframe>
+                </div>
+            </div>
+
+            <!-- 📝 學習測驗 -->
+            <div id="elPanelQuiz" class="el-panel" style="display:none;">
+                <div class="work-list-panel">
+                    <div class="panel-header">
+                        <h3>📝 學習測驗</h3>
+                        <button class="el-admin-btn" onclick="elAddQuiz()" style="display:none; padding:5px 12px; background:#10b981; color:white; border:0; border-radius:6px; font-size:12px; cursor:pointer;">➕ 新增測驗</button>
+                    </div>
+                    <div class="panel-body">
+                        <div id="elQuizListView"><div id="elQuizList"></div></div>
+                        <div id="elQuizTakeView" style="display:none;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -8926,55 +8980,355 @@ function setActiveMenu(menuId) {
     if (elem) elem.classList.add('active');
 }
 
-// 🎓 數位學習平台網址
-var ELEARNING_URL = 'https://e-learning.unipcsc.com.tw/eHRD/eHRDOrg?CFSerialNo=CRSOF000000000094516';
+// ╔══════════════════════════════════════════════╗
+// ║       🎓 數位學習中心（內建知識庫/影片/測驗）   ║
+// ╚══════════════════════════════════════════════╝
+// 資料結構：
+//   elCategories: [{id, name}]
+//   elDocs: [{id, catId, title, content, updated}]
+//   elVideos: [{id, title, url, desc}]
+//   elQuizzes: [{id, title, questions:[{q, options:[], answer:idx}]}]
+//   elProgress: { 'doc_xxx': true, 'quiz_xxx': {score, total, date} }（每使用者一份，存於 elProgress_帳號）
 
-// 開啟數位學習：先試 iframe 嵌入，偵測失敗自動切換為「開新分頁」備援畫面
+var _elTab = 'docs';
+var _elCurCat = null;
+
+function _elIsAdmin() { return currentUser && currentUser.role === 'admin'; }
+// HTML 跳脫（防止內容含 < > 破版）
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function _elProgressKey() { return 'elProgress_' + (currentUser ? currentUser.id : 'guest'); }
+function _elGetProgress() { return loadData(_elProgressKey(), {}); }
+function _elSaveProgress(p) { saveData(_elProgressKey(), p); if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} } }
+
+// 預設範例內容（第一次使用時建立）
+function _elSeedIfEmpty() {
+    var cats = loadData('elCategories', null);
+    if (!cats) {
+        saveData('elCategories', [
+            { id: 'cat_service', name: '🛎️ 門市服務' },
+            { id: 'cat_safety', name: '🦺 食品安全' },
+            { id: 'cat_ops', name: '📋 營運作業' }
+        ]);
+        saveData('elDocs', [
+            { id: 'doc_welcome', catId: 'cat_service', title: '新人必讀：門市服務基本守則', content: '1. 親切問候每位顧客\n2. 保持微笑與眼神接觸\n3. 結帳動作迅速確實\n4. 主動協助顧客需求\n\n（此為範例文件，管理員可編輯或刪除）', updated: Date.now() },
+            { id: 'doc_food', catId: 'cat_safety', title: '食品保存溫度規範', content: '冷藏：7°C 以下\n冷凍：-18°C 以下\n熱food：65°C 以上\n\n每日測溫並記錄，異常立即回報。', updated: Date.now() }
+        ]);
+        saveData('elVideos', [
+            { id: 'vid_demo', title: '咖啡機操作教學', url: 'https://www.youtube.com', desc: '示範範例：點擊開啟教學影片連結' }
+        ]);
+        saveData('elQuizzes', [
+            { id: 'quiz_demo', title: '門市服務小測驗', questions: [
+                { q: '冷藏食品的保存溫度應為？', options: ['7°C 以下', '15°C 以下', '常溫即可'], answer: 0 },
+                { q: '熱食保存溫度應為？', options: ['40°C 以上', '65°C 以上', '不限'], answer: 1 }
+            ]}
+        ]);
+    }
+}
+
+// 開啟學習中心
 function openELearning(menuId) {
     if (typeof closeMenuDrawer === 'function') closeMenuDrawer();
     if (typeof techProgressStart === 'function') { techProgressStart(); setTimeout(function(){ if(typeof techProgressDone==='function') techProgressDone(); }, 550); }
+    _elSeedIfEmpty();
     hideAllPages();
     var page = document.getElementById('page-elearning');
     if (page) page.classList.remove('hidden');
     if (menuId) setActiveMenu(menuId);
     window.scrollTo(0, 0);
-
-    var loading = document.getElementById('elearningLoading');
-    var fallback = document.getElementById('elearningFallback');
-    var frame = document.getElementById('elearningFrame');
-    if (!frame) return;
-
-    // 重置狀態
-    if (loading) loading.style.display = 'block';
-    if (fallback) fallback.style.display = 'none';
-    frame.style.display = 'none';
-
-    var settled = false;
-    // 嵌入成功：iframe load 事件觸發且能存取（同源/允許嵌入）
-    frame.onload = function() {
-        if (settled) return;
-        settled = true;
-        if (loading) loading.style.display = 'none';
-        frame.style.display = 'block';
-    };
-    // 嘗試載入
-    try { frame.src = ELEARNING_URL; } catch(e){}
-
-    // ⏱️ 逾時偵測：多數企業系統會用 X-Frame-Options 拒絕嵌入，
-    //    被拒時 onload 多半不會正常觸發 → 2.6 秒後仍未成功就顯示備援畫面
-    setTimeout(function() {
-        if (settled) return;
-        settled = true;
-        frame.src = 'about:blank';
-        frame.style.display = 'none';
-        if (loading) loading.style.display = 'none';
-        if (fallback) fallback.style.display = 'block';
-    }, 2600);
+    // 顯示/隱藏管理員按鈕
+    var adminBtns = document.querySelectorAll('#page-elearning .el-admin-btn');
+    for (var i = 0; i < adminBtns.length; i++) adminBtns[i].style.display = _elIsAdmin() ? 'inline-block' : 'none';
+    switchELTab(_elTab);
 }
 
-// 在新分頁開啟數位學習平台
-function openELearningNewTab() {
-    window.open(ELEARNING_URL, '_blank', 'noopener');
+function switchELTab(tab) {
+    _elTab = tab;
+    ['docs','videos','quiz'].forEach(function(t){
+        var panel = document.getElementById('elPanel' + t.charAt(0).toUpperCase() + t.slice(1));
+        var btn = document.getElementById('elTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (panel) panel.style.display = (t === tab) ? 'block' : 'none';
+        if (btn) btn.className = 'el-tab' + (t === tab ? ' el-tab-active' : '');
+    });
+    if (tab === 'docs') renderELCategories();
+    else if (tab === 'videos') renderELVideos();
+    else if (tab === 'quiz') renderELQuizList();
+}
+
+// ── 📚 知識文件 ──
+function renderELCategories() {
+    var cats = loadData('elCategories', []);
+    var box = document.getElementById('elCategoryList');
+    if (!box) return;
+    if (!_elCurCat && cats.length) _elCurCat = cats[0].id;
+    var html = '';
+    cats.forEach(function(c){
+        html += '<div class="el-cat-item' + (c.id === _elCurCat ? ' active' : '') + '" onclick="elSelectCat(\'' + c.id + '\')">';
+        html += '<span>' + escapeHtml(c.name) + '</span>';
+        if (_elIsAdmin()) html += '<span onclick="event.stopPropagation();elDeleteCat(\'' + c.id + '\')" style="opacity:.6;font-size:11px;">🗑️</span>';
+        html += '</div>';
+    });
+    if (!cats.length) html = '<div style="color:#9ca3af;font-size:12px;padding:8px;">尚無分類</div>';
+    box.innerHTML = html;
+    renderELDocs();
+}
+function elSelectCat(id) { _elCurCat = id; elBackToList(); renderELCategories(); }
+function renderELDocs() {
+    var docs = loadData('elDocs', []);
+    var cats = loadData('elCategories', []);
+    var cat = cats.find(function(c){ return c.id === _elCurCat; });
+    var nameEl = document.getElementById('elCurCatName');
+    if (nameEl) nameEl.textContent = cat ? cat.name : '請選擇分類';
+    var list = document.getElementById('elDocList');
+    if (!list) return;
+    var prog = _elGetProgress();
+    var catDocs = docs.filter(function(d){ return d.catId === _elCurCat; });
+    var html = '';
+    catDocs.forEach(function(d){
+        var isRead = prog[d.id] === true;
+        html += '<div class="el-doc-card" onclick="elReadDoc(\'' + d.id + '\')">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
+        html += '<strong style="color:#1f2937;font-size:14px;">📄 ' + escapeHtml(d.title) + '</strong>';
+        html += '<span class="el-read-badge" style="background:' + (isRead?'#d1fae5':'#fef3c7') + ';color:' + (isRead?'#047857':'#92400e') + ';white-space:nowrap;">' + (isRead?'✓ 已讀':'未讀') + '</span>';
+        html += '</div>';
+        if (_elIsAdmin()) html += '<div style="margin-top:6px;"><button onclick="event.stopPropagation();elEditDoc(\'' + d.id + '\')" style="font-size:11px;padding:2px 8px;margin-right:4px;">✏️ 編輯</button><button onclick="event.stopPropagation();elDeleteDoc(\'' + d.id + '\')" style="font-size:11px;padding:2px 8px;background:#ef4444;color:white;border:0;border-radius:4px;">🗑️</button></div>';
+        html += '</div>';
+    });
+    if (!catDocs.length) html = '<div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center;">此分類尚無文件</div>';
+    list.innerHTML = html;
+}
+function elReadDoc(id) {
+    var docs = loadData('elDocs', []);
+    var d = docs.find(function(x){ return x.id === id; });
+    if (!d) return;
+    document.getElementById('elDocListView').style.display = 'none';
+    document.getElementById('elDocReadView').style.display = 'block';
+    var html = '<h2 style="color:#1e3a8a;margin-bottom:6px;">' + escapeHtml(d.title) + '</h2>';
+    html += '<div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">更新：' + new Date(d.updated||Date.now()).toLocaleDateString() + '</div>';
+    html += '<div style="font-size:14px;line-height:1.9;color:#374151;white-space:pre-wrap;">' + escapeHtml(d.content) + '</div>';
+    // 標記已讀
+    var prog = _elGetProgress();
+    var isRead = prog[id] === true;
+    html += '<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center;">';
+    if (isRead) html += '<span style="color:#047857;font-weight:bold;">✓ 您已閱讀完成此文件</span>';
+    else html += '<button class="btn-confirm" onclick="elMarkRead(\'' + id + '\')" style="padding:10px 24px;">✓ 標記為已讀</button>';
+    html += '</div>';
+    document.getElementById('elDocReadContent').innerHTML = html;
+    window.scrollTo(0, 0);
+}
+function elMarkRead(id) {
+    var prog = _elGetProgress();
+    prog[id] = true;
+    _elSaveProgress(prog);
+    showNotif('✓ 已標記為已讀');
+    elReadDoc(id);
+}
+function elBackToList() {
+    var lv = document.getElementById('elDocListView');
+    var rv = document.getElementById('elDocReadView');
+    if (lv) lv.style.display = 'block';
+    if (rv) rv.style.display = 'none';
+    renderELDocs();
+}
+// 管理員：分類 CRUD
+function elAddCategory() {
+    var name = prompt('請輸入分類名稱（可加 emoji）：', '');
+    if (!name) return;
+    var cats = loadData('elCategories', []);
+    cats.push({ id: 'cat_' + Date.now(), name: name });
+    saveData('elCategories', cats);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELCategories();
+}
+function elDeleteCat(id) {
+    if (!confirm('確定刪除此分類？該分類下的文件也會一併刪除。')) return;
+    saveData('elCategories', loadData('elCategories', []).filter(function(c){ return c.id !== id; }));
+    saveData('elDocs', loadData('elDocs', []).filter(function(d){ return d.catId !== id; }));
+    if (_elCurCat === id) _elCurCat = null;
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELCategories();
+}
+// 管理員：文件 CRUD（用雙欄 modal）
+function elAddDoc() {
+    if (!_elCurCat) return alert('請先選擇左側分類');
+    _elDocEditModal(null);
+}
+function elEditDoc(id) {
+    var d = loadData('elDocs', []).find(function(x){ return x.id === id; });
+    _elDocEditModal(d);
+}
+function _elDocEditModal(doc) {
+    var isNew = !doc;
+    var title = prompt('文件標題：', doc ? doc.title : '');
+    if (title === null) return;
+    var content = prompt('文件內容（可換行）：', doc ? doc.content : '');
+    if (content === null) return;
+    var docs = loadData('elDocs', []);
+    if (isNew) {
+        docs.push({ id: 'doc_' + Date.now(), catId: _elCurCat, title: title, content: content, updated: Date.now() });
+    } else {
+        var idx = docs.findIndex(function(x){ return x.id === doc.id; });
+        if (idx >= 0) { docs[idx].title = title; docs[idx].content = content; docs[idx].updated = Date.now(); }
+    }
+    saveData('elDocs', docs);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELDocs();
+    showNotif('✅ 已儲存文件');
+}
+function elDeleteDoc(id) {
+    if (!confirm('確定刪除此文件？')) return;
+    saveData('elDocs', loadData('elDocs', []).filter(function(d){ return d.id !== id; }));
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELDocs();
+}
+
+// ── 🎬 影片 / 連結 ──
+function renderELVideos() {
+    var vids = loadData('elVideos', []);
+    var box = document.getElementById('elVideoList');
+    if (!box) return;
+    var html = '';
+    vids.forEach(function(v){
+        html += '<div class="el-video-card">';
+        html += '<div style="background:linear-gradient(135deg,#3b82f6,#2563eb);padding:24px;text-align:center;cursor:pointer;" onclick="window.open(\'' + encodeURI(v.url) + '\',\'_blank\',\'noopener\')">';
+        html += '<div style="font-size:40px;">🎬</div></div>';
+        html += '<div style="padding:12px;">';
+        html += '<strong style="font-size:14px;color:#1f2937;">' + escapeHtml(v.title) + '</strong>';
+        if (v.desc) html += '<div style="font-size:12px;color:#6b7280;margin-top:4px;">' + escapeHtml(v.desc) + '</div>';
+        html += '<div style="margin-top:8px;"><button class="btn-confirm" style="font-size:12px;padding:6px 14px;" onclick="window.open(\'' + encodeURI(v.url) + '\',\'_blank\',\'noopener\')">▶ 開啟</button>';
+        if (_elIsAdmin()) html += ' <button onclick="elDeleteVideo(\'' + v.id + '\')" style="font-size:11px;padding:6px 10px;background:#ef4444;color:white;border:0;border-radius:4px;">🗑️</button>';
+        html += '</div></div></div>';
+    });
+    if (!vids.length) html = '<div style="color:#9ca3af;font-size:13px;padding:20px;grid-column:1/-1;text-align:center;">尚無影片或連結</div>';
+    box.innerHTML = html;
+}
+function elAddVideo() {
+    var title = prompt('影片 / 連結標題：', '');
+    if (!title) return;
+    var url = prompt('連結網址（https://...）：', 'https://');
+    if (!url) return;
+    var desc = prompt('簡短說明（可留空）：', '') || '';
+    var vids = loadData('elVideos', []);
+    vids.push({ id: 'vid_' + Date.now(), title: title, url: url, desc: desc });
+    saveData('elVideos', vids);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELVideos();
+    showNotif('✅ 已新增');
+}
+function elDeleteVideo(id) {
+    if (!confirm('確定刪除？')) return;
+    saveData('elVideos', loadData('elVideos', []).filter(function(v){ return v.id !== id; }));
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELVideos();
+}
+
+// ── 📝 學習測驗 ──
+function renderELQuizList() {
+    var quizzes = loadData('elQuizzes', []);
+    var box = document.getElementById('elQuizList');
+    if (!box) return;
+    document.getElementById('elQuizListView').style.display = 'block';
+    document.getElementById('elQuizTakeView').style.display = 'none';
+    var prog = _elGetProgress();
+    var html = '';
+    quizzes.forEach(function(q){
+        var done = prog[q.id];
+        html += '<div class="el-doc-card" onclick="elTakeQuiz(\'' + q.id + '\')">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">';
+        html += '<strong style="font-size:14px;color:#1f2937;">📝 ' + escapeHtml(q.title) + '</strong>';
+        if (done) html += '<span class="el-read-badge" style="background:#d1fae5;color:#047857;">✓ ' + done.score + '/' + done.total + '</span>';
+        else html += '<span class="el-read-badge" style="background:#fef3c7;color:#92400e;">未測驗</span>';
+        html += '</div><div style="font-size:12px;color:#6b7280;margin-top:4px;">共 ' + (q.questions?q.questions.length:0) + ' 題</div>';
+        if (_elIsAdmin()) html += '<div style="margin-top:6px;"><button onclick="event.stopPropagation();elDeleteQuiz(\'' + q.id + '\')" style="font-size:11px;padding:2px 8px;background:#ef4444;color:white;border:0;border-radius:4px;">🗑️ 刪除</button></div>';
+        html += '</div>';
+    });
+    if (!quizzes.length) html = '<div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center;">尚無測驗</div>';
+    box.innerHTML = html;
+}
+var _elCurQuiz = null;
+function elTakeQuiz(id) {
+    var q = loadData('elQuizzes', []).find(function(x){ return x.id === id; });
+    if (!q || !q.questions || !q.questions.length) return alert('此測驗尚無題目');
+    _elCurQuiz = q;
+    document.getElementById('elQuizListView').style.display = 'none';
+    var view = document.getElementById('elQuizTakeView');
+    view.style.display = 'block';
+    var html = '<button onclick="renderELQuizList()" style="background:#e5e7eb;border:0;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;margin-bottom:12px;">← 返回測驗清單</button>';
+    html += '<h2 style="color:#1e3a8a;margin-bottom:16px;">' + escapeHtml(q.title) + '</h2>';
+    q.questions.forEach(function(qq, qi){
+        html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin-bottom:12px;">';
+        html += '<div style="font-weight:bold;font-size:14px;margin-bottom:10px;color:#1f2937;">' + (qi+1) + '. ' + escapeHtml(qq.q) + '</div>';
+        qq.options.forEach(function(opt, oi){
+            html += '<label style="display:block;padding:8px 10px;margin-bottom:5px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;font-size:13px;">';
+            html += '<input type="radio" name="elq_' + qi + '" value="' + oi + '" style="margin-right:8px;">' + escapeHtml(opt);
+            html += '</label>';
+        });
+        html += '</div>';
+    });
+    html += '<div style="text-align:center;margin-top:16px;"><button class="btn-confirm" style="padding:12px 32px;font-size:15px;" onclick="elSubmitQuiz()">送出答案</button></div>';
+    view.innerHTML = html;
+    window.scrollTo(0, 0);
+}
+function elSubmitQuiz() {
+    var q = _elCurQuiz;
+    if (!q) return;
+    var score = 0;
+    for (var i = 0; i < q.questions.length; i++) {
+        var sel = document.querySelector('input[name="elq_' + i + '"]:checked');
+        if (sel && parseInt(sel.value) === q.questions[i].answer) score++;
+    }
+    var total = q.questions.length;
+    var prog = _elGetProgress();
+    prog[q.id] = { score: score, total: total, date: Date.now() };
+    _elSaveProgress(prog);
+    var pct = Math.round(score/total*100);
+    var pass = pct >= 60;
+    var view = document.getElementById('elQuizTakeView');
+    var html = '<div style="text-align:center;padding:30px 20px;">';
+    html += '<div style="font-size:56px;">' + (pass ? '🎉' : '💪') + '</div>';
+    html += '<h2 style="color:' + (pass?'#047857':'#d97706') + ';margin:12px 0;">' + (pass ? '測驗通過！' : '再加油！') + '</h2>';
+    html += '<div style="font-size:32px;font-weight:bold;color:#1e3a8a;">' + score + ' / ' + total + '</div>';
+    html += '<div style="color:#6b7280;margin-top:6px;">答對率 ' + pct + '%</div>';
+    html += '<div style="margin-top:24px;"><button class="btn-confirm" onclick="elTakeQuiz(\'' + q.id + '\')" style="padding:10px 20px;margin-right:6px;">🔄 重做</button>';
+    html += '<button onclick="renderELQuizList()" style="padding:10px 20px;background:#e5e7eb;border:0;border-radius:8px;cursor:pointer;">返回清單</button></div>';
+    html += '</div>';
+    view.innerHTML = html;
+    window.scrollTo(0, 0);
+}
+function elAddQuiz() {
+    var title = prompt('測驗標題：', '');
+    if (!title) return;
+    var nq = parseInt(prompt('要出幾題？（1-10）', '3')) || 0;
+    if (nq < 1 || nq > 10) return alert('題數請介於 1-10');
+    var questions = [];
+    for (var i = 0; i < nq; i++) {
+        var qtext = prompt('第 ' + (i+1) + ' 題 題目：', '');
+        if (qtext === null) return;
+        var opts = [];
+        for (var j = 0; j < 4; j++) {
+            var o = prompt('第 ' + (i+1) + ' 題 選項 ' + (j+1) + '（留空結束此題選項）：', '');
+            if (o === null) return;
+            if (o === '') break;
+            opts.push(o);
+        }
+        if (opts.length < 2) { alert('每題至少 2 個選項'); i--; continue; }
+        var ans = parseInt(prompt('第 ' + (i+1) + ' 題 正確答案是第幾個選項？(1-' + opts.length + ')', '1')) || 1;
+        questions.push({ q: qtext, options: opts, answer: Math.max(0, Math.min(opts.length-1, ans-1)) });
+    }
+    var quizzes = loadData('elQuizzes', []);
+    quizzes.push({ id: 'quiz_' + Date.now(), title: title, questions: questions });
+    saveData('elQuizzes', quizzes);
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELQuizList();
+    showNotif('✅ 已新增測驗');
+}
+function elDeleteQuiz(id) {
+    if (!confirm('確定刪除此測驗？')) return;
+    saveData('elQuizzes', loadData('elQuizzes', []).filter(function(q){ return q.id !== id; }));
+    if (typeof cloudPush === 'function') { try { cloudPush(true); } catch(e){} }
+    renderELQuizList();
 }
 
 function goToPage(pageName, menuId) {
@@ -22306,6 +22660,7 @@ var BACKUP_KEYS = [
     'salarySlipEmailLog',
     'works', 'stockCounts', 'stockCategories', 'systemParams', 'sysParams', 'storeCompetitions', 'reviewStatus', 'loginAnnouncements', 'petSettlements',
     'petData', 'systemLogs', 'insBrackets', 'insBracketsPT',
+    'elCategories', 'elDocs', 'elVideos', 'elQuizzes',
     'currentStoreId', 'currentSchedStoreId'
 ];
 
