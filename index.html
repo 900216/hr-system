@@ -3836,6 +3836,7 @@ body.view-desktop .work-list-panel:hover {
         <div class="menu-item active" id="menu-work" onclick="showWorkList()">📋 工作清單</div>
         <div class="menu-item" id="menu-pet" onclick="goToPage('petGame','menu-pet')">🐾 寵物樂園</div>
         <div class="menu-item" id="menu-compete" onclick="goToPage('storeCompete','menu-compete')">🏆 門市競賽</div>
+        <div class="menu-item" id="menu-elearning" onclick="openELearning('menu-elearning')">🎓 數位學習</div>
         <div class="menu-item" id="menu-attendance">⏰ 出勤管理 ▼
             <div class="submenu">
                 <div class="submenu-item" onclick="goToPage('clockIn','menu-attendance')">📍 GPS 打卡</div>
@@ -3870,6 +3871,7 @@ body.view-desktop .work-list-panel:hover {
                 <div class="submenu-item" onclick="goToPage('insuranceRemove','menu-employee')">➖ 退保作業</div>
                 <div class="submenu-item" onclick="goToPage('insuranceQuery','menu-employee')">🔍 加退保查詢</div>
                 <div class="submenu-item" onclick="goToPage('changePassword','menu-employee')">🔑 變更密碼</div>
+                <div class="submenu-item" onclick="goToPage('eLearning','menu-employee')">📚 數位學習平台</div>
             </div>
         </div>
         <div class="menu-item" id="menu-daily-inv">📊 日別庫存 ▼
@@ -3906,6 +3908,37 @@ body.view-desktop .work-list-panel:hover {
     <div id="menuBackdrop" class="menu-backdrop" onclick="closeMenuDrawer()"></div>
     
     <!-- 工作清單 -->
+    <!-- 🎓 數位學習平台 -->
+    <div id="page-elearning" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>🎓 數位學習</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel">
+                <div class="panel-header">
+                    <h3>🎓 統一超商數位學習平台</h3>
+                    <button class="btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="openELearningNewTab()">🔗 開新分頁</button>
+                </div>
+                <div class="panel-body" style="padding:0;">
+                    <!-- 載入中提示 -->
+                    <div id="elearningLoading" style="text-align:center; padding:30px 16px; color:#6b7280;">
+                        <div style="font-size:36px; margin-bottom:10px;">🎓</div>
+                        <div style="font-size:14px;">正在嘗試於系統內開啟學習平台…</div>
+                    </div>
+                    <!-- 無法嵌入時的備援畫面 -->
+                    <div id="elearningFallback" style="display:none; text-align:center; padding:30px 20px;">
+                        <div style="font-size:48px; margin-bottom:12px;">🎓</div>
+                        <h3 style="color:#1e3a8a; margin-bottom:8px;">統一超商數位學習平台</h3>
+                        <p style="color:#6b7280; font-size:13px; line-height:1.7; max-width:420px; margin:0 auto 18px;">
+                            此學習平台基於資安設定，無法直接嵌入於系統內顯示。<br>請點下方按鈕在新分頁開啟，使用您的公司帳號登入。
+                        </p>
+                        <button class="btn-confirm" style="font-size:15px; padding:12px 28px;" onclick="openELearningNewTab()">🚀 開啟數位學習平台</button>
+                        <div style="font-size:11px; color:#9ca3af; margin-top:14px;">💡 開啟後請以「行動版網站」登入（此平台僅支援手機版）</div>
+                    </div>
+                    <!-- iframe 容器（能嵌入時顯示） -->
+                    <iframe id="elearningFrame" style="display:none; width:100%; height:calc(100vh - 220px); min-height:480px; border:0;" referrerpolicy="no-referrer"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- 🐾 寵物樂園 -->
     <div id="page-petGame" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; <strong>🐾 寵物樂園</strong></div>
@@ -4124,6 +4157,31 @@ body.view-desktop .work-list-panel:hover {
     <div id="printArea" class="print-area"></div>
     
     <!-- 簡化頁面 -->
+    <!-- 📚 數位學習平台（內嵌統一超商 e-learning）-->
+    <div id="page-eLearning" class="page-content hidden">
+        <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; 👥 員工管理 &gt; <strong>📚 數位學習平台</strong></div>
+        <div class="main-content">
+            <div class="work-list-panel" style="border-color:#2563eb;">
+                <div class="panel-header" style="background:linear-gradient(to bottom, #3b82f6, #2563eb);">
+                    <h3 style="color:white;">📚 統一超商數位學習平台</h3>
+                    <button class="btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="openELearningNewTab()">🔗 新分頁開啟</button>
+                </div>
+                <div class="panel-body" style="padding:0; position:relative;">
+                    <div id="eLearningLoading" style="padding:40px 20px; text-align:center; color:#6b7280;">
+                        <div style="font-size:32px; margin-bottom:10px;">📚</div>
+                        <div style="font-size:14px;">正在載入數位學習平台…</div>
+                    </div>
+                    <iframe id="eLearningFrame" src="" style="width:100%; height:calc(100vh - 200px); min-height:500px; border:0; display:none;" onload="onELearningLoad()"></iframe>
+                    <div id="eLearningBlocked" style="display:none; padding:40px 20px; text-align:center;">
+                        <div style="font-size:40px; margin-bottom:12px;">🔒</div>
+                        <div style="font-size:15px; color:#374151; font-weight:bold; margin-bottom:8px;">此平台不允許內嵌顯示</div>
+                        <div style="font-size:13px; color:#6b7280; margin-bottom:20px; line-height:1.6;">統一超商學習平台基於安全設定，無法直接嵌入本系統內顯示。<br>請點下方按鈕在新分頁開啟，登入後即可使用。</div>
+                        <button class="btn-confirm" style="font-size:15px; padding:12px 28px;" onclick="openELearningNewTab()">🔗 開啟數位學習平台</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- 📍 GPS 打卡 -->
     <div id="page-clockIn" class="page-content hidden">
         <div class="breadcrumb">🏠 <a onclick="showWorkList()">工作清單</a> &gt; ⏰ 出勤管理 &gt; <strong>📍 GPS 打卡</strong></div>
@@ -8383,7 +8441,7 @@ function hasAccess(pageName) {
     if (!currentUser) return false;
     
     // 🆕 新功能自動開放（避免舊自訂權限擋住新頁面）：檔期退貨所有人都可用
-    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'petGame', 'storeCompete', 'monthlySettle', 'empPenalty', 'storeLayout'];
+    var ALWAYS_ALLOW = ['returnCampaign', 'marketingFocus', 'newProducts', 'clockIn', 'clockRecords', 'petGame', 'storeCompete', 'monthlySettle', 'empPenalty', 'storeLayout', 'eLearning'];
     if (ALWAYS_ALLOW.indexOf(pageName) !== -1) {
         return true;
     }
@@ -8868,6 +8926,57 @@ function setActiveMenu(menuId) {
     if (elem) elem.classList.add('active');
 }
 
+// 🎓 數位學習平台網址
+var ELEARNING_URL = 'https://e-learning.unipcsc.com.tw/eHRD/eHRDOrg?CFSerialNo=CRSOF000000000094516';
+
+// 開啟數位學習：先試 iframe 嵌入，偵測失敗自動切換為「開新分頁」備援畫面
+function openELearning(menuId) {
+    if (typeof closeMenuDrawer === 'function') closeMenuDrawer();
+    if (typeof techProgressStart === 'function') { techProgressStart(); setTimeout(function(){ if(typeof techProgressDone==='function') techProgressDone(); }, 550); }
+    hideAllPages();
+    var page = document.getElementById('page-elearning');
+    if (page) page.classList.remove('hidden');
+    if (menuId) setActiveMenu(menuId);
+    window.scrollTo(0, 0);
+
+    var loading = document.getElementById('elearningLoading');
+    var fallback = document.getElementById('elearningFallback');
+    var frame = document.getElementById('elearningFrame');
+    if (!frame) return;
+
+    // 重置狀態
+    if (loading) loading.style.display = 'block';
+    if (fallback) fallback.style.display = 'none';
+    frame.style.display = 'none';
+
+    var settled = false;
+    // 嵌入成功：iframe load 事件觸發且能存取（同源/允許嵌入）
+    frame.onload = function() {
+        if (settled) return;
+        settled = true;
+        if (loading) loading.style.display = 'none';
+        frame.style.display = 'block';
+    };
+    // 嘗試載入
+    try { frame.src = ELEARNING_URL; } catch(e){}
+
+    // ⏱️ 逾時偵測：多數企業系統會用 X-Frame-Options 拒絕嵌入，
+    //    被拒時 onload 多半不會正常觸發 → 2.6 秒後仍未成功就顯示備援畫面
+    setTimeout(function() {
+        if (settled) return;
+        settled = true;
+        frame.src = 'about:blank';
+        frame.style.display = 'none';
+        if (loading) loading.style.display = 'none';
+        if (fallback) fallback.style.display = 'block';
+    }, 2600);
+}
+
+// 在新分頁開啟數位學習平台
+function openELearningNewTab() {
+    window.open(ELEARNING_URL, '_blank', 'noopener');
+}
+
 function goToPage(pageName, menuId) {
     // 📱 導覽後自動關閉選單抽屜
     if (typeof closeMenuDrawer === 'function') closeMenuDrawer();
@@ -8938,9 +9047,60 @@ function goToPage(pageName, menuId) {
     else if (pageName === 'monthlySettle') initMonthlySettle();
     else if (pageName === 'marketingFocus') initMarketingFocus();
     else if (pageName === 'newProducts') initNewProducts();
+    else if (pageName === 'eLearning') initELearning();
     
     // 紀錄訪問日誌
     logAction('view', pageName);
+}
+
+// 📚 數位學習平台網址
+var ELEARNING_URL = 'https://e-learning.unipcsc.com.tw/eHRD/eHRDOrg?CFSerialNo=CRSOF000000000094516';
+var _eLearningLoaded = false;
+var _eLearningTimer = null;
+
+function initELearning() {
+    var frame = document.getElementById('eLearningFrame');
+    var loading = document.getElementById('eLearningLoading');
+    var blocked = document.getElementById('eLearningBlocked');
+    if (!frame) return;
+    // 重置狀態
+    if (loading) loading.style.display = 'block';
+    if (blocked) blocked.style.display = 'none';
+    frame.style.display = 'none';
+    _eLearningLoaded = false;
+    // 載入網址（已載過就不重設，避免重複登入）
+    if (frame.src !== ELEARNING_URL) frame.src = ELEARNING_URL;
+    else { onELearningLoad(); }
+    // 逾時偵測：3.5 秒內沒成功 onload → 多半被 X-Frame-Options 擋住
+    if (_eLearningTimer) clearTimeout(_eLearningTimer);
+    _eLearningTimer = setTimeout(function(){
+        if (!_eLearningLoaded) showELearningBlocked();
+    }, 3500);
+}
+
+function onELearningLoad() {
+    var frame = document.getElementById('eLearningFrame');
+    var loading = document.getElementById('eLearningLoading');
+    var blocked = document.getElementById('eLearningBlocked');
+    // 嘗試判斷 iframe 是否真的載入內容（被擋時 onload 也可能觸發但內容空白）
+    _eLearningLoaded = true;
+    if (_eLearningTimer) { clearTimeout(_eLearningTimer); _eLearningTimer = null; }
+    if (loading) loading.style.display = 'none';
+    if (blocked) blocked.style.display = 'none';
+    if (frame) frame.style.display = 'block';
+}
+
+function showELearningBlocked() {
+    var frame = document.getElementById('eLearningFrame');
+    var loading = document.getElementById('eLearningLoading');
+    var blocked = document.getElementById('eLearningBlocked');
+    if (loading) loading.style.display = 'none';
+    if (frame) frame.style.display = 'none';
+    if (blocked) blocked.style.display = 'block';
+}
+
+function openELearningNewTab() {
+    window.open(ELEARNING_URL, '_blank');
 }
 
 // 設定當月
@@ -24278,7 +24438,13 @@ function autoPushDebounced() {
 // 自動拉取（定時）
 // 🆕 偵測使用者是否正在輸入（避免同步刷掉未存資料）
 var _lastUserInputTime = 0;
+var _lastSaveDataTime = 0;  // 最近一次寫入備份資料的時間
 function isUserActivelyEditing() {
+    // 0. 🔑 最近 12 秒內剛寫入過資料 → 視為資料可能還在變動，暫停背景同步
+    //    （避免「資料還沒完全存好就被上傳/下載覆蓋」造成遺失）
+    if (Date.now() - _lastSaveDataTime < 12000) {
+        return true;
+    }
     // 1. 目前焦點在輸入元素
     var ae = document.activeElement;
     if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) {
@@ -24294,7 +24460,7 @@ function isUserActivelyEditing() {
         var ov = document.getElementById(editingOverlays[i]);
         if (ov && ov.style.display === 'block') return true;
     }
-    // 4. 有開啟中的 Modal（modal-overlay 未隱藏）
+    // 4. 有開啟中的 Modal（modal-overlay 或 .hidden 以外的彈窗）
     var modals = document.querySelectorAll('.modal-overlay');
     for (var m = 0; m < modals.length; m++) {
         if (!modals[m].classList.contains('hidden')) return true;
@@ -24539,6 +24705,7 @@ window.saveData = function(key, value) {
     }
     // 觸發自動推送（限定備份範圍內的 key）
     if (BACKUP_KEYS.indexOf(key) >= 0 && (_syncEnabled || (typeof fbEnabled === 'function' && fbEnabled()))) {
+        _lastSaveDataTime = Date.now();
         autoPushDebounced();
     }
 };
